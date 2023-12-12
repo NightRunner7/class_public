@@ -1271,7 +1271,13 @@ int background_ncdm_distribution(
     /*    FERMI-DIRAC INCLUDING CHEMICAL POTENTIALS   */
     /**************************************************/
 
-    *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)+1.) +1./(exp(q+ksi)+1.));
+    /* *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)+1.) +1./(exp(q+ksi)+1.));
+    
+    /*****************************************************/
+    /*    BOSON-EINSTEIN INCLUDING CHEMICAL POTENTIALS   */
+    /*****************************************************/
+
+    *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)-1.) +1./(exp(q+ksi)-1.));
 
     /**************************************************/
 
