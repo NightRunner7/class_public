@@ -7,6 +7,11 @@
 
 #include "input.h"
 
+/* Monopole (BRINGMANN 2018) modification */
+#include "gsl/gsl_sf_hyperg.h"
+#include "gsl/gsl_sf_gamma.h"
+/* End Monopole (BRINGMANN 2018) modification*/ 
+
 /* The input module fills variables belonging to the structures of
    essentially all other modules. Thus we need to include all the
    headers. New in v3.0: These #include fit better here than in
@@ -2341,8 +2346,8 @@ int input_read_parameters_species(struct file_content * pfc,
   /** Summary: */
 
   /** - Define local variables */
-  int flag1, flag2, flag3;
-  double param1, param2, param3;
+  int flag1, flag2, flag3, flag4, flag5, flag6;
+  double param1, param2, param3, param4, param5, param6;
   char string1[_ARGUMENT_LENGTH_MAX_];
   int fileentries;
   int N_ncdm=0, n, entries_read;
@@ -2711,6 +2716,85 @@ int input_read_parameters_species(struct file_content * pfc,
 
 
   /* 7) ** ADDITIONAL SPECIES ** --> Add your species here */
+
+  /** ================================================================================================*/
+  /** I) Monopole (BRINGMANN 2018) modification ======================================================*/
+  /** ================================================================================================*/
+  /** I.a) f_mon  */
+  /* Read */
+
+  class_call(parser_read_double(pfc,"f_mon",&param1,&flag1,errmsg),                                                                        
+             errmsg,                                                                                                                        
+             errmsg);
+  class_call(parser_read_double(pfc,"log10f_mon",&param4,&flag4,errmsg),        
+              errmsg,                                                             
+              errmsg);
+  class_test(((flag1 == _TRUE_) && (flag4 == _TRUE_)),
+            errmsg,
+            "In input file, you can only enter one of f_mon or log10f_mon, choose one");
+
+  if( (flag1 == _TRUE_)  || (flag4 == _TRUE_)){
+    if (flag1 == _TRUE_) {
+      pba->f_mon = param1;}
+    if (flag4 == _TRUE_) {
+     pba->f_mon = pow(10,param4);}
+    if (pba->f_mon > 0.) {
+      /** - Read in kappa and a_t parameters that describe DDM-DR conversion */
+      
+      class_call(parser_read_double(pfc,"kappa_mon",&param5,&flag5,errmsg),errmsg,errmsg);
+      class_call(parser_read_double(pfc,"log10kappa_mon",&param6,&flag6,errmsg),errmsg,errmsg);
+      class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa__mon or log10kappa_mon, choose one");
+      if (flag5 == _TRUE_) {
+      pba->kappa_mon = param5;
+      }
+      if (flag6 == _TRUE_) {
+      pba->kappa_mon = pow(10.0,param6);
+      }
+
+      if (pba->kappa_mon==1.0) {
+      pba->kappa_mon = 0.99999;
+      }
+
+      class_call(parser_read_double(pfc,"a_t_mon",&param2,&flag2,errmsg), errmsg, errmsg);
+      class_call(parser_read_double(pfc,"log10a_t_mon",&param3,&flag3,errmsg), errmsg, errmsg);
+      class_test(((flag2 == _TRUE_) && (flag3 == _TRUE_)),
+             errmsg,
+             "In input file, you can only enter one of a_t_mon or log10a_t_mon, choose one");
+      if (flag2 == _TRUE_) {
+      pba->a_t_mon = param2;
+      }
+      if (flag3 == _TRUE_) {
+      pba->a_t_mon = pow(10.0,param3);
+      }
+
+      class_test((pba-> f_mon-1./(pow(pba->a_t_mon,pba->kappa_mon))>0),errmsg,"This combination of kappa_mon, a_t_mon, and f_mon violates the physicality condition");
+      /** Compute Omega0_dcdmdr and Omega_ini_dcdm */
+      // by construction, the DCDM is fully gone at z=0 in this model
+      //       // and we can explicitly compute the DR contribution
+      //             // Note that we set Omega_ini_dcdm = 0. here as a placeholder (see Sec. 3.1 of
+      //                   //   https://arxiv.org/pdf/1407.2418.pdf), but the actual value
+      //                         //   of the initial DCDM density is explicitly computed in background.c
+      pba->Omega_ini_mon = 0.;
+      /** GNU function only converges for |z|<1 */
+      /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
+      /** specifically the second identity in "Generic general cases" */
+      /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
+      /** based on tests in Mathematica: */
+      /** - use the GNU routine when argument |z|<1 */
+      /** - use the identity approach when 1<=|z|<100 */
+      /** - use the asymptotic approach when |z|>=100 */
+
+      if (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 1.)
+        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(1/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+      else if ((fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 100.))
+        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+      else
+        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+
+    }
+  }
+  /** I) End Monopole (BRINGMANN 2018) modification ======================================================*/
+
 
   /** 7.1) Decaying DM into DR */
   /** 7.1.a) Omega_0_dcdmdr (DCDM, i.e. decaying CDM) */

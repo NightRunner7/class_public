@@ -78,6 +78,15 @@ struct background
   double Gamma_dcdm;      /**< \f$ \Gamma_{dcdm} \f$: decay constant for decaying cold dark matter */
   double tau_dcdm;
 
+  /* Monopole (BRINGMANN 2018) modification */
+  double f_mon; /**< \f$ f_{mon} \f$: fraction of the initial CDM density comprised of decaying cold dark matter */
+  double kappa_mon; /**< \f$ \zeta_{mon} \f$: rate parameter for decaying cold dark matter */
+  double a_t_mon; /**< \f$ \Gamma_{mon} \f$: transition scale factor for decaying cold dark matter */
+  double Omega_ini_mon;  /**< \f$ \Omega_{ini,mon} \f$: rescaled initial value for mon density (see 1407.2418 for definitions) */
+  double Omega0_mondr;   /**< \f$ \Omega_{0 mon}+\Omega_{0 dr} \f$: decaying cold dark matter (mon) decaying to dark radiation (dr) */
+  double Gamma_mon;      /**< \f$ \Gamma_{mon} \f$: decay constant for decaying monopoles */
+  /* End Monopole (BRINGMANN 2018) modification */
+
   int N_ncdm;                            /**< Number of distinguishable ncdm species */
   /* the following parameters help to define tabulated ncdm p-s-d passed in file */
   char * ncdm_psd_files;                 /**< list of filenames for tabulated p-s-d */
@@ -136,6 +145,9 @@ struct background
   int sgnK; /**< K/|K|: -1, 0 or 1 */
   double Neff; /**< so-called "effective neutrino number", computed at earliest time in interpolation table */
   double Omega0_dcdm; /**< \f$ \Omega_{0 dcdm} \f$: decaying cold dark matter */
+  /* Monopole (BRINGMANN 2018) modification */
+  double Omega0_mon; /**< \f$ \Omega_{0 mon} \f$: decaying monopoles */
+  /* End Monopole (BRINGMANN 2018) modification */
   double Omega0_dr; /**< \f$ \Omega_{0 dr} \f$: decay radiation */
   double Omega0_m;  /**< total non-relativistic matter today */
   double Omega0_r;  /**< total ultra-relativistic radiation today */
@@ -171,7 +183,15 @@ struct background
   int index_bg_rho_idr;       /**< density of interacting dark radiation */
   int index_bg_rho_ur;        /**< relativistic neutrinos/relics density */
   int index_bg_rho_dcdm;      /**< dcdm density */
+  /* Monopole (BRINGMANN 2018) modification */
+  int index_bg_rho_mon;      /**< mon density */
+  /* End Monopole (BRINGMANN 2018) modification */
   int index_bg_rho_dr;        /**< dr density */
+
+  /* Monopole (BRINGMANN 2018) modification */
+  int index_bg_Gamma_mon;      /**< mon density */
+  /* End Monopole (BRINGMANN 2018) modification */
+
 
   int index_bg_phi_scf;       /**< scalar field value */
   int index_bg_phi_prime_scf; /**< scalar field derivative wrt conformal time */
@@ -282,6 +302,9 @@ struct background
   short has_cdm;       /**< presence of cold dark matter? */
   short has_idm;       /**< presence of interacting dark matter with photons, baryons, and idr */
   short has_dcdm;      /**< presence of decaying cold dark matter? */
+  /* Monopole (BRINGMANN 2018) modification */
+  short has_mon;      /**< presence of decaying monopoles? */
+  /* End Monopole (BRINGMANN 2018) modification */
   short has_dr;        /**< presence of relativistic decay radiation? */
   short has_scf;       /**< presence of a scalar field? */
   short has_ncdm;      /**< presence of non-cold dark matter? */

@@ -478,6 +478,9 @@ int perturbations_output_data(
             }
           }
           class_store_double(dataptr,tk[ppt->index_tp_delta_dcdm],ppt->has_source_delta_dcdm,storeidx);
+          /* Monopole (BRINGMANN 2018) modification */
+          class_store_double(dataptr,tk[ppt->index_tp_delta_mon],ppt->has_source_delta_mon,storeidx);
+          /* End Monopole (BRINGMANN 2018) modification */
           class_store_double(dataptr,tk[ppt->index_tp_delta_dr],ppt->has_source_delta_dr,storeidx);
           class_store_double(dataptr,tk[ppt->index_tp_delta_scf],ppt->has_source_delta_scf,storeidx);
           class_store_double(dataptr,tk[ppt->index_tp_delta_m],ppt->has_source_delta_m,storeidx);
@@ -507,6 +510,9 @@ int perturbations_output_data(
             }
           }
           class_store_double(dataptr,tk[ppt->index_tp_theta_dcdm],ppt->has_source_theta_dcdm,storeidx);
+          /* Monopole (BRINGMANN 2018) modification */
+          class_store_double(dataptr,tk[ppt->index_tp_theta_mon],ppt->has_source_theta_mon,storeidx);
+          /* End Monopole (BRINGMANN 2018) modification */
           class_store_double(dataptr,tk[ppt->index_tp_theta_dr],ppt->has_source_theta_dr,storeidx);
           class_store_double(dataptr,tk[ppt->index_tp_theta_scf],ppt->has_source_theta_scf,storeidx);
           class_store_double(dataptr,tk[ppt->index_tp_theta_tot],ppt->has_source_theta_tot,storeidx);
@@ -567,6 +573,9 @@ int perturbations_output_titles(
         }
       }
       class_store_columntitle(titles,"d_dcdm",pba->has_dcdm);
+      /* Monopole (BRINGMANN 2018) modification */
+      class_store_columntitle(titles,"d_mon",pba->has_mon);
+      /* End Monopole (BRINGMANN 2018) modification */
       class_store_columntitle(titles,"d_dr",pba->has_dr);
       class_store_columntitle(titles,"d_scf",pba->has_scf);
       class_store_columntitle(titles,"d_m",ppt->has_source_delta_m);
@@ -596,6 +605,9 @@ int perturbations_output_titles(
         }
       }
       class_store_columntitle(titles,"t_dcdm",pba->has_dcdm);
+      /* Monopole (BRINGMANN 2018) modification */
+      class_store_columntitle(titles,"t_mon",pba->has_mon);
+      /* End Monopole (BRINGMANN 2018) modification */
       class_store_columntitle(titles,"t_dr",pba->has_dr);
       class_store_columntitle(titles,"t_scf",pba->has_scf);
       class_store_columntitle(titles,"t_tot",_TRUE_);
@@ -799,6 +811,15 @@ int perturbations_init(
                "Non-adiabatic initial conditions not coded in presence of decaying dark matter");
 
   }
+  /* Monopole (BRINGMANN 2018) modification */
+  if (pba->has_mon == _TRUE_) {
+
+    class_test((ppt->has_cdi == _TRUE_) || (ppt->has_bi == _TRUE_) || (ppt->has_nid == _TRUE_) || (ppt->has_niv == _TRUE_),
+               ppt->error_message,
+               "Non-adiabatic initial conditions not coded in presence of decaying monopoles");
+
+  }
+  /* End Monopole (BRINGMANN 2018) modification */
 
   class_test(ppt->has_vectors == _TRUE_,
              ppt->error_message,
@@ -1184,6 +1205,9 @@ int perturbations_indices(
   ppt->has_source_delta_cdm = _FALSE_;
   ppt->has_source_delta_idm = _FALSE_;
   ppt->has_source_delta_dcdm = _FALSE_;
+  /* Monopole (BRINGMANN 2018) modification */
+  ppt->has_source_delta_mon = _FALSE_;
+  /* End Monopole (BRINGMANN 2018) modification */
   ppt->has_source_delta_fld = _FALSE_;
   ppt->has_source_delta_scf = _FALSE_;
   ppt->has_source_delta_dr = _FALSE_;
@@ -1199,6 +1223,9 @@ int perturbations_indices(
   ppt->has_source_theta_cdm = _FALSE_;
   ppt->has_source_theta_idm = _FALSE_;
   ppt->has_source_theta_dcdm = _FALSE_;
+  /* Monopole (BRINGMANN 2018) modification */
+  ppt->has_source_theta_mon = _FALSE_;
+  /* End Monopole (BRINGMANN 2018) modification */
   ppt->has_source_theta_fld = _FALSE_;
   ppt->has_source_theta_scf = _FALSE_;
   ppt->has_source_theta_dr = _FALSE_;
@@ -1291,6 +1318,10 @@ int perturbations_indices(
           ppt->has_source_delta_idm = _TRUE_;
         if (pba->has_dcdm == _TRUE_)
           ppt->has_source_delta_dcdm = _TRUE_;
+        /* Monopole (BRINGMANN 2018) modification */
+        if (pba->has_mon == _TRUE_)
+          ppt->has_source_delta_mon = _TRUE_;
+        /* End Monopole (BRINGMANN 2018) modification */
         if (pba->has_fld == _TRUE_)
           ppt->has_source_delta_fld = _TRUE_;
         if (pba->has_scf == _TRUE_)
@@ -1322,6 +1353,10 @@ int perturbations_indices(
           ppt->has_source_theta_idm = _TRUE_;
         if (pba->has_dcdm == _TRUE_)
           ppt->has_source_theta_dcdm = _TRUE_;
+        /* Monopole (BRINGMANN 2018) modification */
+        if (pba->has_mon == _TRUE_)
+          ppt->has_source_theta_mon = _TRUE_;
+        /* End Monopole (BRINGMANN 2018) modification */
         if (pba->has_fld == _TRUE_)
           ppt->has_source_theta_fld = _TRUE_;
         if (pba->has_scf == _TRUE_)
@@ -1398,6 +1433,9 @@ int perturbations_indices(
       class_define_index(ppt->index_tp_delta_cdm,  ppt->has_source_delta_cdm, index_type,1);
       class_define_index(ppt->index_tp_delta_idm,  ppt->has_source_delta_idm, index_type,1);
       class_define_index(ppt->index_tp_delta_dcdm, ppt->has_source_delta_dcdm,index_type,1);
+      /* Monopole (BRINGMANN 2018) modification */
+      class_define_index(ppt->index_tp_delta_mon, ppt->has_source_delta_mon,index_type,1);
+      /* End Monopole (BRINGMANN 2018) modification */
       class_define_index(ppt->index_tp_delta_fld,  ppt->has_source_delta_fld, index_type,1);
       class_define_index(ppt->index_tp_delta_scf,  ppt->has_source_delta_scf, index_type,1);
       class_define_index(ppt->index_tp_delta_dr,   ppt->has_source_delta_dr,  index_type,1);
@@ -1412,6 +1450,9 @@ int perturbations_indices(
       class_define_index(ppt->index_tp_theta_cdm,  ppt->has_source_theta_cdm, index_type,1);
       class_define_index(ppt->index_tp_theta_idm,  ppt->has_source_theta_idm, index_type,1);
       class_define_index(ppt->index_tp_theta_dcdm, ppt->has_source_theta_dcdm,index_type,1);
+      /* Monopole (BRINGMANN 2018) modification */
+      class_define_index(ppt->index_tp_theta_mon, ppt->has_source_theta_mon,index_type,1);
+      /* End Monopole (BRINGMANN 2018) modification */
       class_define_index(ppt->index_tp_theta_fld,  ppt->has_source_theta_fld, index_type,1);
       class_define_index(ppt->index_tp_theta_scf,  ppt->has_source_theta_scf, index_type,1);
       class_define_index(ppt->index_tp_theta_dr,   ppt->has_source_theta_dr,  index_type,1);
@@ -3349,6 +3390,9 @@ int perturbations_prepare_k_output(struct background * pba,
       /* Decaying cold dark matter */
       class_store_columntitle(ppt->scalar_titles, "delta_dcdm", pba->has_dcdm);
       class_store_columntitle(ppt->scalar_titles, "theta_dcdm", pba->has_dcdm);
+      /* Decaying monopoles */
+      class_store_columntitle(ppt->scalar_titles, "delta_mon", pba->has_mon);
+      class_store_columntitle(ppt->scalar_titles, "theta_mon", pba->has_mon);
       /* Decay radiation */
       class_store_columntitle(ppt->scalar_titles, "delta_dr", pba->has_dr);
       class_store_columntitle(ppt->scalar_titles, "theta_dr", pba->has_dr);
@@ -3928,6 +3972,11 @@ int perturbations_vector_init(
 
     class_define_index(ppv->index_pt_delta_dcdm,pba->has_dcdm,index_pt,1); /* dcdm density */
     class_define_index(ppv->index_pt_theta_dcdm,pba->has_dcdm,index_pt,1); /* dcdm velocity */
+    
+    /* monopoles */
+
+    class_define_index(ppv->index_pt_delta_mon,pba->has_mon,index_pt,1); /* monopoles density */
+    class_define_index(ppv->index_pt_theta_mon,pba->has_mon,index_pt,1); /* monopoles velocity */
 
     /* ultra relativistic decay radiation */
     if (pba->has_dr==_TRUE_){
@@ -4392,6 +4441,17 @@ int perturbations_vector_init(
         ppv->y[ppv->index_pt_theta_dcdm] =
           ppw->pv->y[ppw->pv->index_pt_theta_dcdm];
       }
+
+      /* Monopole (BRINGMANN 2018) modification */
+      if (pba->has_mon == _TRUE_) {
+
+        ppv->y[ppv->index_pt_delta_mon] =
+          ppw->pv->y[ppw->pv->index_pt_delta_mon];
+
+        ppv->y[ppv->index_pt_theta_mon] =
+          ppw->pv->y[ppw->pv->index_pt_theta_mon];
+      }
+      /* End Monopole (BRINGMANN 2018) modification */
 
       if (pba->has_dr == _TRUE_){
         for (l=0; l <= ppv->l_max_dr; l++)
@@ -5331,6 +5391,12 @@ int perturbations_initial_conditions(struct precision * ppr,
     rho_m += ppw->pvecback[pba->index_bg_rho_dcdm];
   }
 
+  /* Monopole (BRINGMANN 2018) modification */
+  if (pba->has_mon == _TRUE_) {
+    rho_m += ppw->pvecback[pba->index_bg_rho_mon];
+  }
+  /* End Monopole (BRINGMANN 2018) modification */
+
   if (pba->has_dr == _TRUE_) {
     rho_r += ppw->pvecback[pba->index_bg_rho_dr];
     rho_nu += ppw->pvecback[pba->index_bg_rho_dr];
@@ -5456,6 +5522,14 @@ int perturbations_initial_conditions(struct precision * ppr,
         /* dcdm velocity velocity vanishes initially in the synchronous gauge */
 
       }
+
+      /* Monopole (BRINGMANN 2018) modification */
+      if (pba->has_mon == _TRUE_) {
+        ppw->pv->y[ppw->pv->index_pt_delta_mon] = 3./4.*ppw->pv->y[ppw->pv->index_pt_delta_g]; /* monopoles density */
+        /* monopoles velocity velocity vanishes initially in the synchronous gauge */
+
+      }
+      /* End Monopole (BRINGMANN 2018) modification */
 
       /* fluid (assumes wa=0, if this is not the case the
          fluid will catch anyway the attractor solution) */
@@ -5697,7 +5771,12 @@ int perturbations_initial_conditions(struct precision * ppr,
         delta_cdm += ppw->pvecback[pba->index_bg_rho_dcdm] * ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
         rho_cdm += ppw->pvecback[pba->index_bg_rho_dcdm];
       }
-
+      /* Monopole (BRINGMANN 2018) modification */
+      if (pba->has_mon == _TRUE_){
+        delta_cdm += ppw->pvecback[pba->index_bg_rho_mon] * ppw->pv->y[ppw->pv->index_pt_delta_mon];
+        rho_cdm += ppw->pvecback[pba->index_bg_rho_mon];
+      }
+      /* End Monopole (BRINGMANN 2018) modification */
 
       if (rho_cdm > 0 ) {
         delta_cdm /= rho_cdm;
@@ -5740,6 +5819,14 @@ int perturbations_initial_conditions(struct precision * ppr,
         ppw->pv->y[ppw->pv->index_pt_theta_dcdm] = k*k*alpha;
       }
 
+      /* Monopole (BRINGMANN 2018) modification */
+      if (pba->has_mon == _TRUE_) {
+        pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
+        ppw->pv->y[ppw->pv->index_pt_delta_mon] -= (3.*a_prime_over_a + a*pba->Gamma_mon)*alpha;
+        ppw->pv->y[ppw->pv->index_pt_theta_mon] = k*k*alpha;
+      }
+      /* End Monopole (BRINGMANN 2018) modification */
+
       /* fluid */
       if ((pba->has_fld == _TRUE_) && (pba->use_ppf == _FALSE_)) {
 
@@ -5768,9 +5855,14 @@ int perturbations_initial_conditions(struct precision * ppr,
         theta_ur += k*k*alpha;
         /* shear and l3 are gauge invariant */
 
-        if (pba->has_dr == _TRUE_)
+        if ((pba->has_dr == _TRUE_) && (pba->has_dcdm == _TRUE_))
           delta_dr += (-4.*a_prime_over_a + a*pba->Gamma_dcdm*ppw->pvecback[pba->index_bg_rho_dcdm]/ppw->pvecback[pba->index_bg_rho_dr])*alpha;
-
+        /* Monopole (BRINGMANN 2018) modification */
+        if ((pba->has_dr == _TRUE_) && (pba->has_mon == _TRUE_)){
+          pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
+          delta_dr += (-4.*a_prime_over_a + a*pba->Gamma_mon*ppw->pvecback[pba->index_bg_rho_mon]/ppw->pvecback[pba->index_bg_rho_dr])*alpha;
+        }
+        /* End Monopole (BRINGMANN 2018) modification */
       }
 
     } /* end of gauge transformation to newtonian gauge */
@@ -6995,6 +7087,26 @@ int perturbations_total_stress_energy(
         rho_plus_p_m += ppw->pvecback[pba->index_bg_rho_dcdm];
       }
     }
+    
+    /* Monopole (BRINGMANN 2018) modification */
+    /* monopoles contribution */
+    if (pba->has_mon == _TRUE_) {
+      ppw->delta_rho += ppw->pvecback[pba->index_bg_rho_mon]*y[ppw->pv->index_pt_delta_mon];
+      ppw->rho_plus_p_theta += ppw->pvecback[pba->index_bg_rho_mon]*y[ppw->pv->index_pt_theta_mon];
+
+      ppw->rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_mon];
+
+      if (ppt->has_source_delta_m == _TRUE_) {
+        delta_rho_m += ppw->pvecback[pba->index_bg_rho_mon]*y[ppw->pv->index_pt_delta_mon]; // contribution to delta rho_matter
+        rho_m += ppw->pvecback[pba->index_bg_rho_mon];
+      }
+      if ((ppt->has_source_delta_m == _TRUE_) || (ppt->has_source_theta_m == _TRUE_)) {
+        rho_plus_p_theta_m += ppw->pvecback[pba->index_bg_rho_mon]*y[ppw->pv->index_pt_theta_mon]; // contribution to [(rho+p)theta]_matter
+        rho_plus_p_m += ppw->pvecback[pba->index_bg_rho_mon];
+      }
+    }
+    /* End Monopole (BRINGMANN 2018) modification */
+
 
     /* ultra-relativistic decay radiation */
 
@@ -7853,6 +7965,15 @@ int perturbations_sources(
         + (3.*a_prime_over_a+a*pba->Gamma_dcdm)*theta_over_k2; // N-body gauge correction;
     }
 
+    /* Monopole (BRINGMANN 2018) modification */
+    /* delta_mon */
+    if (ppt->has_source_delta_mon == _TRUE_) {
+      pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
+      _set_source_(ppt->index_tp_delta_mon) = y[ppw->pv->index_pt_delta_mon]
+        + (3.*a_prime_over_a+a*pba->Gamma_mon)*theta_over_k2; // N-body gauge correction;
+    }
+    /* End Monopole (BRINGMANN 2018) modification */
+
     /* delta_fld */
     if (ppt->has_source_delta_fld == _TRUE_) {
       _set_source_(ppt->index_tp_delta_fld) = ppw->delta_rho_fld/pvecback[pba->index_bg_rho_fld]
@@ -7968,6 +8089,14 @@ int perturbations_sources(
       _set_source_(ppt->index_tp_theta_dcdm) = y[ppw->pv->index_pt_theta_dcdm]
         + theta_shift; // N-body gauge correction
     }
+
+    /* Monopole (BRINGMANN 2018) modification */
+    /* theta_mon */
+    if (ppt->has_source_theta_mon == _TRUE_) {
+      _set_source_(ppt->index_tp_theta_mon) = y[ppw->pv->index_pt_theta_mon]
+        + theta_shift; // N-body gauge correction
+    }
+    /* End Monopole (BRINGMANN 2018) modification */
 
     /* theta_fld */
     if (ppt->has_source_theta_fld == _TRUE_) {
@@ -8119,6 +8248,9 @@ int perturbations_print_variables(double tau,
   double delta_cdm=0.,theta_cdm=0.;
   double delta_idm=0., theta_idm=0.;
   double delta_dcdm=0.,theta_dcdm=0.;
+  /* Monopole (BRINGMANN 2018) modification */
+  double delta_mon=0.,theta_mon=0.;
+  /* End Monopole (BRINGMANN 2018) modification */
   double delta_dr=0.,theta_dr=0.,shear_dr=0., f_dr=1.0;
   double delta_ur=0.,theta_ur=0.,shear_ur=0.,l4_ur=0.;
   double delta_idr=0., theta_idr=0., shear_idr=0.;
@@ -8389,6 +8521,14 @@ int perturbations_print_variables(double tau,
 
     }
 
+    /* Monopole (BRINGMANN 2018) modification */
+    if (pba->has_mon == _TRUE_) {
+
+      delta_mon = y[ppw->pv->index_pt_delta_mon];
+      theta_mon = y[ppw->pv->index_pt_theta_mon];
+
+    }
+    /* End Monopole (BRINGMANN 2018) modification */
 
     if (pba->has_dr == _TRUE_) {
       f_dr = pow(pvecback[pba->index_bg_a]*pvecback[pba->index_bg_a]/pba->H0,2)*pvecback[pba->index_bg_rho_dr];
@@ -8440,7 +8580,14 @@ int perturbations_print_variables(double tau,
       }
 
       if (pba->has_dr == _TRUE_) {
-        delta_dr += (-4.*a*H+a*pba->Gamma_dcdm*pvecback[pba->index_bg_rho_dcdm]/pvecback[pba->index_bg_rho_dr])*alpha;
+        /* Monopole (BRINGMANN 2018) modification */
+        if (pba->has_mon == _TRUE_){
+          pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
+          delta_dr += (-4.*a*H+a*pba->Gamma_mon*pvecback[pba->index_bg_rho_mon]/pvecback[pba->index_bg_rho_dr])*alpha;
+          /* End Monopole (BRINGMANN 2018) modification */
+        }
+        else
+          delta_dr += (-4.*a*H+a*pba->Gamma_dcdm*pvecback[pba->index_bg_rho_dcdm]/pvecback[pba->index_bg_rho_dr])*alpha;
 
         theta_dr += k*k*alpha;
       }
@@ -8482,6 +8629,16 @@ int perturbations_print_variables(double tau,
         delta_dcdm += alpha*(-a*pba->Gamma_dcdm-3.*a*H);
         theta_dcdm += k*k*alpha;
       }
+
+      /* Monopole (BRINGMANN 2018) modification */
+      if (pba->has_mon == _TRUE_) {
+        /* DMDR modification: implement explicit time-dep. model here via Gamma */
+        pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
+
+        delta_mon += alpha*(-a*pba->Gamma_mon-3.*a*H);
+        theta_mon += k*k*alpha;
+      }
+      /* End Monopole (BRINGMANN 2018) modification */
 
       if (pba->has_scf == _TRUE_) {
         delta_scf += alpha*(-3.0*H*(1.0+pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf]));
@@ -8550,6 +8707,11 @@ int perturbations_print_variables(double tau,
     /* Decaying cold dark matter */
     class_store_double(dataptr, delta_dcdm, pba->has_dcdm, storeidx);
     class_store_double(dataptr, theta_dcdm, pba->has_dcdm, storeidx);
+    /* Monopole (BRINGMANN 2018) modification */
+    /* Decaying Monopoles */
+    class_store_double(dataptr, delta_mon, pba->has_mon, storeidx);
+    class_store_double(dataptr, theta_mon, pba->has_mon, storeidx);
+    /* End Monopole (BRINGMANN 2018) modification */
     /* Decay radiation */
     class_store_double(dataptr, delta_dr, pba->has_dr, storeidx);
     class_store_double(dataptr, theta_dr, pba->has_dr, storeidx);
@@ -9354,6 +9516,57 @@ int perturbations_derivs(double tau,
         k*(s_l[l]*y[pv->index_pt_F0_dr+l-1]-(1.+l)*cotKgen*y[pv->index_pt_F0_dr+l]);
 
     }
+
+    /* Monopole (BRINGMANN 2018) modification */
+    /** - ---> mon and dr */
+
+    if (pba->has_mon == _TRUE_) {
+      /** - ----> mon */      
+      pba->Gamma_mon = pvecback[pba->index_bg_Gamma_mon];
+
+      dy[pv->index_pt_delta_mon] = -(y[pv->index_pt_theta_mon]+metric_continuity)
+        - a * pba->Gamma_mon / k2 * metric_euler; /* monopoles density */
+
+      dy[pv->index_pt_theta_mon] = - a_prime_over_a*y[pv->index_pt_theta_mon] + metric_euler; /* monopoles velocity */
+    }
+
+    /** - ---> dr */
+
+    if ((pba->has_mon == _TRUE_)&&(pba->has_dr == _TRUE_)) {     
+      pba->Gamma_mon = pvecback[pba->index_bg_Gamma_mon];
+
+      f_dr = pow(pow(a,2)/pba->H0,2)*pvecback[pba->index_bg_rho_dr];
+      fprime_dr = pba->Gamma_mon*pvecback[pba->index_bg_rho_mon]*pow(a,5)/pow(pba->H0,2);
+
+      /** - ----> dr F0 */
+      dy[pv->index_pt_F0_dr] = -k*y[pv->index_pt_F0_dr+1]-4./3.*metric_continuity*f_dr+
+        fprime_dr*(y[pv->index_pt_delta_mon]+metric_euler/k2);
+
+      /** - ----> dr F1 */
+      dy[pv->index_pt_F0_dr+1] = k/3.*y[pv->index_pt_F0_dr]-2./3.*k*y[pv->index_pt_F0_dr+2]*s2_squared +
+        4*metric_euler/(3.*k)*f_dr + fprime_dr/k*y[pv->index_pt_theta_mon];
+
+      /** - ----> exact dr F2 */
+      dy[pv->index_pt_F0_dr+2] = 8./15.*(3./4.*k*y[pv->index_pt_F0_dr+1]+metric_shear*f_dr) -3./5.*k*s_l[3]/s_l[2]*y[pv->index_pt_F0_dr+3];
+
+      /** - ----> exact dr l=3 */
+      l = 3;
+      dy[pv->index_pt_F0_dr+3] = k/(2.*l+1.)*
+        (l*s_l[l]*s_l[2]*y[pv->index_pt_F0_dr+2]-(l+1.)*s_l[l+1]*y[pv->index_pt_F0_dr+4]);
+
+      /** - ----> exact dr l>3 */
+      for (l = 4; l < pv->l_max_dr; l++) {
+        dy[pv->index_pt_F0_dr+l] = k/(2.*l+1)*
+          (l*s_l[l]*y[pv->index_pt_F0_dr+l-1]-(l+1.)*s_l[l+1]*y[pv->index_pt_F0_dr+l+1]);
+      }
+
+      /** - ----> exact dr lmax_dr */
+      l = pv->l_max_dr;
+      dy[pv->index_pt_F0_dr+l] =
+        k*(s_l[l]*y[pv->index_pt_F0_dr+l-1]-(1.+l)*cotKgen*y[pv->index_pt_F0_dr+l]);
+
+    }
+    /* End Monopole (BRINGMANN 2018) modification */
 
     /** - ---> fluid (fld) */
 

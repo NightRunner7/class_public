@@ -7,6 +7,10 @@
 #include "math.h"
 #include "string.h"
 #include "float.h"
+/* Monopole (BRINGMANN 2018) modification */
+#include "gsl/gsl_sf_hyperg.h"
+#include "gsl/gsl_sf_gamma.h"
+/* End Monopole (BRINGMANN 2018) modification */
 #ifdef _OPENMP
 #include "omp.h"
 #endif

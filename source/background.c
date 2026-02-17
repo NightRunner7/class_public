@@ -114,6 +114,11 @@
 
 #include "background.h"
 
+/* Monopole (BRINGMANN 2018) modification */
+#include "gsl/gsl_sf_hyperg.h"
+#include "gsl/gsl_sf_gamma.h"
+/* End Monopole (BRINGMANN 2018) modification*/ 
+
 /**
  * Background quantities at given redshift z.
  *
@@ -459,10 +464,28 @@ int background_functions(
     rho_m += pvecback[pba->index_bg_rho_dcdm];
   }
 
+  /* Monopoles */
+  if (pba->has_mon == _TRUE_) {
+    /* Pass value of rho_mon to output */
+    pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon *(1-pow(a,pba->kappa_mon))/(1+pow(a/pba->a_t_mon,pba->kappa_mon));
+    rho_tot += pvecback[pba->index_bg_rho_mon];
+    p_tot += 0.;
+    rho_m += pvecback[pba->index_bg_rho_mon];
+  }
+
   /* dr */
   if (pba->has_dr == _TRUE_) {
     /* Pass value of rho_dr to output */
-    pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
+    if (pba->has_mon == _TRUE_){
+      if (fabs(-1.*pow((a)/pba->a_t_mon,pba->kappa_mon)) < 1.)
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(a/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon));
+      else if ((fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) < 100.))
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(a/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
+      else
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(a/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(a/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
+    }
+    else
+      pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
     rho_tot += pvecback[pba->index_bg_rho_dr];
     p_tot += (1./3.)*pvecback[pba->index_bg_rho_dr];
     dp_dloga += -(4./3.) * pvecback[pba->index_bg_rho_dr];
@@ -596,6 +619,17 @@ int background_functions(
     pvecback[pba->index_bg_p_tot_prime] += pvecback[pba->index_bg_p_prime_scf];
   }
 
+  /* Monopole (BRINGMANN 2018) modification */
+  /* Gamma_mon, the time-dependent inverse lifetime of DM */
+  if (pba->has_mon == _TRUE_) {
+    pvecback[pba->index_bg_Gamma_mon] = pvecback[pba->index_bg_H]*pba->kappa_mon*(pow(a,pba->kappa_mon)+pow(a/pba->a_t_mon,pba->kappa_mon))/
+            ((1.-pow(a,pba->kappa_mon))*(1.+pow(a/pba->a_t_mon,pba->kappa_mon)));
+    // Regulate divergence:
+    if (pvecback[pba->index_bg_Gamma_mon] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.)
+            pvecback[pba->index_bg_Gamma_mon]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
+  }
+  /* End Monopole (BRINGMANN 2018) modification */
+
   /** - compute critical density */
   rho_crit = rho_tot-pba->K/a/a;
   class_test(rho_crit <= 0.,
@@ -697,6 +731,8 @@ int background_w_fld(
     if (pba->has_idm == _TRUE_) Omega_m += pba->Omega0_idm;
     if (pba->has_dcdm == _TRUE_)
       class_stop(pba->error_message,"Early Dark Energy not compatible with decaying Dark Matter because we omitted to code the calculation of a_eq in that case, but it would not be difficult to add it if necessary, should be a matter of 5 minutes");
+    if (pba->has_mon == _TRUE_)
+      class_stop(pba->error_message,"Early Dark Energy not compatible with decaying Monopoles because we omitted to code the calculation of a_eq in that case, but it would not be difficult to add it if necessary, should be a matter of 5 minutes");
     a_eq = Omega_r/Omega_m; // assumes a flat universe with a=1 today
 
     // w_ede(a) taken from eq. (11) in 1706.00730
@@ -979,6 +1015,9 @@ int background_indices(
   pba->has_idm = _FALSE_;
   pba->has_ncdm = _FALSE_;
   pba->has_dcdm = _FALSE_;
+  /* Monopole (BRINGMANN 2018) modification */
+  pba->has_mon = _FALSE_;
+  /* End Monopole (BRINGMANN 2018) modification */
   pba->has_dr = _FALSE_;
   pba->has_scf = _FALSE_;
   pba->has_lambda = _FALSE_;
@@ -1002,6 +1041,14 @@ int background_indices(
     if (pba->Gamma_dcdm != 0.)
       pba->has_dr = _TRUE_;
   }
+
+  /* Monopole (BRINGMANN 2018) modification */
+  if (pba->Omega0_mondr != 0.) {
+    pba->has_mon = _TRUE_;
+  if (pba->a_t_mon != 0.)
+    pba->has_dr = _TRUE_;
+  }
+  /* End Monopole (BRINGMANN 2018) modification */
 
   if (pba->Omega0_scf != 0.)
     pba->has_scf = _TRUE_;
@@ -1059,6 +1106,14 @@ int background_indices(
 
   /* - index for dcdm */
   class_define_index(pba->index_bg_rho_dcdm,pba->has_dcdm,index_bg,1);
+
+  /* Monopole (BRINGMANN 2018) modification */
+  /* - index for mon */
+  class_define_index(pba->index_bg_rho_mon,pba->has_mon,index_bg,1);
+
+  /* - index for gamma_mon */
+  class_define_index(pba->index_bg_Gamma_mon,pba->has_mon,index_bg,1);
+  /* End Monopole (BRINGMANN 2018) modification */
 
   /* - index for dr */
   class_define_index(pba->index_bg_rho_dr,pba->has_dr,index_bg,1);
@@ -1988,9 +2043,40 @@ int background_solve(
   if (pba->has_dcdm == _TRUE_) {
     pba->Omega0_dcdm = pvecback_integration[pba->index_bi_rho_dcdm]/pba->H0/pba->H0;
   }
-  if (pba->has_dr == _TRUE_) {
-    pba->Omega0_dr = pvecback_integration[pba->index_bi_rho_dr]/pba->H0/pba->H0;
+  /* Monopole (BRINGMANN 2018) modification */
+  if (pba->has_mon == _TRUE_) {
+   // Note that in our conventions, omega0dcdm is identicaly 0 (it is proportional to 1-a)
+    pba->Omega0_mon = 0.0;
   }
+  if (pba->has_dr == _TRUE_) {
+    if (pba->has_mon == _TRUE_){
+      int rhodr_0;
+
+      /** GNU function only converges for |z|<1 */
+      /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
+      /** specifically the second identity in "Generic general cases" */
+      /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
+      /** based on tests in Mathematica: */
+      /** - use the GNU routine when argument |z|<1 */
+      /** - use the identity approach when 1<=|z|<100 */
+      /** - use the asymptotic approach when |z|>=100 */
+
+      if (fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) < 1.)
+        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.) - pow(pba->a_t_mon,pba->kappa_mon));
+      else if ((fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) < 100.))
+        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1./pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
+      else
+        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1./pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1./pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
+
+
+      pba->Omega0_dr = rhodr_0/pba->H0/pba->H0;  
+
+    }
+    else
+      pba->Omega0_dr = pvecback_integration[pba->index_bi_rho_dr]/pba->H0/pba->H0;
+  }
+  /* End Monopole (BRINGMANN 2018) modification */
+
   /* -> scale-invariant growth rate today */
   D_today = pvecback_integration[pba->index_bi_D];
 
@@ -2072,6 +2158,16 @@ int background_solve(
              pba->Omega0_dr+pba->Omega0_dcdm,pba->Omega0_dcdmdr);
       printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
     }
+    /* Monopole (BRINGMANN 2018) modification */
+    if ((pba->has_dcdm == _TRUE_)&&(pba->has_dr == _TRUE_)) {
+      printf("    Decaying Monopoles details: (MON --> DR)\n");
+      printf("     -> Omega0_mon = %f\n",pba->Omega0_mon);
+      printf("     -> Omega0_dr = %f\n",pba->Omega0_dr);
+      printf("     -> Omega0_dr+Omega0_mon = %f, input value = %f\n",
+             pba->Omega0_dr+pba->Omega0_mon,pba->Omega0_mondr);
+      printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
+    }
+    /* End Monopole (BRINGMANN 2018) modification */
     if (pba->has_scf == _TRUE_) {
       printf("    Scalar field details:\n");
       printf("     -> Omega_scf = %g, wished %g\n",
@@ -2102,6 +2198,10 @@ int background_solve(
     pba->Omega0_nfsm += pba->Omega0_idm;
   if (pba->has_dcdm == _TRUE_)
     pba->Omega0_nfsm += pba->Omega0_dcdm;
+  /* Monopole (BRINGMANN 2018) modification */
+  if (pba->has_mon == _TRUE_)
+    pba->Omega0_nfsm += pba->Omega0_mon;
+  /* End Monopole (BRINGMANN 2018) modification */
   for (n_ncdm=0;n_ncdm<pba->N_ncdm; n_ncdm++) {
     /* here we define non-free-streaming matter as: any non-relatistic species with a dimensionless ratio m/T bigger than a threshold ppr->M_nfsm_threshold; if this threshold is of the order of 10^4, this corresponds to the condition "becoming non-relativistic during radiation domination". Beware: this definition won't work in the case in which the user passes a customised p.s.d. for ncdm, such that M_ncdm is not defined.  */
     if (pba->M_ncdm[n_ncdm] > ppr->M_nfsm_threshold) {
@@ -2230,6 +2330,9 @@ int background_initial_conditions(
        */
       f = 1./3.*pow(a,6)*pvecback_integration[pba->index_bi_rho_dcdm]*pba->Gamma_dcdm/pow(pba->H0,3)/sqrt(Omega_rad);
       pvecback_integration[pba->index_bi_rho_dr] = f*pba->H0*pba->H0/pow(a,4);
+    }
+    else if (pba->has_mon == _TRUE_){
+      /* DO NOTHING */
     }
     else{
       /** There is also a space reserved for a future case where dr is not sourced by dcdm */
@@ -2456,6 +2559,9 @@ int background_output_titles(
   class_store_columntitle(titles,"(.)rho_idr",pba->has_idr);
   class_store_columntitle(titles,"(.)rho_crit",_TRUE_);
   class_store_columntitle(titles,"(.)rho_dcdm",pba->has_dcdm);
+  /* Monopole (BRINGMANN 2018) modification */
+  class_store_columntitle(titles,"(.)rho_mon",pba->has_mon);
+  /* End Monopole (BRINGMANN 2018) modification */
   class_store_columntitle(titles,"(.)rho_dr",pba->has_dr);
 
   class_store_columntitle(titles,"(.)rho_scf",pba->has_scf);
@@ -2529,7 +2635,14 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_rho_idr],pba->has_idr,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_crit],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dcdm],pba->has_dcdm,storeidx);
+    /* Monopole (BRINGMANN 2018) modification */
+    class_store_double(dataptr,pvecback[pba->index_bg_rho_mon],pba->has_mon,storeidx);
+    /* End Monopole (BRINGMANN 2018) modification */
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dr],pba->has_dr,storeidx);
+
+    /* Monopole (BRINGMANN 2018) modification */
+    class_store_double(dataptr,pvecback[pba->index_bg_Gamma_mon],pba->has_mon,storeidx);
+    /* End Monopole (BRINGMANN 2018) modification */
 
     class_store_double(dataptr,pvecback[pba->index_bg_rho_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_p_scf],pba->has_scf,storeidx);
@@ -2810,6 +2923,12 @@ int background_output_budget(
       class_print_species("Decaying Cold Dark Matter",dcdm);
       budget_matter+=pba->Omega0_dcdm;
     }
+    /* Monopole (BRINGMANN 2018) modification */
+    if (pba->has_mon == _TRUE_) {
+      class_print_species("Decaying Monopoles",mon);
+      budget_matter+=pba->Omega0_mon;
+    }
+    /* End Monopole (BRINGMANN 2018) modification */
 
     if (pba->N_ncdm > 0) {
       printf(" ---> Non-Cold Dark Matter Species (incl. massive neutrinos)\n");

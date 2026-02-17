@@ -246,6 +246,9 @@ struct perturbations
   short has_source_delta_idm;  /**< do we need source for delta of interacting dark matter */
   short has_source_delta_idr;  /**< do we need source for delta of interacting dark radiation? */
   short has_source_delta_dcdm; /**< do we need source for delta of DCDM? */
+  /* Monopole (BRINGMANN 2018) modification */
+  short has_source_delta_mon; /**< do we need source for delta of Monopoles? */
+  /* End Monopole (BRINGMANN 2018) modification */
   short has_source_delta_fld;  /**< do we need source for delta of dark energy? */
   short has_source_delta_scf;  /**< do we need source for delta from scalar field? */
   short has_source_delta_dr;   /**< do we need source for delta of decay radiation? */
@@ -260,6 +263,9 @@ struct perturbations
   short has_source_theta_idm;  /**< do we need source for theta of interacting dark matter */
   short has_source_theta_idr;  /**< do we need source for theta of interacting dark radiation? */
   short has_source_theta_dcdm; /**< do we need source for theta of DCDM? */
+  /* Monopole (BRINGMANN 2018) modification */
+  short has_source_theta_mon; /**< do we need source for theta of Monopoles? */
+  /* End Monopole (BRINGMANN 2018) modification */
   short has_source_theta_fld;  /**< do we need source for theta of dark energy? */
   short has_source_theta_scf;  /**< do we need source for theta of scalar field? */
   short has_source_theta_dr;   /**< do we need source for theta of ultra-relativistic neutrinos/relics? */
@@ -293,6 +299,9 @@ struct perturbations
   int index_tp_delta_cdm; /**< index value for delta of cold dark matter */
   int index_tp_delta_idm; /**< index value for delta of interacting dark matter */
   int index_tp_delta_dcdm;/**< index value for delta of DCDM */
+  /* Monopole (BRINGMANN 2018) modification */
+  int index_tp_delta_mon;/**< index value for delta of monopoles */
+  /* End Monopole (BRINGMANN 2018) modification */
   int index_tp_delta_fld;  /**< index value for delta of dark energy */
   int index_tp_delta_scf;  /**< index value for delta of scalar field */
   int index_tp_delta_dr; /**< index value for delta of decay radiation */
@@ -309,6 +318,9 @@ struct perturbations
   int index_tp_theta_b;     /**< index value for theta of baryons */
   int index_tp_theta_cdm;   /**< index value for theta of cold dark matter */
   int index_tp_theta_dcdm;  /**< index value for theta of DCDM */
+  /* Monopole (BRINGMANN 2018) modification */
+  int index_tp_theta_mon;  /**< index value for theta of monopoles */
+  /* End Monopole (BRINGMANN 2018) modification */
   int index_tp_theta_fld;   /**< index value for theta of dark energy */
   int index_tp_theta_scf;   /**< index value for theta of scalar field */
   int index_tp_theta_ur;    /**< index value for theta of ultra-relativistic neutrinos/relics */
@@ -477,6 +489,10 @@ struct perturbations_vector
   int index_pt_theta_idm; /**< idm velocity */
   int index_pt_delta_dcdm; /**< dcdm density */
   int index_pt_theta_dcdm; /**< dcdm velocity */
+  /* Monopole (BRINGMANN 2018) modification */
+  int index_pt_delta_mon; /**< monopoles density */
+  int index_pt_theta_mon; /**< monopoles velocity */
+  /* End Monopole (BRINGMANN 2018) modification */
   int index_pt_delta_fld;  /**< dark energy density in true fluid case */
   int index_pt_theta_fld;  /**< dark energy velocity in true fluid case */
   int index_pt_Gamma_fld;  /**< unique dark energy dynamical variable in PPF case */
