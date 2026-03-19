@@ -85,6 +85,7 @@ struct background
   double Omega_ini_mon;  /**< \f$ \Omega_{ini,mon} \f$: rescaled initial value for mon density (see 1407.2418 for definitions) */
   double Omega0_mondr;   /**< \f$ \Omega_{0 mon}+\Omega_{0 dr} \f$: decaying cold dark matter (mon) decaying to dark radiation (dr) */
   double Gamma_mon;      /**< \f$ \Gamma_{mon} \f$: decay constant for decaying monopoles */
+  double delta_mon_transition; /**< \f$ \Delta_{mon transition} \f$: controls the width, small means sharper transition*/
   /* End Monopole (BRINGMANN 2018) modification */
 
   int N_ncdm;                            /**< Number of distinguishable ncdm species */
@@ -304,6 +305,7 @@ struct background
   short has_dcdm;      /**< presence of decaying cold dark matter? */
   /* Monopole (BRINGMANN 2018) modification */
   short has_mon;      /**< presence of decaying monopoles? */
+  short monopole_step_transition;      /**< presence of monopoles step transition? */
   /* End Monopole (BRINGMANN 2018) modification */
   short has_dr;        /**< presence of relativistic decay radiation? */
   short has_scf;       /**< presence of a scalar field? */

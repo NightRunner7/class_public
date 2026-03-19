@@ -2720,9 +2720,35 @@ int input_read_parameters_species(struct file_content * pfc,
   /** ================================================================================================*/
   /** I) Monopole (BRINGMANN 2018) modification ======================================================*/
   /** ================================================================================================*/
-  /** I.a) f_mon  */
-  /* Read */
+  
+  /* Default */
+  pba->monopole_step_transition = _FALSE_;
 
+  /** I.a) Read monopole_step_transition */
+  char step_string[_ARGUMENT_LENGTH_MAX_];
+  int flag_step;
+
+  class_call(parser_read_string(pfc,"monopole_step_transition",&step_string,&flag_step,errmsg),
+            errmsg,
+            errmsg);
+
+  if (flag_step == _TRUE_) {
+    if ((strcmp(step_string,"yes") == 0) ||
+        (strcmp(step_string,"true") == 0) ||
+        (strcmp(step_string,"y") == 0) ) {
+      pba->monopole_step_transition = _TRUE_;
+    }
+    else if ((strcmp(step_string,"no") == 0) ||
+              (strcmp(step_string,"false") == 0) ||
+              (strcmp(step_string,"n") == 0) ) {
+      pba->monopole_step_transition = _FALSE_;
+    }
+    else {
+      class_stop(errmsg,"monopole_step_transition must be yes/no or true/false");
+    }
+  }
+
+  /** I.b) Read f_mon or log10f_mon */
   class_call(parser_read_double(pfc,"f_mon",&param1,&flag1,errmsg),                                                                        
              errmsg,                                                                                                                        
              errmsg);
@@ -2739,27 +2765,12 @@ int input_read_parameters_species(struct file_content * pfc,
     if (flag4 == _TRUE_) {
      pba->f_mon = pow(10,param4);}
     if (pba->f_mon > 0.) {
-      /** - Read in kappa and a_t parameters that describe DDM-DR conversion */
-      
-      class_call(parser_read_double(pfc,"kappa_mon",&param5,&flag5,errmsg),errmsg,errmsg);
-      class_call(parser_read_double(pfc,"log10kappa_mon",&param6,&flag6,errmsg),errmsg,errmsg);
-      class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa__mon or log10kappa_mon, choose one");
-      if (flag5 == _TRUE_) {
-      pba->kappa_mon = param5;
-      }
-      if (flag6 == _TRUE_) {
-      pba->kappa_mon = pow(10.0,param6);
-      }
-
-      if (pba->kappa_mon==1.0) {
-      pba->kappa_mon = 0.99999;
-      }
-
+      /** I.c) Read a_t_mon or log10a_t_mon (common for both branches) */
       class_call(parser_read_double(pfc,"a_t_mon",&param2,&flag2,errmsg), errmsg, errmsg);
-      class_call(parser_read_double(pfc,"log10a_t_mon",&param3,&flag3,errmsg), errmsg, errmsg);
-      class_test(((flag2 == _TRUE_) && (flag3 == _TRUE_)),
-             errmsg,
-             "In input file, you can only enter one of a_t_mon or log10a_t_mon, choose one");
+      class_call(parser_read_double(pfc,"log10a_t",&param3,&flag3,errmsg), errmsg, errmsg);
+      class_test(((flag2 == _TRUE_) && (flag3 == _TRUE_)), errmsg, "In input file, you can only enter one of a_t_mon or log10a_t, choose one");
+      class_test(((flag2 == _FALSE_) && (flag3 == _FALSE_)),errmsg,"You must provide one of a_t_mon or log10a_t_mon when f_mon > 0");
+
       if (flag2 == _TRUE_) {
       pba->a_t_mon = param2;
       }
@@ -2767,30 +2778,81 @@ int input_read_parameters_species(struct file_content * pfc,
       pba->a_t_mon = pow(10.0,param3);
       }
 
-      class_test((pba-> f_mon-1./(pow(pba->a_t_mon,pba->kappa_mon))>0),errmsg,"This combination of kappa_mon, a_t_mon, and f_mon violates the physicality condition");
-      /** Compute Omega0_dcdmdr and Omega_ini_dcdm */
-      // by construction, the DCDM is fully gone at z=0 in this model
-      //       // and we can explicitly compute the DR contribution
-      //             // Note that we set Omega_ini_dcdm = 0. here as a placeholder (see Sec. 3.1 of
-      //                   //   https://arxiv.org/pdf/1407.2418.pdf), but the actual value
-      //                         //   of the initial DCDM density is explicitly computed in background.c
-      pba->Omega_ini_mon = 0.;
-      /** GNU function only converges for |z|<1 */
-      /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
-      /** specifically the second identity in "Generic general cases" */
-      /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
-      /** based on tests in Mathematica: */
-      /** - use the GNU routine when argument |z|<1 */
-      /** - use the identity approach when 1<=|z|<100 */
-      /** - use the asymptotic approach when |z|>=100 */
+      /** I.d) Read kappa_mon or log10kappa_mon (different for both branches) */
+      /** ------------------------------------------------------------------------------------------ */
+      /** Smooth transition branch                                                                   */
+      /** ------------------------------------------------------------------------------------------ */
+      if (pba->monopole_step_transition == _FALSE_) {
+        class_call(parser_read_double(pfc,"kappa_mon",&param5,&flag5,errmsg),errmsg,errmsg);
+        class_call(parser_read_double(pfc,"log10kappa_mon",&param6,&flag6,errmsg),errmsg,errmsg);
+        class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa_mon or log10kappa_mon, choose one");
+        
+        if (flag5 == _TRUE_) {
+          pba->kappa_mon = param5;
+        }
+        if (flag6 == _TRUE_) {
+          pba->kappa_mon = pow(10.0,param6);
+        }
+        if (pba->kappa_mon==1.0) {
+          pba->kappa_mon = 0.99999;
+        }
 
-      if (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 1.)
-        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(1/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
-      else if ((fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 100.))
-        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
-      else
-        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+        class_test((pba-> f_mon-1./(pow(pba->a_t_mon,pba->kappa_mon))>0),errmsg,"This combination of kappa_mon, a_t_mon, and f_mon violates the physicality condition");
+        /** Compute Omega0_dcdmdr and Omega_ini_dcdm */
+        // by construction, the DCDM is fully gone at z=0 in this model
+        //       // and we can explicitly compute the DR contribution
+        //             // Note that we set Omega_ini_dcdm = 0. here as a placeholder (see Sec. 3.1 of
+        //                   //   https://arxiv.org/pdf/1407.2418.pdf), but the actual value
+        //                         //   of the initial DCDM density is explicitly computed in background.c
+        pba->Omega_ini_mon = 0.;
+        /** GNU function only converges for |z|<1 */
+        /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
+        /** specifically the second identity in "Generic general cases" */
+        /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
+        /** based on tests in Mathematica: */
+        /** - use the GNU routine when argument |z|<1 */
+        /** - use the identity approach when 1<=|z|<100 */
+        /** - use the asymptotic approach when |z|>=100 */
 
+        if (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 1.)
+          pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(1/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+        else if ((fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 100.))
+          pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+        else
+          pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+      }
+      /** ------------------------------------------------------------------------------------------ */
+      /** Step transition branch                                                                     */
+      /** ------------------------------------------------------------------------------------------ */
+      else{
+        class_call(parser_read_double(pfc,"delta_mon_transition",&param5,&flag5,errmsg),errmsg,errmsg);
+        if (flag5 == _TRUE_) {
+          pba->delta_mon_transition = param5;
+        }
+
+        /* kappa is not used in this mode */
+        pba->kappa_mon = 0.;
+
+        /** Compute Omega0_dcdmdr and Omega_ini_dcdm */
+        // by construction, the DCDM is fully gone at z=0 in this model
+        //       // and we can explicitly compute the DR contribution
+        //             // Note that we set Omega_ini_dcdm = 0. here as a placeholder (see Sec. 3.1 of
+        //                   //   https://arxiv.org/pdf/1407.2418.pdf), but the actual value
+        //                         //   of the initial DCDM density is explicitly computed in background.c
+        pba->Omega_ini_mon = 0.;
+
+        /* instantaneous conversion:
+           rho_mon = f_mon * Omega0_cdm * H0^2 * a^-3  for a < a_t
+           rho_dr  = f_mon * Omega0_cdm * H0^2 * a_t * a^-4 for a > a_t
+
+           Hence today (a=1):
+           rho_dr(today) = f_mon * Omega0_cdm * H0^2 * a_t
+           => Omega0_mondr = f_mon * Omega0_cdm * a_t
+        */
+        pba->Omega0_mondr = pba->f_mon * pba->Omega0_cdm * pba->a_t_mon;  /* will be computed dynamically */
+        // pba->Omega0_mondr = 0.;  /* will be computed dynamically */
+
+      }
     }
   }
   /** I) End Monopole (BRINGMANN 2018) modification ======================================================*/
