@@ -540,7 +540,10 @@ int input_shooting(struct file_content * pfc,
                                        "omega_dcdmdr",
                                        "Omega_scf",
                                        "Omega_ini_dcdm",
-                                       "omega_ini_dcdm"};
+                                       "omega_ini_dcdm", 
+                                       "Omega_dcdmwdm",
+                                       "omega_dcdmwdm",
+                                      };
 
   /* array of corresponding parameters that must be adjusted in order to meet the target (= unknown parameters) */
   char * const unknown_namestrings[] = {"h",                        /* unknown param for target '100*theta_s' */
@@ -549,8 +552,10 @@ int input_shooting(struct file_content * pfc,
                                         "Omega_ini_dcdm",           /* unknown param for target 'Omega_dcdmd' */
                                         "omega_ini_dcdm",           /* unknown param for target 'omega_dcdmdr' */
                                         "scf_shooting_parameter",   /* unknown param for target 'Omega_scf' */
-                                        "Omega_dcdmdr",             /* unknown param for target 'Omega_ini_dcdm' */
-                                        "omega_dcdmdr"};             /* unknown param for target 'omega_ini_dcdm' */
+                                        "Omega_dcdmwdm",             /* unknown param for target 'Omega_ini_dcdm' */ // AD HOC FIX TO HAVE SHOOTING FOR DCDM+WDM model
+                                        "omega_dcdmwdm",             /* unknown param for target 'omega_ini_dcdm' */ // AD HOC FIX TO HAVE SHOOTING FOR DCDM+WDM model
+                                        "Omega_ini_dcdm",            /* unknown param for target 'Omega_dcdmwdm' */
+                                        "omega_ini_dcdm", };            /* unknown param for target 'omega_dcdmwdm' */
 
   /* for each target, module up to which we need to run CLASS in order
      to compute the targetted quantities (not running the whole code
@@ -562,7 +567,9 @@ int input_shooting(struct file_content * pfc,
                                         cs_background,     /* computation stage for target 'omega_dcdmdr' */
                                         cs_background,     /* computation stage for target 'Omega_scf' */
                                         cs_background,     /* computation stage for target 'Omega_ini_dcdm' */
-                                        cs_background};     /* computation stage for target 'omega_ini_dcdm' */
+                                        cs_background,     /* computation stage for target 'omega_ini_dcdm' */
+                                        cs_background,     /* computation stage for target 'Omega_dcdmwdm' */
+                                        cs_background };    /* computation stage for target 'omega_dcdmwdm' */
 
   struct fzerofun_workspace fzw;
 
@@ -879,8 +886,8 @@ int input_needs_shooting_for_target(struct file_content * pfc,
 
   *needs_shooting = _TRUE_;
   switch (target_name){
-  case Omega_dcdmdr:
-  case omega_dcdmdr:
+  // case Omega_dcdmdr:
+  // case omega_dcdmdr:
   case Omega_scf:
   case Omega_ini_dcdm:
   case omega_ini_dcdm:
@@ -888,6 +895,8 @@ int input_needs_shooting_for_target(struct file_content * pfc,
     if (target_value == 0.)
       *needs_shooting = _FALSE_;
     break;
+  case Omega_dcdmwdm:
+  case omega_dcdmwdm:
   default:
     /* Default is no additional checks */
     *needs_shooting = _TRUE_;
@@ -939,7 +948,7 @@ int input_find_root(double *xzero,
 
   /** Then we do a linear hunt for the boundaries */
   /* Try fifteen times to go above and below the root (i.e. where shooting succeeds) */
-  for (iter=1; iter<=15; iter++){
+  for (iter=1; iter<=30; iter++){
     x2 = x1 - dx;
     /* Try three times to get a 'reasonable' value, i.e. no CLASS error */
     for (iter2=1; iter2 <= 3; iter2++) {
@@ -1160,7 +1169,7 @@ int input_get_guess(double *xguess,
   struct distortions sd;      /* for spectral distortions */
   struct output op;           /* for output files */
   int i;
-  double Omega_M, a_decay, gamma, Omega0_dcdmdr=1.0;
+  double Omega_M, a_decay, gamma, Omega0_dcdmdr=1.0, Omega0_dcdmwdm=1.0;
   int index_guess;
   int index_ncdm; double N_nonur_guess = 0.0;
 
@@ -1200,35 +1209,35 @@ int input_get_guess(double *xguess,
       xguess[index_guess] = pfzw->target_value[index_guess] - N_nonur_guess;
       dxdy[index_guess] = 1.;
       break;
-    case Omega_dcdmdr:
-      Omega_M = ba.Omega0_cdm+ba.Omega0_idm+ba.Omega0_dcdmdr+ba.Omega0_b;
-      /* *
-       * This formula is exact in a Matter + Lambda Universe, but only for Omega_dcdm,
-       * not the combined.
-       * sqrt_one_minus_M = sqrt(1.0 - Omega_M);
-       * xguess[index_guess] = pfzw->target_value[index_guess]*
-       *                       exp(2./3.*ba.Gamma_dcdm/ba.H0*
-       *                       atanh(sqrt_one_minus_M)/sqrt_one_minus_M);
-       * dxdy[index_guess] = 1.0;//exp(2./3.*ba.Gamma_dcdm/ba.H0*atanh(sqrt_one_minus_M)/sqrt_one_minus_M);
-       * */
-      gamma = ba.Gamma_dcdm/ba.H0;
-      if (gamma < 1)
-        a_decay = 1.0;
-      else
-        a_decay = pow(1+(gamma*gamma-1.)/Omega_M,-1./3.);
-      xguess[index_guess] = pfzw->target_value[index_guess]/a_decay;
-      dxdy[index_guess] = 1./a_decay;
-      break;
-    case omega_dcdmdr:
-      Omega_M = ba.Omega0_cdm+ba.Omega0_idm+ba.Omega0_dcdmdr+ba.Omega0_b;
-      gamma = ba.Gamma_dcdm/ba.H0;
-      if (gamma < 1)
-        a_decay = 1.0;
-      else
-        a_decay = pow(1+(gamma*gamma-1.)/Omega_M,-1./3.);
-      xguess[index_guess] = pfzw->target_value[index_guess]/ba.h/ba.h/a_decay;
-      dxdy[index_guess] = 1./a_decay/ba.h/ba.h;
-      break;
+    // case Omega_dcdmdr:
+    //   Omega_M = ba.Omega0_cdm+ba.Omega0_idm+ba.Omega0_dcdmdr+ba.Omega0_b;
+    //   /* *
+    //    * This formula is exact in a Matter + Lambda Universe, but only for Omega_dcdm,
+    //    * not the combined.
+    //    * sqrt_one_minus_M = sqrt(1.0 - Omega_M);
+    //    * xguess[index_guess] = pfzw->target_value[index_guess]*
+    //    *                       exp(2./3.*ba.Gamma_dcdm/ba.H0*
+    //    *                       atanh(sqrt_one_minus_M)/sqrt_one_minus_M);
+    //    * dxdy[index_guess] = 1.0;//exp(2./3.*ba.Gamma_dcdm/ba.H0*atanh(sqrt_one_minus_M)/sqrt_one_minus_M);
+    //    * */
+    //   gamma = ba.Gamma_dcdm/ba.H0;
+    //   if (gamma < 1)
+    //     a_decay = 1.0;
+    //   else
+    //     a_decay = pow(1+(gamma*gamma-1.)/Omega_M,-1./3.);
+    //   xguess[index_guess] = pfzw->target_value[index_guess]/a_decay;
+    //   dxdy[index_guess] = 1./a_decay;
+    //   break;
+    // case omega_dcdmdr:
+    //   Omega_M = ba.Omega0_cdm+ba.Omega0_idm+ba.Omega0_dcdmdr+ba.Omega0_b;
+    //   gamma = ba.Gamma_dcdm/ba.H0;
+    //   if (gamma < 1)
+    //     a_decay = 1.0;
+    //   else
+    //     a_decay = pow(1+(gamma*gamma-1.)/Omega_M,-1./3.);
+    //   xguess[index_guess] = pfzw->target_value[index_guess]/ba.h/ba.h/a_decay;
+    //   dxdy[index_guess] = 1./a_decay/ba.h/ba.h;
+    //   break;
     case Omega_scf:
       /* *
        * This guess is arbitrary, something nice using WKB should be implemented.
@@ -1248,12 +1257,26 @@ int input_get_guess(double *xguess,
       }
       break;
     case omega_ini_dcdm:
-      Omega0_dcdmdr = 1./(ba.h*ba.h);
+      if (ba.has_wdm == _TRUE_){
+        Omega0_dcdmwdm = 1./(ba.h*ba.h);
+        //printf("DEBUG: Omega0_dcdmwdm = %e\n", Omega0_dcdmwdm);
+      }
+      else {
+        Omega0_dcdmdr = 1./(ba.h*ba.h);
+        //printf("DEBUG: Omega0_dcdmdr = %e\n", Omega0_dcdmdr);
+      }
+      //break;
     case Omega_ini_dcdm:
       /* This works since correspondence is Omega_ini_dcdm -> Omega_dcdmdr and
          omega_ini_dcdm -> omega_dcdmdr */
-      Omega0_dcdmdr *=pfzw->target_value[index_guess];
-      Omega_M = ba.Omega0_cdm+ba.Omega0_idm+Omega0_dcdmdr+ba.Omega0_b;
+      if (ba.has_wdm == _TRUE_){
+        Omega0_dcdmwdm *=pfzw->target_value[index_guess];
+        Omega_M = ba.Omega0_cdm+ba.Omega0_idm+Omega0_dcdmwdm+ba.Omega0_b;
+      }
+      else {
+        Omega0_dcdmdr *=pfzw->target_value[index_guess];
+        Omega_M = ba.Omega0_cdm+ba.Omega0_idm+Omega0_dcdmdr+ba.Omega0_b;
+      }
       gamma = ba.Gamma_dcdm/ba.H0;
       if (gamma < 1)
         a_decay = 1.0;
@@ -1264,7 +1287,36 @@ int input_get_guess(double *xguess,
       if (gamma > 100)
         dxdy[index_guess] *= gamma/100;
       break;
-
+    case Omega_dcdmwdm:
+      Omega_M = ba.Omega0_cdm+ba.Omega0_idm+ba.Omega0_dcdmwdm+ba.Omega0_b;
+      /* *
+       * This formula is exact in a Matter + Lambda Universe, but only for Omega_dcdm,
+       * not the combined.
+       * sqrt_one_minus_M = sqrt(1.0 - Omega_M);
+       * xguess[index_guess] = pfzw->target_value[index_guess]*
+       *                       exp(2./3.*ba.Gamma_dcdm/ba.H0*
+       *                       atanh(sqrt_one_minus_M)/sqrt_one_minus_M);
+       * dxdy[index_guess] = 1.0;//exp(2./3.*ba.Gamma_dcdm/ba.H0*atanh(sqrt_one_minus_M)/sqrt_one_minus_M);
+       * */
+      gamma = ba.Gamma_dcdm/ba.H0;
+      if (gamma < 1)
+        a_decay = 1.0;
+      else
+        a_decay = pow(1+(gamma*gamma-1.)/Omega_M,-1./3.);
+      xguess[index_guess] = pfzw->target_value[index_guess]/a_decay;
+      dxdy[index_guess] = 1./a_decay;
+      break;
+    case omega_dcdmwdm:
+      Omega_M = ba.Omega0_cdm+ba.Omega0_idm+ba.Omega0_dcdmwdm+ba.Omega0_b;
+      gamma = ba.Gamma_dcdm/ba.H0;
+      printf("Omega_M = %e, gamma = %e\n", Omega_M, gamma);
+      if (gamma < 1)
+        a_decay = 1.0;
+      else
+        a_decay = pow(1+(gamma*gamma-1.)/Omega_M,-1./3.);
+      xguess[index_guess] = pfzw->target_value[index_guess]/ba.h/ba.h/a_decay;
+      dxdy[index_guess] = 1./a_decay/ba.h/ba.h;
+      break;
     case sigma8:
       /* Assume linear relationship between A_s and sigma8 and fix coefficient
          according to vanilla LambdaCDM. Should be good enough... */
@@ -1328,7 +1380,7 @@ int input_try_unknown_parameters(double * unknown_parameter,
   struct output op;           /* for output files */
 
   int i;
-  double rho_dcdm_today, rho_dr_today;
+  double rho_dcdm_today, rho_dr_today, rho_wdm_today;
   struct fzerofun_workspace * pfzw;
   int input_verbose;
   int flag;
@@ -1459,22 +1511,22 @@ int input_try_unknown_parameters(double * unknown_parameter,
     case Neff:
       output[i] = ba.Neff-pfzw->target_value[i];
       break;
-    case Omega_dcdmdr:
-      rho_dcdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dcdm];
-      if (ba.has_dr == _TRUE_)
-        rho_dr_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dr];
-      else
-        rho_dr_today = 0.;
-      output[i] = (rho_dcdm_today+rho_dr_today)/(ba.H0*ba.H0)-pfzw->target_value[i];
-      break;
-    case omega_dcdmdr:
-      rho_dcdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dcdm];
-      if (ba.has_dr == _TRUE_)
-        rho_dr_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dr];
-      else
-        rho_dr_today = 0.;
-      output[i] = (rho_dcdm_today+rho_dr_today)/(ba.H0*ba.H0)-pfzw->target_value[i]/ba.h/ba.h;
-      break;
+    // case Omega_dcdmdr:
+    //   rho_dcdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dcdm];
+    //   if (ba.has_dr == _TRUE_)
+    //     rho_dr_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dr];
+    //   else
+    //     rho_dr_today = 0.;
+    //   output[i] = (rho_dcdm_today+rho_dr_today)/(ba.H0*ba.H0)-pfzw->target_value[i];
+    //   break;
+    // case omega_dcdmdr:
+    //   rho_dcdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dcdm];
+    //   if (ba.has_dr == _TRUE_)
+    //     rho_dr_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dr];
+    //   else
+    //     rho_dr_today = 0.;
+    //   output[i] = (rho_dcdm_today+rho_dr_today)/(ba.H0*ba.H0)-pfzw->target_value[i]/ba.h/ba.h;
+    //   break;
     case Omega_scf:
       /** In case scalar field is used to fill, pba->Omega0_scf is not equal to pfzw->target_value[i].*/
       output[i] = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_scf]/(ba.H0*ba.H0)-ba.Omega0_scf;
@@ -1482,11 +1534,38 @@ int input_try_unknown_parameters(double * unknown_parameter,
     case Omega_ini_dcdm:
     case omega_ini_dcdm:
       rho_dcdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dcdm];
-      if (ba.has_dr == _TRUE_)
-        rho_dr_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dr];
+      /* WDM scenario: decay products are WDM (ncdm), not DR */
+      // if (ba.has_wdm == _TRUE_){ {
+        if (ba.has_wdm == _TRUE_)
+          rho_wdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_ncdm1 + (ba.N_ncdm - 1)];
+        else
+          rho_wdm_today = 0.;
+        output[i] = -(rho_dcdm_today+rho_wdm_today)/(ba.H0*ba.H0)+ba.Omega0_dcdmwdm;
+      // }
+      /* DCDM scenario: decay products are DR */
+      // else {
+      //   if (ba.has_dr == _TRUE_)
+      //     rho_dr_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dr];
+      //   else
+      //     rho_dr_today = 0.;
+      //   output[i] = -(rho_dcdm_today+rho_dr_today)/(ba.H0*ba.H0)+ba.Omega0_dcdmdr;
+      // }
+      break;
+    case Omega_dcdmwdm:
+      rho_dcdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dcdm];
+      if (ba.has_wdm == _TRUE_)
+        rho_wdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_ncdm1 + (ba.N_ncdm - 1)];
       else
-        rho_dr_today = 0.;
-      output[i] = -(rho_dcdm_today+rho_dr_today)/(ba.H0*ba.H0)+ba.Omega0_dcdmdr;
+        rho_wdm_today = 0.;
+      output[i] = (rho_dcdm_today+rho_wdm_today)/(ba.H0*ba.H0)-pfzw->target_value[i];
+      break;
+    case omega_dcdmwdm:
+      rho_dcdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_dcdm];
+      if (ba.has_wdm == _TRUE_)
+        rho_wdm_today = ba.background_table[(ba.bt_size-1)*ba.bg_size+ba.index_bg_rho_ncdm1 + (ba.N_ncdm - 1)];
+      else
+        rho_wdm_today = 0.;
+      output[i] = (rho_dcdm_today+rho_wdm_today)/(ba.H0*ba.H0)-pfzw->target_value[i]/ba.h/ba.h;
       break;
     case sigma8:
       output[i] = fo.sigma8[fo.index_pk_m];
@@ -2526,6 +2605,144 @@ int input_read_parameters_species(struct file_content * pfc,
     Omega_m_remaining-= pba->Omega0_b;
   }
 
+  /** ================================================================================================*/
+  /** II) General Accelerating Dark Matter      ======================================================*/
+  /** ================================================================================================*/
+
+  /* Basically copied the inmplementation of DCDM, but with addition of our new param f_adm, however the equations describing this evolution are different. */
+  /* Read */
+  class_call(parser_read_double(pfc,"Omega_dcdmwdm",&param1,&flag1,errmsg),
+            errmsg,
+            errmsg);
+  class_call(parser_read_double(pfc,"omega_dcdmwdm",&param2,&flag2,errmsg),
+            errmsg,
+            errmsg);
+  class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
+            errmsg,
+            "You can only enter one of 'Omega_dcdmwdm' or 'omega_dcdmwdm'.");
+
+  /* ---> if user passes directly the density of dcdmwdm */
+  if (flag1 == _TRUE_)
+    pba->Omega0_dcdmwdm = param1;
+  if (flag2 == _TRUE_)
+    pba->Omega0_dcdmwdm = param2/pba->h/pba->h;
+  class_test(pba->Omega0_dcdmwdm<0,errmsg,"You cannot set the dcdmwdm density to negative values.");
+
+  /** 7.1.b) Omega_ini_dcdm or omega_ini_dcdm */
+  /* Read */
+  class_call(parser_read_double(pfc,"Omega_ini_dcdm",&param1,&flag1,errmsg),
+            errmsg,
+            errmsg);
+  class_call(parser_read_double(pfc,"omega_ini_dcdm",&param2,&flag2,errmsg),
+            errmsg,
+            errmsg);
+  /* Test */
+  class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
+            errmsg,
+            "You can only enter one of 'Omega_ini_dcdm' or 'omega_ini_dcdm'.");
+  /* Complete set of parameters */
+  if (flag1 == _TRUE_){
+    pba->Omega_ini_dcdm = param1;
+  }
+  if (flag2 == _TRUE_){
+    pba->Omega_ini_dcdm = param2/pba->h/pba->h;
+  }
+  class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
+
+  class_call(parser_read_double(pfc,"m_wdm_in_GeV",&param2,&flag2,errmsg), errmsg, errmsg);
+  /* Proceed only if WDM is active in this run */
+  if (pba->Omega0_dcdmwdm > 0. || (pba->Omega_ini_dcdm > 0. && flag2 == _TRUE_)) {
+    pba->has_wdm = _TRUE_;
+
+    /* --- Handle Energy Boost (eta = E/m_acc-1) --- */
+    class_call(parser_read_double(pfc,"eta_wdm",&param1,&flag1,errmsg),
+              errmsg,
+              errmsg);
+    class_call(parser_read_double(pfc,"m_wdm_in_GeV",&param2,&flag2,errmsg),
+              errmsg,
+              errmsg);
+    // class_call(parser_read_double(pfc,"E_wdm_in_GeV",&param3,&flag3,errmsg),
+    //           errmsg,
+    //           errmsg);
+      class_call(parser_read_double(pfc,"m_cdm_in_GeV",&param3,&flag3,errmsg),
+              errmsg,
+              errmsg);
+
+    class_test(flag1 == _FALSE_, 
+                errmsg, 
+                "If you want to have WDM you need to provide the energy boost eta_wdm.");
+    class_test(flag2 == _FALSE_, 
+                errmsg, 
+                "If you want to have WDM you need to provide its mass in GeV.");
+    class_test(flag3 == _FALSE_, 
+                errmsg, 
+                "To compute PSD of WDM we need the mass of CDM in GeV.");
+
+    /* Error if user provides neither eta, nor the complete set of m and E */
+    // class_test((flag1 == _FALSE_) && (flag2 == _FALSE_ || flag3 == _FALSE_), 
+    //             errmsg, 
+    //             "You must provide either 'eta_wdm', OR both 'm_wdm_in_GeV' and 'E_wdm_in_GeV'.");
+
+    if (flag1 == _TRUE_) {
+        pba->eta_wdm = param1;
+      } 
+    if (flag2 == _TRUE_) {
+        pba->m_wdm_in_GeV = param2;
+      }
+    if (flag3 == _TRUE_) {
+        pba->M_cdm_in_GeV = param3;
+      }
+    // else if (flag2 == _TRUE_ && flag3 == _TRUE_) {
+    //   pba->m_wdm_in_GeV = param2;
+    //   pba->E_wdm_in_GeV = param3;
+    //   pba->eta_wdm = param3/param2 - 1.;
+    // }
+    // else {
+    //   printf("Warning: WDM energy boost not provided. Assuming no energy boost (eta_wdm = 0). Note that if you want to provide an energy boost, you must provide either 'eta_wdm' directly, or both 'm_wdm_in_GeV' and 'E_wdm_in_GeV' to compute eta_wdm. \n");
+    //   pba->eta_wdm = 0.;
+    // }
+
+    /* Finally let's deal with Gamma_wdm */
+
+    class_call(parser_read_double(pfc,"Gamma_wdm",&param1,&flag1,errmsg), errmsg, errmsg);
+    class_call(parser_read_double(pfc,"tau_wdm",&param2,&flag2,errmsg), errmsg, errmsg);
+    class_call(parser_read_double(pfc,"f_wdm",&param3,&flag3,errmsg), errmsg, errmsg);
+
+    /* Require exactly one decay parameter */
+    class_test((flag1 == _TRUE_) && (flag2 == _TRUE_), 
+                errmsg, 
+                "You can only provide one of 'Gamma_wdm' or 'tau_wdm'.");
+    class_test((flag1 == _FALSE_) && (flag2 == _FALSE_), 
+                errmsg, 
+                "You must provide a decay parameter: either 'Gamma_wdm' or 'tau_wdm'.");
+
+    /* Require the fraction rho_wdm/(rho_wdm+rho_cdm) in far past */
+    // class_test((flag3 == _FALSE_), 
+    //             errmsg, 
+    //             "You must provide the initial (i.e. in far past) ratio of wdm to total DM (wdm+CDM) 'f_wdm'.");
+
+    /* Assign the ratio */
+    if (flag3 == _TRUE_) { /* I am not sure it's needed tbh */
+        pba->f_wdm = param3; 
+    }
+    
+    if (flag1 == _TRUE_) {
+        /* User provided Gamma directly. Input is in km/s/Mpc. */
+        pba->Gamma_dcdm = param1 * (1.e3 / _c_);       // [Mpc]
+        pba->tau_dcdm = _Mpc_over_m_ * 1e-3 / param1;  // [s]
+        // if (input_verbose > 2) {
+        //     printf("DEBUG: You provided 'Gamma_wdm' directly. Setting Gamma_wdm = %e Mpc, which corresponds to tau_wdm = %e s. \n", pba->Gamma_dcdm, pba->tau_dcdm);
+        // }
+    }
+    else if (flag2 == _TRUE_) { 
+      pba->tau_dcdm = param2; // [s]
+      pba->Gamma_dcdm = _Mpc_over_m_/(param2*_c_);  // [Mpc]
+      // if (input_verbose > 2) {
+      //     printf("DEBUG: You provided 'tau_wdm' directly. Setting tau_wdm = %e s, which corresponds to Gamma_wdm = %e Mpc.\n", pba->tau_dcdm, pba->Gamma_dcdm);
+      // }
+    }
+  }
+
   /** 5) Non-cold relics (ncdm) */
   /** 5.a) Number of non-cold relics */
   /* Read */
@@ -2573,6 +2790,15 @@ int input_read_parameters_species(struct file_content * pfc,
     /** 5.d) Mass and/or Omega of each ncdm species */
     /* Read */
     class_read_list_of_doubles_or_default("m_ncdm",pba->m_ncdm_in_eV,0.0,N_ncdm);
+
+    /* If N_ncdm = 2, then the first species are neutrinos and the 2nd is our AccDM */
+    /* It will probably require passing some random value in the m_ncdm list as an input in CLASS, however the 2nd term will be overwritten here. */
+    if (N_ncdm > 1) {
+      pba->m_ncdm_in_eV[1] = pba->m_wdm_in_GeV*1e9; // Set a default value for the second species
+      // if (input_verbose > 2) {
+      //   printf("DEBUG: m_wdm_in_GeV = %e GeV, which corresponds to m_ncdm[1] = %e eV. \n", pba->m_wdm_in_GeV, pba->m_ncdm_in_eV[1]);
+      // }
+    }
     for (n=0; n<N_ncdm; n++){
       class_test(pba->m_ncdm_in_eV[n]<0,
                  errmsg,
@@ -2638,6 +2864,26 @@ int input_read_parameters_species(struct file_content * pfc,
       class_read_list_of_doubles_or_default("ncdm_maximum_q", pba->ncdm_qmax, 15, N_ncdm);
     }
 
+    if (pba->m_wdm_in_GeV > 0. && pba-> N_ncdm > 1) {
+        /* Calculate physical momentum P_acc in GeV */
+        double m_wdm = pba->m_wdm_in_GeV; 
+        double P_acc = m_wdm * sqrt(pba->eta_wdm * (pba->eta_wdm + 2.0)); /* in GeV */
+        
+        /* Convert T_cmb to GeV */
+        double T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1e9;
+        double T_ncdm_in_GeV = pba->T_ncdm[1] * T_cmb_in_GeV; // Assuming the second species is WDM
+        
+        /* If WDM is the last species: */
+        int idx_wdm = pba->N_ncdm - 1; 
+        
+        /* Set qmax to safely encompass the momentum peak */
+        pba->ncdm_qmax[idx_wdm] = 15.0 * P_acc / T_ncdm_in_GeV; // Set qmax to 2 times the peak momentum, which should be sufficient to capture the distribution. You can adjust this factor if needed.
+        if (input_verbose > 2) {
+            printf("Setting ncdm_qmax for WDM species (index %d) to %e to capture the momentum distribution peak at P_acc = %e GeV.\n", idx_wdm, pba->ncdm_qmax[idx_wdm], P_acc);
+        }
+      }
+    /* ========================================================= */
+
     /** 5.h.2) Number of momentum bins */
     class_call(parser_read_list_of_integers(pfc, "Number of momentum bins", &entries_read, &(pba->ncdm_input_q_size), &flag1, errmsg),
                errmsg, errmsg); //Deprecated parameter, still read to keep compatibility
@@ -2659,8 +2905,21 @@ int input_read_parameters_species(struct file_content * pfc,
     for (n=0; n < N_ncdm; n++){
       if (pba->m_ncdm_in_eV[n] != 0.0){
         /* Case of only mass or mass and Omega/omega: */
-        pba->M_ncdm[n] = pba->m_ncdm_in_eV[n]/_k_B_*_eV_/pba->T_ncdm[n]/pba->T_cmb;
-        class_call(background_ncdm_momenta(pba->q_ncdm_bg[n],
+
+        /* This is a simple placeholder implementation, to be improved later */
+        if (n == 0) {
+          pba->M_ncdm[n] = pba->m_ncdm_in_eV[n]/_k_B_*_eV_/pba->T_ncdm[n]/pba->T_cmb;
+        }
+        if (n == 1) {
+          pba->M_ncdm[n] = pba->m_wdm_in_GeV*1e9/_k_B_*_eV_/pba->T_ncdm[n]/pba->T_cmb;
+          //printf("Setting M_ncdm[1] to %e based on m_wdm_in_GeV = %e GeV, T_ncdm[1] = %e*T_cmb and T_cmb = %e K.\n", pba->M_ncdm[1], pba->m_wdm_in_GeV, pba->T_ncdm[1], pba->T_cmb);
+        }
+        if (n>1) {
+          pba->M_ncdm[n] = pba->m_ncdm_in_eV[n]/_k_B_*_eV_/pba->T_ncdm[n]/pba->T_cmb;
+        }
+        class_call(background_ncdm_momenta(
+                                           pba,    
+                                           pba->q_ncdm_bg[n],
                                            pba->w_ncdm_bg[n],
                                            pba->q_size_ncdm_bg[n],
                                            pba->M_ncdm[n],
@@ -2673,16 +2932,22 @@ int input_read_parameters_species(struct file_content * pfc,
                                            NULL),
                    pba->error_message,
                    errmsg);
-        if (pba->Omega0_ncdm[n] == 0.0){
-          pba->Omega0_ncdm[n] = rho_ncdm/pba->H0/pba->H0;
+        if (n == 0 || n == 1) {
+          if (pba->Omega0_ncdm[n] == 0.0){
+            pba->Omega0_ncdm[n] = rho_ncdm/pba->H0/pba->H0;
+          }
+          else{
+            fnu_factor = (pba->H0*pba->H0*pba->Omega0_ncdm[n]/rho_ncdm);
+            pba->factor_ncdm[n] *= fnu_factor;
+            pba->deg_ncdm[n] *=fnu_factor;
+          }
         }
-        else{
-          fnu_factor = (pba->H0*pba->H0*pba->Omega0_ncdm[n]/rho_ncdm);
-          pba->factor_ncdm[n] *= fnu_factor;
-          /* dlnf0dlnq is already computed, but it is independent of any
-             normalization of f0. We don't need the factor anymore, but we
-             store it nevertheless */
-          pba->deg_ncdm[n] *=fnu_factor;
+        // if (n == 1){
+        //   pba->Omega0_ncdm[n] = 1e-10; // Some very small placeholder value
+        //}
+        if (n>1){
+          pba->Omega0_ncdm[n] = 0.0; // Set the density of any additional species to zero by default
+          printf("Warning: you have defined more than 2 ncdm species, but only the first two will be given a non-zero density as we consider only neutrinos+accDM.");
         }
       }
       else{
@@ -2698,9 +2963,13 @@ int input_read_parameters_species(struct file_content * pfc,
   }
   class_test(pba->Omega0_ncdm_tot<0,errmsg,"You cannot set the NCDM density to negative values.");
   if (has_m_budget == _TRUE_) {
-    class_test(Omega_m_remaining < pba->Omega0_ncdm_tot, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_ncdm = %e' (summed over all species)",Omega_m_remaining, pba->Omega0_ncdm_tot);
-    Omega_m_remaining-= pba->Omega0_ncdm_tot;
-  }
+      double Omega0_ncdm_no_wdm = pba->Omega0_ncdm_tot;
+      if (pba->has_wdm == _TRUE_ && pba->N_ncdm > 0) { // If WDM is active, we need to exclude its contribution from the matter budget, as the user will have provided its density directly through Omega_dcdmwdm or omega_dcdmwdm
+        Omega0_ncdm_no_wdm -= pba->Omega0_ncdm[pba->N_ncdm - 1]; 
+      }
+      class_test(Omega_m_remaining < Omega0_ncdm_no_wdm, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_dcdmwdm = %e'",Omega_m_remaining, pba->Omega0_dcdmwdm);
+      Omega_m_remaining -= Omega0_ncdm_no_wdm;
+    }
 
   /** 6) Omega_0_k (effective fractional density of curvature) */
   /* Read */
@@ -2720,35 +2989,9 @@ int input_read_parameters_species(struct file_content * pfc,
   /** ================================================================================================*/
   /** I) Monopole (BRINGMANN 2018) modification ======================================================*/
   /** ================================================================================================*/
-  
-  /* Default */
-  pba->monopole_step_transition = _FALSE_;
+  /** I.a) f_mon  */
+  /* Read */
 
-  /** I.a) Read monopole_step_transition */
-  char step_string[_ARGUMENT_LENGTH_MAX_];
-  int flag_step;
-
-  class_call(parser_read_string(pfc,"monopole_step_transition",&step_string,&flag_step,errmsg),
-            errmsg,
-            errmsg);
-
-  if (flag_step == _TRUE_) {
-    if ((strcmp(step_string,"yes") == 0) ||
-        (strcmp(step_string,"true") == 0) ||
-        (strcmp(step_string,"y") == 0) ) {
-      pba->monopole_step_transition = _TRUE_;
-    }
-    else if ((strcmp(step_string,"no") == 0) ||
-              (strcmp(step_string,"false") == 0) ||
-              (strcmp(step_string,"n") == 0) ) {
-      pba->monopole_step_transition = _FALSE_;
-    }
-    else {
-      class_stop(errmsg,"monopole_step_transition must be yes/no or true/false");
-    }
-  }
-
-  /** I.b) Read f_mon or log10f_mon */
   class_call(parser_read_double(pfc,"f_mon",&param1,&flag1,errmsg),                                                                        
              errmsg,                                                                                                                        
              errmsg);
@@ -2765,12 +3008,27 @@ int input_read_parameters_species(struct file_content * pfc,
     if (flag4 == _TRUE_) {
      pba->f_mon = pow(10,param4);}
     if (pba->f_mon > 0.) {
-      /** I.c) Read a_t_mon or log10a_t_mon (common for both branches) */
-      class_call(parser_read_double(pfc,"a_t_mon",&param2,&flag2,errmsg), errmsg, errmsg);
-      class_call(parser_read_double(pfc,"log10a_t",&param3,&flag3,errmsg), errmsg, errmsg);
-      class_test(((flag2 == _TRUE_) && (flag3 == _TRUE_)), errmsg, "In input file, you can only enter one of a_t_mon or log10a_t, choose one");
-      class_test(((flag2 == _FALSE_) && (flag3 == _FALSE_)),errmsg,"You must provide one of a_t_mon or log10a_t_mon when f_mon > 0");
+      /** - Read in kappa and a_t parameters that describe DDM-DR conversion */
+      
+      class_call(parser_read_double(pfc,"kappa_mon",&param5,&flag5,errmsg),errmsg,errmsg);
+      class_call(parser_read_double(pfc,"log10kappa_mon",&param6,&flag6,errmsg),errmsg,errmsg);
+      class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa__mon or log10kappa_mon, choose one");
+      if (flag5 == _TRUE_) {
+      pba->kappa_mon = param5;
+      }
+      if (flag6 == _TRUE_) {
+      pba->kappa_mon = pow(10.0,param6);
+      }
 
+      if (pba->kappa_mon==1.0) {
+      pba->kappa_mon = 0.99999;
+      }
+
+      class_call(parser_read_double(pfc,"a_t_mon",&param2,&flag2,errmsg), errmsg, errmsg);
+      class_call(parser_read_double(pfc,"log10a_t_mon",&param3,&flag3,errmsg), errmsg, errmsg);
+      class_test(((flag2 == _TRUE_) && (flag3 == _TRUE_)),
+             errmsg,
+             "In input file, you can only enter one of a_t_mon or log10a_t_mon, choose one");
       if (flag2 == _TRUE_) {
       pba->a_t_mon = param2;
       }
@@ -2778,85 +3036,33 @@ int input_read_parameters_species(struct file_content * pfc,
       pba->a_t_mon = pow(10.0,param3);
       }
 
-      /** I.d) Read kappa_mon or log10kappa_mon (different for both branches) */
-      /** ------------------------------------------------------------------------------------------ */
-      /** Smooth transition branch                                                                   */
-      /** ------------------------------------------------------------------------------------------ */
-      if (pba->monopole_step_transition == _FALSE_) {
-        class_call(parser_read_double(pfc,"kappa_mon",&param5,&flag5,errmsg),errmsg,errmsg);
-        class_call(parser_read_double(pfc,"log10kappa_mon",&param6,&flag6,errmsg),errmsg,errmsg);
-        class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa_mon or log10kappa_mon, choose one");
-        
-        if (flag5 == _TRUE_) {
-          pba->kappa_mon = param5;
-        }
-        if (flag6 == _TRUE_) {
-          pba->kappa_mon = pow(10.0,param6);
-        }
-        if (pba->kappa_mon==1.0) {
-          pba->kappa_mon = 0.99999;
-        }
+      class_test((pba-> f_mon-1./(pow(pba->a_t_mon,pba->kappa_mon))>0),errmsg,"This combination of kappa_mon, a_t_mon, and f_mon violates the physicality condition");
+      /** Compute Omega0_dcdmdr and Omega_ini_dcdm */
+      // by construction, the DCDM is fully gone at z=0 in this model
+      //       // and we can explicitly compute the DR contribution
+      //             // Note that we set Omega_ini_dcdm = 0. here as a placeholder (see Sec. 3.1 of
+      //                   //   https://arxiv.org/pdf/1407.2418.pdf), but the actual value
+      //                         //   of the initial DCDM density is explicitly computed in background.c
+      pba->Omega_ini_mon = 0.;
+      /** GNU function only converges for |z|<1 */
+      /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
+      /** specifically the second identity in "Generic general cases" */
+      /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
+      /** based on tests in Mathematica: */
+      /** - use the GNU routine when argument |z|<1 */
+      /** - use the identity approach when 1<=|z|<100 */
+      /** - use the asymptotic approach when |z|>=100 */
 
-        class_test((pba-> f_mon-1./(pow(pba->a_t_mon,pba->kappa_mon))>0),errmsg,"This combination of kappa_mon, a_t_mon, and f_mon violates the physicality condition");
-        /** Compute Omega0_dcdmdr and Omega_ini_dcdm */
-        // by construction, the DCDM is fully gone at z=0 in this model
-        //       // and we can explicitly compute the DR contribution
-        //             // Note that we set Omega_ini_dcdm = 0. here as a placeholder (see Sec. 3.1 of
-        //                   //   https://arxiv.org/pdf/1407.2418.pdf), but the actual value
-        //                         //   of the initial DCDM density is explicitly computed in background.c
-        pba->Omega_ini_mon = 0.;
-        /** GNU function only converges for |z|<1 */
-        /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
-        /** specifically the second identity in "Generic general cases" */
-        /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
-        /** based on tests in Mathematica: */
-        /** - use the GNU routine when argument |z|<1 */
-        /** - use the identity approach when 1<=|z|<100 */
-        /** - use the asymptotic approach when |z|>=100 */
+      if (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 1.)
+        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(1/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+      else if ((fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 100.))
+        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
+      else
+        pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
 
-        if (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 1.)
-          pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(1/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
-        else if ((fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)) < 100.))
-          pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
-        else
-          pba->Omega0_mondr = (pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(1,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(1,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon))) / pba->H0 / pba->H0;
-      }
-      /** ------------------------------------------------------------------------------------------ */
-      /** Step transition branch                                                                     */
-      /** ------------------------------------------------------------------------------------------ */
-      else{
-        class_call(parser_read_double(pfc,"delta_mon_transition",&param5,&flag5,errmsg),errmsg,errmsg);
-        if (flag5 == _TRUE_) {
-          pba->delta_mon_transition = param5;
-        }
-
-        /* kappa is not used in this mode */
-        pba->kappa_mon = 0.;
-
-        /** Compute Omega0_dcdmdr and Omega_ini_dcdm */
-        // by construction, the DCDM is fully gone at z=0 in this model
-        //       // and we can explicitly compute the DR contribution
-        //             // Note that we set Omega_ini_dcdm = 0. here as a placeholder (see Sec. 3.1 of
-        //                   //   https://arxiv.org/pdf/1407.2418.pdf), but the actual value
-        //                         //   of the initial DCDM density is explicitly computed in background.c
-        pba->Omega_ini_mon = 0.;
-
-        /* instantaneous conversion:
-           rho_mon = f_mon * Omega0_cdm * H0^2 * a^-3  for a < a_t
-           rho_dr  = f_mon * Omega0_cdm * H0^2 * a_t * a^-4 for a > a_t
-
-           Hence today (a=1):
-           rho_dr(today) = f_mon * Omega0_cdm * H0^2 * a_t
-           => Omega0_mondr = f_mon * Omega0_cdm * a_t
-        */
-        pba->Omega0_mondr = pba->f_mon * pba->Omega0_cdm * pba->a_t_mon;  /* will be computed dynamically */
-        // pba->Omega0_mondr = 0.;  /* will be computed dynamically */
-
-      }
     }
   }
   /** I) End Monopole (BRINGMANN 2018) modification ======================================================*/
-
 
   /** 7.1) Decaying DM into DR */
   /** 7.1.a) Omega_0_dcdmdr (DCDM, i.e. decaying CDM) */
@@ -2880,26 +3086,26 @@ int input_read_parameters_species(struct file_content * pfc,
 
   /** 7.1.b) Omega_ini_dcdm or omega_ini_dcdm */
   /* Read */
-  class_call(parser_read_double(pfc,"Omega_ini_dcdm",&param1,&flag1,errmsg),
-             errmsg,
-             errmsg);
-  class_call(parser_read_double(pfc,"omega_ini_dcdm",&param2,&flag2,errmsg),
-             errmsg,
-             errmsg);
-  /* Test */
-  class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
-             errmsg,
-             "You can only enter one of 'Omega_ini_dcdm' or 'omega_ini_dcdm'.");
-  /* Complete set of parameters */
-  if (flag1 == _TRUE_){
-    pba->Omega_ini_dcdm = param1;
-  }
-  if (flag2 == _TRUE_){
-    pba->Omega_ini_dcdm = param2/pba->h/pba->h;
-  }
-  class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
+  // class_call(parser_read_double(pfc,"Omega_ini_dcdm",&param1,&flag1,errmsg),
+  //            errmsg,
+  //            errmsg);
+  // class_call(parser_read_double(pfc,"omega_ini_dcdm",&param2,&flag2,errmsg),
+  //            errmsg,
+  //            errmsg);
+  // /* Test */
+  // class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
+  //            errmsg,
+  //            "You can only enter one of 'Omega_ini_dcdm' or 'omega_ini_dcdm'.");
+  // /* Complete set of parameters */
+  // if (flag1 == _TRUE_){
+  //   pba->Omega_ini_dcdm = param1;
+  // }
+  // if (flag2 == _TRUE_){
+  //   pba->Omega_ini_dcdm = param2/pba->h/pba->h;
+  // }
+  // class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
 
-  if (pba->Omega0_dcdmdr > 0 || (pba->Omega_ini_dcdm > 0.)) {
+  if ((pba->Omega0_dcdmdr > 0 || (pba->Omega_ini_dcdm > 0.)) && (pba->has_wdm == _FALSE_)) {
 
     /** 7.1.c) Gamma in same units as H0, i.e. km/(s Mpc)*/
     /* Read */
@@ -2930,9 +3136,18 @@ int input_read_parameters_species(struct file_content * pfc,
                errmsg,
                "You need to enter a decay constant for the decaying DM 'Gamma_dcdm > 0.'");
   }
+  
   if (has_m_budget == _TRUE_) {
-    class_test(Omega_m_remaining < pba->Omega0_dcdmdr, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_dcdmdr = %e'",Omega_m_remaining, pba->Omega0_dcdmdr);
-    Omega_m_remaining-= pba->Omega0_dcdmdr;
+    if (pba->Omega0_dcdmdr > 0.) {
+      /** Test if there is enough dark matter left to be converted into dcdmdr */
+      class_test(Omega_m_remaining < pba->Omega0_dcdmdr, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_dcdmdr = %e'",Omega_m_remaining, pba->Omega0_dcdmdr);
+      Omega_m_remaining-= pba->Omega0_dcdmdr;
+    }
+    if (pba->Omega0_dcdmwdm > 0.) {
+      /** Test if there is enough dark matter left to be converted into dcdmwdm */
+      class_test(Omega_m_remaining < pba->Omega0_dcdmwdm, errmsg, "Too much energy density from massive species. At this point only %e is left for Omega_m, but requested 'Omega_dcdmwdm = %e'",Omega_m_remaining, pba->Omega0_dcdmwdm);
+      Omega_m_remaining-= pba->Omega0_dcdmwdm;
+    }
   }
 
   /** 7.2) Multi-interacting dark matter (idm) */
@@ -3355,8 +3570,19 @@ int input_read_parameters_species(struct file_content * pfc,
   Omega_tot += pba->Omega0_cdm;
   Omega_tot += pba->Omega0_idm;
   Omega_tot += pba->Omega0_dcdmdr;
+  Omega_tot += pba->Omega0_dcdmwdm;
+  //printf("Omega0_dcdm = %e\n", pba->Omega0_dcdm);
+  //printf("Omega0_dcdmwdm = %e\n", pba->Omega0_dcdmwdm);
   Omega_tot += pba->Omega0_idr;
-  Omega_tot += pba->Omega0_ncdm_tot;
+
+  //printf("Omega0_ncdm_tot = %e\n", pba->Omega0_ncdm_tot);
+  double Omega0_ncdm_no_wdm = pba->Omega0_ncdm_tot;
+  if (pba->has_wdm == _TRUE_ && pba->N_ncdm > 0) {
+    Omega0_ncdm_no_wdm -= pba->Omega0_ncdm[pba->N_ncdm - 1];
+  }
+  Omega_tot += Omega0_ncdm_no_wdm;
+  //Omega_tot += pba->Omega0_ncdm_tot;
+
   /* Step 1 */
   if (flag1 == _TRUE_){
     pba->Omega0_lambda = param1;
@@ -6000,6 +6226,15 @@ int input_default_params(struct background *pba,
   pba->Gamma_dcdm = 0.0;
   pba->tau_dcdm = 0.0;
 
+  /* START Accelerating DM */
+  pba->eta_wdm = 0.;
+  pba->m_wdm_in_GeV = 0.;
+  pba->M_cdm_in_GeV = 0.;
+  pba->f_wdm = 0.;
+  pba->Omega0_dcdmwdm = 0.0;
+
+  /* END Accelerating DM */
+
   /** 7.2) Interacting Dark Matter */
   /** 7.2.1.a) Current factional density of idm */
   pba->Omega0_idm = 0;
@@ -6036,7 +6271,7 @@ int input_default_params(struct background *pba,
   /** 9) Dark energy contributions */
   pba->Omega0_fld = 0.;
   pba->Omega0_scf = 0.;
-  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr - pba->Omega0_idr -pba->Omega0_idm;
+  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr - pba->Omega0_idr -pba->Omega0_idm -pba->Omega0_dcdmwdm;
   /** 8.a) Omega fluid */
   /** 8.a.1) PPF approximation */
   pba->use_ppf = _TRUE_;

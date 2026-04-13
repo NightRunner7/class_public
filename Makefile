@@ -35,9 +35,10 @@ AR        = ar rv
 PYTHON ?= python
 
 # your optimization flag
-OPTFLAG = -O3 -ffast-math
+OPTFLAG = -O3
 #OPTFLAG = -Ofast -ffast-math #-march=native
 #OPTFLAG = -fast
+#OPTFLAG = -g -O0 -fsanitize=undefined
 
 # your openmp flag (comment for compiling without openmp)
 OMPFLAG   = -pthread #-fopenmp

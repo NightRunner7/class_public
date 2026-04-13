@@ -18,7 +18,8 @@ int get_qsampling_manual(double *x,
 
   double y, h, t;
   double *b, *c;
-  int i;
+  int i,j;
+  double qmin;
   switch (method){ 
   case (qm_auto) :
     return _FAILURE_;
@@ -56,6 +57,31 @@ int get_qsampling_manual(double *x,
       w[i] = y*h/t/t;
     }
     return _SUCCESS_;
+  case (qm_simpson_log): // Check whether this is correct, in 2102.12498 the implementaiton was different, they lacked multiplication by ln10 and they had 1, 4, 1, 4, 1,..., 1 instead of 1, 4, 2, 4, 2,..., 1
+  /** Simpson rule on a log interval. */
+	qmin = qmax*1e-20;
+	h = (log10(qmax)-log10(qmin))/(N-1);
+  double ln10 = log(10.0);
+
+  for (i=0; i<N; i++){
+    if (i == N -1) { // Make sure the last point is exactly qmax
+      x[i] = qmax;
+    }
+    else {
+      x[i] = qmin*pow(10, i*h);
+    }
+    (*function)(params_for_function,x[i],&y);
+
+    w[i] = y * (h / 3.0) * x[i] * ln10;
+    if (i != 0 && i != N - 1) {
+      if (i % 2 == 1) {
+        w[i] *= 4.0; 
+      } else {
+        w[i] *= 2.0; 
+      }
+    }
+  }
+  return _SUCCESS_;
   }
   return _SUCCESS_;
 }

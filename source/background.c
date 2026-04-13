@@ -464,21 +464,10 @@ int background_functions(
     rho_m += pvecback[pba->index_bg_rho_dcdm];
   }
 
-  /* Monopole (BRINGMANN 2018) modification */
   /* Monopoles */
   if (pba->has_mon == _TRUE_) {
-    if (pba->monopole_step_transition == _FALSE_) {
-      /* Smooth transition case */
-      pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon * (1. - pow(a,pba->kappa_mon)) / (1. + pow(a/pba->a_t_mon,pba->kappa_mon));
-    }
-    else {
-      /* Sharp smooth transition case */
-      double x, S;
-      x = log(a / pba->a_t_mon) / pba->delta_mon_transition;
-      S = 0.5 * (1.0 - tanh(x));
-      pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon * S;
-    }
-
+    /* Pass value of rho_mon to output */
+    pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon *(1-pow(a,pba->kappa_mon))/(1+pow(a/pba->a_t_mon,pba->kappa_mon));
     rho_tot += pvecback[pba->index_bg_rho_mon];
     p_tot += 0.;
     rho_m += pvecback[pba->index_bg_rho_mon];
@@ -488,19 +477,12 @@ int background_functions(
   if (pba->has_dr == _TRUE_) {
     /* Pass value of rho_dr to output */
     if (pba->has_mon == _TRUE_){
-      if (pba->monopole_step_transition == _FALSE_) {
-        /* Smooth transition case */
-        if (fabs(-1.*pow((a)/pba->a_t_mon,pba->kappa_mon)) < 1.)
-          pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(a/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon));
-        else if ((fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) < 100.))
-          pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(a/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
-        else
-          pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(a/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(a/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
-      }
-      else{
-        /* Step transition case */
-        pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
-      }
+      if (fabs(-1.*pow((a)/pba->a_t_mon,pba->kappa_mon)) < 1.)
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(a/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon));
+      else if ((fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) < 100.))
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(a/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
+      else
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(a/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(a/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
     }
     else
       pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
@@ -509,7 +491,6 @@ int background_functions(
     dp_dloga += -(4./3.) * pvecback[pba->index_bg_rho_dr];
     rho_r += pvecback[pba->index_bg_rho_dr];
   }
-  /* End Monopole (BRINGMANN 2018) modification */
 
   /* Scalar field */
   if (pba->has_scf == _TRUE_) {
@@ -539,7 +520,7 @@ int background_functions(
 
       /* function returning background ncdm[n_ncdm] quantities (only
          those for which non-NULL pointers are passed) */
-      class_call(background_ncdm_momenta(
+      class_call(background_ncdm_momenta(pba, 
                                          pba->q_ncdm_bg[n_ncdm],
                                          pba->w_ncdm_bg[n_ncdm],
                                          pba->q_size_ncdm_bg[n_ncdm],
@@ -641,27 +622,11 @@ int background_functions(
   /* Monopole (BRINGMANN 2018) modification */
   /* Gamma_mon, the time-dependent inverse lifetime of DM */
   if (pba->has_mon == _TRUE_) {
-    if (pba->monopole_step_transition == _FALSE_) {
-      /* Smooth transition case */
-      pvecback[pba->index_bg_Gamma_mon] = pvecback[pba->index_bg_H]*pba->kappa_mon*(pow(a,pba->kappa_mon)+pow(a/pba->a_t_mon,pba->kappa_mon))/
-              ((1.-pow(a,pba->kappa_mon))*(1.+pow(a/pba->a_t_mon,pba->kappa_mon)));
-      // Regulate divergence:
-      if (pvecback[pba->index_bg_Gamma_mon] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.)
-              pvecback[pba->index_bg_Gamma_mon]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
-    }
-    else {
-      /* Sharp smooth transition case */
-      double x, th, S, dS_dloga;
-      x  = log(a / pba->a_t_mon) / pba->delta_mon_transition;
-      th = tanh(x);
-      S  = 0.5 * (1.0 - th);
-      dS_dloga = -0.5 / pba->delta_mon_transition * (1.0 - th * th);
-      if (S > 1e-14)
-        pvecback[pba->index_bg_Gamma_mon] =
-          -pvecback[pba->index_bg_H] * dS_dloga / S;
-      else
-        pvecback[pba->index_bg_Gamma_mon] = 0.0;
-    }
+    pvecback[pba->index_bg_Gamma_mon] = pvecback[pba->index_bg_H]*pba->kappa_mon*(pow(a,pba->kappa_mon)+pow(a/pba->a_t_mon,pba->kappa_mon))/
+            ((1.-pow(a,pba->kappa_mon))*(1.+pow(a/pba->a_t_mon,pba->kappa_mon)));
+    // Regulate divergence:
+    if (pvecback[pba->index_bg_Gamma_mon] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.)
+            pvecback[pba->index_bg_Gamma_mon]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
   }
   /* End Monopole (BRINGMANN 2018) modification */
 
@@ -1053,6 +1018,9 @@ int background_indices(
   /* Monopole (BRINGMANN 2018) modification */
   pba->has_mon = _FALSE_;
   /* End Monopole (BRINGMANN 2018) modification */
+  /* Accelerating Dark Matter */
+  pba->has_wdm = _FALSE_;
+  /* End Accelerating Dark Matter */
   pba->has_dr = _FALSE_;
   pba->has_scf = _FALSE_;
   pba->has_lambda = _FALSE_;
@@ -1071,17 +1039,23 @@ int background_indices(
   if (pba->Omega0_ncdm_tot != 0.)
     pba->has_ncdm = _TRUE_;
 
-  if (pba->Omega0_dcdmdr != 0.) {
+  if (pba->Omega0_dcdmdr != 0. || (pba->Omega_ini_dcdm != 0. && pba->m_wdm_in_GeV == 0.)) {
     pba->has_dcdm = _TRUE_;
     if (pba->Gamma_dcdm != 0.)
       pba->has_dr = _TRUE_;
   }
 
+  if (pba->Omega0_dcdmwdm != 0. || (pba->Omega_ini_dcdm != 0. && pba->m_wdm_in_GeV != 0.)) {
+    pba->has_dcdm = _TRUE_;
+    if (pba->Gamma_dcdm != 0.)
+      pba->has_wdm = _TRUE_;
+  }
+
   /* Monopole (BRINGMANN 2018) modification */
   if (pba->Omega0_mondr != 0.) {
     pba->has_mon = _TRUE_;
-    if (pba->a_t_mon != 0.)
-      pba->has_dr = _TRUE_;
+  if (pba->a_t_mon != 0.)
+    pba->has_dr = _TRUE_;
   }
   /* End Monopole (BRINGMANN 2018) modification */
 
@@ -1365,7 +1339,82 @@ int background_ncdm_distribution(
     /*    FERMI-DIRAC INCLUDING CHEMICAL POTENTIALS   */
     /**************************************************/
 
-    *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)+1.) +1./(exp(q+ksi)+1.));
+    if (n_ncdm==0) {
+      *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)+1.) +1./(exp(q+ksi)+1.));
+    }
+
+    /******************************************************/
+    /*    ACCELERATING DARK MATTER PHASE-SPACE APPROACH   */
+    /******************************************************/
+
+    if (n_ncdm==1 && pba->has_wdm == _TRUE_) {
+      /* Convert T_cmb to eV and GeV for later use */
+      double T_cmb_in_eV = pba->T_cmb * _k_B_ / _eV_;
+      double T_cmb_in_GeV = T_cmb_in_eV / 1.e9;
+
+      double T_ncdm_today_GeV = T_cmb_in_GeV * pba->T_ncdm[n_ncdm];
+
+      /* Extract masses in GeV */
+      double M_cdm = pba->M_cdm_in_GeV; 
+      double m_wdm = pba->m_wdm_in_GeV; 
+
+      /* Momentum transfer from acceleration */
+      double P_acc = m_wdm*sqrt(pba->eta_wdm*(pba->eta_wdm+2)); /* In GeV! */
+
+      /* Scale factor corresponding to the considered comoving momentum q */
+      double a_q = q*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
+      double z_q = 1/a_q - 1; /* Redshift corresponding to a_q */
+
+      /* Estimate density parameters assuming LCDM */
+      double Omega_m = pba->Omega0_b + pba->Omega0_cdm + pba->Omega_ini_dcdm; // why Omega_ini_dcdm and not Omega0_dcdm? Add Omega0_ncdm? 
+      double Omega_r = pba->Omega0_g + pba->Omega0_ur;                        // Add Omega0_ncdm somehow?
+      double Omega_Lambda = pba->Omega0_lambda;                               // Is this evaluated correctly at a_q?
+      //printf("DEBUG DISTRIBUTION: For q = %e, z_q = %e, Omega_m = %e, Omega_r = %e, Omega_Lambda = %e\n", q, z_q, Omega_m, Omega_r, Omega_Lambda);
+
+      /* CDM density at acceleration (Comoving, kg/Mpc^3) */
+      double rho_crit = 3.0 * pba->H0 * pba->H0 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
+      double rho_dcdm_ini = pba->Omega_ini_dcdm * rho_crit; 
+      double parent_mass_kg = M_cdm * 1e9 * _eV_ / (_c_ * _c_);
+      double n_dcdm_ini = rho_dcdm_ini / parent_mass_kg; // In 1/Mpc^3
+      double q_factor = (pba->T_cmb*pba->T_ncdm[n_ncdm] / (_h_P_ * _c_ / _k_B_ / 2 / _PI_ ) * _Mpc_over_m_);
+
+      // if (a_q < 1e-6) {
+      //     /* Analytical limit of t_q during radiation domination */
+      //     double t_q = a_q * a_q / (2.0 * pba->H0 * sqrt(Omega_r));
+          
+      //     /* Combine qcube and H_q algebraically to avoid 0 * Infinity: 
+      //        H_q = H0*sqrt(Omega_r)/a_q^2  -->  qcube*H_q = q^3 * factor^3 * H0*sqrt(Omega_r)/(q*T/P)^2 */
+      //     double qcube_Hq = q * pow(q_factor, 3) * pba->H0 * sqrt(Omega_r) * pow(P_acc / T_ncdm_today_GeV, 2);
+          
+      //     *f0 = pba->Gamma_dcdm * n_dcdm_ini * exp(-pba->Gamma_dcdm * t_q) / (4.0 * _PI_ * qcube_Hq);
+      //     //printf("DEBUG DISTRIBUTION 2: Using radiation domination approximation for q = %e, z_q = %e, t_q = %e, f0 = %e\n", q, z_q, t_q, *f0);
+      //     }
+      // else {
+         /* Full exact formula for standard q bins */
+          double H_q = pba->H0*sqrt(Omega_r*pow(a_q,-4) + Omega_m*pow(a_q,-3) + Omega_Lambda); // Approximation of Hubble rate at a_q, assuming LCDM expansion history
+
+          double term1 = Omega_m * sqrt(Omega_r+Omega_m*a_q);
+          double term2 = 2.0 * pow(Omega_r, 1.5)/a_q;
+          double term3 = 2.0 * Omega_r * sqrt((Omega_r / a_q + Omega_m) / a_q);
+
+          double t_q = 2.0 * (term1+term2-term3) / (3.0 * Omega_m*Omega_m/a_q*pba->H0);
+          t_q = MAX(0.0, t_q); 
+
+          double qcube = pow(q * q_factor, 3);
+          
+          *f0 = pba->Gamma_dcdm * n_dcdm_ini * exp(-pba->Gamma_dcdm * t_q) / (4.0 * _PI_ * qcube * H_q);
+          // if (z_q >2 && z_q < 20 && *f0 > 1e-155) {
+          //   printf("DEBUG DISTRIBUTION 2: Using full formula for q = %e, z_q = %e, f0 = %e\n", q, z_q, *f0);
+          // }
+        // }
+
+        /* Catch underflows */
+        if (*f0 < 1e-300 || isnan(*f0)) {
+          *f0 = 1e-300;
+        }
+
+    }
+
 
     /**************************************************/
 
@@ -1601,7 +1650,7 @@ int background_ncdm_init(
       /** - in verbose mode, inform user of number of sampled momenta
           for background quantities */
       if (pba->background_verbose > 0) {
-        printf("ncdm species i=%d sampled with %d points for purpose of background andperturbation integration using the manual method\n",
+        printf("ncdm species i=%d sampled with %d points for purpose of background and perturbation integration using the manual method\n",
                k+1,
                pba->q_size_ncdm[k]);
       }
@@ -1616,6 +1665,9 @@ int background_ncdm_init(
       q = pba->q_ncdm[k][index_q];
       class_call(background_ncdm_distribution(&pbadist,q,&f0),
                  pba->error_message,pba->error_message);
+      // if (k == 1 && pba->has_wdm == _TRUE_) {
+      //     printf("DEBUG INIT: q = %e, f0 = %e\n", q, f0);
+      // }
 
       //Loop to find appropriate dq:
       for (tolexp=_PSD_DERIVATIVE_EXP_MIN_; tolexp<_PSD_DERIVATIVE_EXP_MAX_; tolexp++) {
@@ -1646,12 +1698,18 @@ int background_ncdm_init(
       df0dq = (+f0m2-8*f0m1+8*f0p1-f0p2)/12.0/dq;
       //printf("df0dq[%g] = %g. dlf=%g ?= %g. f0 =%g.\n",q,df0dq,q/f0*df0dq,
       //Avoid underflow in extreme tail:
-      if (fabs(f0)==0.)
+      if (fabs(f0)==0.) {
         pba->dlnf0_dlnq_ncdm[k][index_q] = -q; /* valid for whatever f0 with exponential tail in exp(-q) */
-      else
-        pba->dlnf0_dlnq_ncdm[k][index_q] = q/f0*df0dq;
+      }
+      else{
+        if (k == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
+          pba->dlnf0_dlnq_ncdm[k][index_q] = q*df0dq; //Instead of evolving psi, we directly evolve f0*psi. Hence, the f0 at the denominator cancels out.
+        }
+        else{
+          pba->dlnf0_dlnq_ncdm[k][index_q] = q/f0*df0dq;
+        }
+      }
     }
-
     pba->factor_ncdm[k]=pba->deg_ncdm[k]*4*_PI_*pow(pba->T_cmb*pba->T_ncdm[k]*_k_B_,4)*8*_PI_*_G_
       /3./pow(_h_P_/2./_PI_,3)/pow(_c_,7)*_Mpc_over_m_*_Mpc_over_m_;
 
@@ -1689,6 +1747,7 @@ int background_ncdm_init(
 
 int background_ncdm_momenta(
                             /* Only calculate for non-NULL pointers: */
+                            struct background *pba,
                             double * qvec,
                             double * wvec,
                             int qsize,
@@ -1706,6 +1765,11 @@ int background_ncdm_momenta(
   double epsilon;
   double q2;
   double factor2;
+
+  double z_q;
+  double P_acc = 1.;  
+  double T_cmb = 1.;                          
+
   /** Summary: */
 
   /** - rescale normalization at given redshift */
@@ -1721,19 +1785,49 @@ int background_ncdm_momenta(
   /** - loop over momenta */
   for (index_q=0; index_q<qsize; index_q++) {
 
-    /* squared momentum */
-    q2 = qvec[index_q]*qvec[index_q];
+    z_q = 1e100;
 
-    /* energy */
-    epsilon = sqrt(q2+M*M/(1.+z)/(1.+z));
+    if (pba->has_wdm == _TRUE_ && M>1e4) { /* PLACEHOLDER, however M in our case should usually be much larger anyway*/
+      double T_cmb_in_eV = pba->T_cmb * _k_B_ / _eV_;
+      double T_cmb_in_GeV = T_cmb_in_eV / 1.e9;
+      double T_ncdm_today_GeV = T_cmb_in_GeV * pba->T_ncdm[pba->N_ncdm - 1]; 
+      double m_wdm = pba->m_wdm_in_GeV; 
 
-    /* integrand of the various quantities */
-    if (n!=NULL) *n += q2*wvec[index_q];
-    if (rho!=NULL) *rho += q2*epsilon*wvec[index_q];
-    if (p!=NULL) *p += q2*q2/3./epsilon*wvec[index_q];
-    if (drho_dM!=NULL) *drho_dM += q2*M/(1.+z)/(1.+z)/epsilon*wvec[index_q];
-    if (pseudo_p!=NULL) *pseudo_p += pow(q2/epsilon,3)/3.0*wvec[index_q];
+      P_acc = m_wdm*sqrt(pba->eta_wdm*(pba->eta_wdm+2)); /* In GeV! */
+      double a_q = qvec[index_q]*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
+      z_q = 1.0/a_q - 1.0; // Redshift corresponding to a_q */
+      //z_q = 100;
+      //printf("DEBUG: index_q = %d, q_value = %e, z_q = %e, M = %e\n", index_q, qvec[index_q], z_q, M);
+    }
+
+    if (z>z_q){
+        if (n!=NULL) *n += 0;
+        if (rho!=NULL) *rho += 0;
+        if (p!=NULL) *p += 0;
+        if (drho_dM!=NULL) *drho_dM += 0;
+        if (pseudo_p!=NULL) *pseudo_p +=  0;
+    }
+
+    else{
+      /* squared momentum */
+      q2 = qvec[index_q]*qvec[index_q];
+
+      /* energy */
+      epsilon = sqrt(q2+M*M/(1.+z)/(1.+z));
+
+      /* integrand of the various quantities */
+      if (n!=NULL) *n += q2*wvec[index_q];
+      if (rho!=NULL) *rho += q2*epsilon*wvec[index_q];
+      if (p!=NULL) *p += q2*q2/3./epsilon*wvec[index_q];
+      if (drho_dM!=NULL) *drho_dM += q2*M/(1.+z)/(1.+z)/epsilon*wvec[index_q];
+      if (pseudo_p!=NULL) *pseudo_p += pow(q2/epsilon,3)/3.0*wvec[index_q];
+    }
   }
+
+  if (pba->has_wdm == _TRUE_ && M>1e4) { /* PLACEHOLDER, however M in our case should usually be much larger anyway*/
+    factor2 *= 1; // AD HOC
+  }
+
 
   /** - adjust normalization */
   if (n!=NULL) *n *= factor2/(1.+z);
@@ -1741,6 +1835,12 @@ int background_ncdm_momenta(
   if (p!=NULL) *p *= factor2;
   if (drho_dM!=NULL) *drho_dM *= factor2;
   if (pseudo_p!=NULL) *pseudo_p *=factor2;
+
+  // Add security to avoid reaching 0
+  if (rho!=NULL) *rho += 1e-300;
+  if (p!=NULL) *p += 1e-300;
+  if (drho_dM!=NULL) *drho_dM += 1e-300;
+  if (pseudo_p!=NULL) *pseudo_p +=1e-300;
 
   return _SUCCESS_;
 }
@@ -1765,7 +1865,9 @@ int background_ncdm_M_from_Omega(
   rho0 = pba->H0*pba->H0*pba->Omega0_ncdm[n_ncdm]; /*Remember that rho is defined such that H^2=sum(rho_i) */
   M = 0.0;
 
-  background_ncdm_momenta(pba->q_ncdm_bg[n_ncdm],
+  background_ncdm_momenta(
+                          pba,  
+                          pba->q_ncdm_bg[n_ncdm],
                           pba->w_ncdm_bg[n_ncdm],
                           pba->q_size_ncdm_bg[n_ncdm],
                           M,
@@ -1787,7 +1889,8 @@ int background_ncdm_M_from_Omega(
   for (iter=1; iter<=maxiter; iter++) {
 
     /* Newton iteration. First get relevant quantities at M: */
-    background_ncdm_momenta(pba->q_ncdm_bg[n_ncdm],
+    background_ncdm_momenta(pba,  
+                            pba->q_ncdm_bg[n_ncdm],
                             pba->w_ncdm_bg[n_ncdm],
                             pba->q_size_ncdm_bg[n_ncdm],
                             M,
@@ -1910,7 +2013,8 @@ int background_checks(
                pba->m_ncdm_in_eV[n_ncdm]*pba->deg_ncdm[n_ncdm]/pba->Omega0_ncdm[n_ncdm]/pba->h/pba->h);
 
         /* call this function to get rho_ncdm */
-        background_ncdm_momenta(pba->q_ncdm_bg[n_ncdm],
+        background_ncdm_momenta(pba,
+                                pba->q_ncdm_bg[n_ncdm],
                                 pba->w_ncdm_bg[n_ncdm],
                                 pba->q_size_ncdm_bg[n_ncdm],
                                 0.,
@@ -2085,31 +2189,27 @@ int background_solve(
   }
   if (pba->has_dr == _TRUE_) {
     if (pba->has_mon == _TRUE_){
-      if (pba->monopole_step_transition == _FALSE_) {
-        /* Smooth transition case */
-        double rhodr_0;
+      int rhodr_0;
 
-        /** GNU function only converges for |z|<1 */
-        /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
-        /** specifically the second identity in "Generic general cases" */
-        /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
-        /** based on tests in Mathematica: */
-        /** - use the GNU routine when argument |z|<1 */
-        /** - use the identity approach when 1<=|z|<100 */
-        /** - use the asymptotic approach when |z|>=100 */
+      /** GNU function only converges for |z|<1 */
+      /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
+      /** specifically the second identity in "Generic general cases" */
+      /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
+      /** based on tests in Mathematica: */
+      /** - use the GNU routine when argument |z|<1 */
+      /** - use the identity approach when 1<=|z|<100 */
+      /** - use the asymptotic approach when |z|>=100 */
 
-        if (fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) < 1.)
-          rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.) - pow(pba->a_t_mon,pba->kappa_mon));
-        else if ((fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) < 100.))
-          rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1./pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
-        else
-          rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1./pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1./pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
-        pba->Omega0_dr = rhodr_0/pba->H0/pba->H0;  
-      }
-      else {
-        /* Step transition */
-        pba->Omega0_dr = pvecback_integration[pba->index_bi_rho_dr] / pba->H0 / pba->H0;
-      }
+      if (fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) < 1.)
+        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.) - pow(pba->a_t_mon,pba->kappa_mon));
+      else if ((fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) < 100.))
+        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1./pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
+      else
+        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1./pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1./pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
+
+
+      pba->Omega0_dr = rhodr_0/pba->H0/pba->H0;  
+
     }
     else
       pba->Omega0_dr = pvecback_integration[pba->index_bi_rho_dr]/pba->H0/pba->H0;
@@ -2204,6 +2304,14 @@ int background_solve(
       printf("     -> Omega0_dr = %f\n",pba->Omega0_dr);
       printf("     -> Omega0_dr+Omega0_mon = %f, input value = %f\n",
              pba->Omega0_dr+pba->Omega0_mon,pba->Omega0_mondr);
+      printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
+    }
+    if ((pba->has_dcdm == _TRUE_)&&(pba->has_wdm == _TRUE_)) {
+      printf("    Decaying Cold Dark Matter details: (DCDM --> WDM)\n");
+      printf("     -> Omega0_dcdm = %f\n",pba->Omega0_dcdm);
+      printf("     -> Omega0_wdm = %f\n",pba->Omega0_ncdm[1]);
+      printf("     -> Omega0_wdm+Omega0_dcdm = %f, input value = %f\n",
+             pba->Omega0_ncdm[1]+pba->Omega0_dcdm,pba->Omega0_dcdmwdm);
       printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
     }
     /* End Monopole (BRINGMANN 2018) modification */
@@ -2306,7 +2414,8 @@ int background_initial_conditions(
 
       for (n_ncdm=0; n_ncdm<pba->N_ncdm; n_ncdm++) {
 
-        class_call(background_ncdm_momenta(pba->q_ncdm_bg[n_ncdm],
+        class_call(background_ncdm_momenta(pba,
+                                           pba->q_ncdm_bg[n_ncdm],
                                            pba->w_ncdm_bg[n_ncdm],
                                            pba->q_size_ncdm_bg[n_ncdm],
                                            pba->M_ncdm[n_ncdm],
@@ -2320,6 +2429,10 @@ int background_initial_conditions(
                    pba->error_message,
                    pba->error_message);
         rho_ncdm_rel_tot += 3.*p_ncdm;
+        /* Skip WDM species */
+        if (pba->has_wdm && n_ncdm == pba->N_ncdm - 1) { /* PLACEHOLDER, MAKE IT BETTER LATER */
+            continue;
+        }
         if (fabs(p_ncdm/rho_ncdm-1./3.)>ppr->tol_ncdm_initial_w) {
           is_early_enough = _FALSE_;
         }
@@ -2370,18 +2483,9 @@ int background_initial_conditions(
       f = 1./3.*pow(a,6)*pvecback_integration[pba->index_bi_rho_dcdm]*pba->Gamma_dcdm/pow(pba->H0,3)/sqrt(Omega_rad);
       pvecback_integration[pba->index_bi_rho_dr] = f*pba->H0*pba->H0/pow(a,4);
     }
-    /* Monopole (BRINGMANN 2018) modification */
-    else if (pba->has_mon == _TRUE_) {
-      if (pba->monopole_step_transition == _FALSE_) {
-        /* Smooth transition case */
-        /* DO NOTHING */
-      }
-      else {
-        /* sharp smooth branch: start with no DR */
-        pvecback_integration[pba->index_bi_rho_dr] = 0.0;
-      } 
+    else if (pba->has_mon == _TRUE_){
+      /* DO NOTHING */
     }
-    /* End Monopole (BRINGMANN 2018) modification */
     else{
       /** There is also a space reserved for a future case where dr is not sourced by dcdm */
       pvecback_integration[pba->index_bi_rho_dr] = 0.0;
@@ -2809,13 +2913,6 @@ int background_derivs(
     /** - Compute dr density \f$ d\rho/dloga = -4\rho - \Gamma/H \rho \f$ */
     dy[pba->index_bi_rho_dr] = -4.*y[pba->index_bi_rho_dr]+pba->Gamma_dcdm/H*y[pba->index_bi_rho_dcdm];
   }
-
-  /* Monopole (BRINGMANN 2018) modification */
-  if ((pba->monopole_step_transition == _TRUE_) && (pba->has_dr == _TRUE_)) {
-    pba->Gamma_mon = pvecback[pba->index_bg_Gamma_mon];
-    dy[pba->index_bi_rho_dr] =-4.*y[pba->index_bi_rho_dr]+pba->Gamma_mon/H*pvecback[pba->index_bg_rho_mon];
-  }
-  /* End Monopole (BRINGMANN 2018) modification */
 
   if (pba->has_fld == _TRUE_) {
     /** - Compute fld density \f$ d\rho/dloga = -3 (1+w_{fld}(a)) \rho \f$ */

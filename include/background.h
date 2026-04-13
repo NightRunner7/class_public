@@ -69,7 +69,6 @@ struct background
 
   double Omega0_idm; /**< \f$ \Omega_{0 idm} \f$: interacting dark matter with photons, baryons, and idr */
 
-
   double Omega0_idr; /**< \f$ \Omega_{0 idr} \f$: interacting dark radiation */
   double T_idr;      /**< \f$ T_{idr} \f$: current temperature of interacting dark radiation in Kelvins */
 
@@ -85,8 +84,25 @@ struct background
   double Omega_ini_mon;  /**< \f$ \Omega_{ini,mon} \f$: rescaled initial value for mon density (see 1407.2418 for definitions) */
   double Omega0_mondr;   /**< \f$ \Omega_{0 mon}+\Omega_{0 dr} \f$: decaying cold dark matter (mon) decaying to dark radiation (dr) */
   double Gamma_mon;      /**< \f$ \Gamma_{mon} \f$: decay constant for decaying monopoles */
-  double delta_mon_transition; /**< \f$ \Delta_{mon transition} \f$: controls the width, small means sharper transition*/
   /* End Monopole (BRINGMANN 2018) modification */
+
+  /* Accelerating Dark Matter */
+
+  // double Gamma_wdm;      /**< \f$ \Gamma_{wdm} \f$: decay constant for accelerating dark matter Gamma = f/tau */
+  double f_wdm;          /**< \f$ f_{wdm} \f$: fraction of the initial CDM density comprised of accelerating dark matter */
+  // double tau_wdm;        /**< \f$ \tau_{wdm} \f$: time scale for acceleration*/
+
+  double eta_wdm;        /**< \f$ \eta_{wdm} \f$: fraction of energy gained by the WDM component after acceleration E=(1+\eta)m_wdm */
+  double m_wdm_in_GeV;   /**< \f$ m_{wdm} \f$: mass of the accelerating dark matter particle in GeV */
+  double E_wdm_in_GeV;   /**< \f$ E_{wdm} \f$: energy of the accelerating dark matter particle in GeV */
+
+  double M_cdm_in_GeV;   /**< \f$ m_{cdm} \f$: mass of Cold Dark Matter particle in GeV, necessary to compute number density, should be large. */
+
+  // double Omega_ini_accdm;  /**< \f$ \Omega_{ini,adm} \f$: rescaled initial value for accelerating dark matter density */
+  double Omega0_dcdmwdm;           /**< \f$ \Omega_{0 wdm}+\Omega_{0 cdm} \f$: Cold Dark Matter (cdm) accelerating to WDM (wdm) */
+  // double Omega_ini_acc;  /**< \f$ \Omega_{ini,acc} \f$: rescaled initial value for non-accelerating (cdm) dark matter density */
+
+  /* END Accelerating Dark Matter */
 
   int N_ncdm;                            /**< Number of distinguishable ncdm species */
   /* the following parameters help to define tabulated ncdm p-s-d passed in file */
@@ -146,9 +162,6 @@ struct background
   int sgnK; /**< K/|K|: -1, 0 or 1 */
   double Neff; /**< so-called "effective neutrino number", computed at earliest time in interpolation table */
   double Omega0_dcdm; /**< \f$ \Omega_{0 dcdm} \f$: decaying cold dark matter */
-  /* Monopole (BRINGMANN 2018) modification */
-  double Omega0_mon; /**< \f$ \Omega_{0 mon} \f$: decaying monopoles */
-  /* End Monopole (BRINGMANN 2018) modification */
   double Omega0_dr; /**< \f$ \Omega_{0 dr} \f$: decay radiation */
   double Omega0_m;  /**< total non-relativistic matter today */
   double Omega0_r;  /**< total ultra-relativistic radiation today */
@@ -158,6 +171,15 @@ struct background
   double H_eq;      /**< Hubble rate at radiation/matter equality [Mpc^-1] */
   double z_eq;      /**< redshift at radiation/matter equality */
   double tau_eq;    /**< conformal time at radiation/matter equality [Mpc] */
+
+  /* Monopole (BRINGMANN 2018) modification */
+  double Omega0_mon; /**< \f$ \Omega_{0 mon} \f$: decaying monopoles */
+  /* End Monopole (BRINGMANN 2018) modification */
+
+  /* START Accelerating DM  */
+  // double Omega0_wdm; /**< \f$ \Omega_{0 wdm} \f$: accelerating DM */
+  // double Omega0_nonwdm; /**< \f$ \Omega_{0 nonwdm} \f$: non-accelerating DM = CDM */ /* Just use DCDM for this... */
+  /* END Accelerating DM */
 
   //@}
 
@@ -184,15 +206,17 @@ struct background
   int index_bg_rho_idr;       /**< density of interacting dark radiation */
   int index_bg_rho_ur;        /**< relativistic neutrinos/relics density */
   int index_bg_rho_dcdm;      /**< dcdm density */
-  /* Monopole (BRINGMANN 2018) modification */
-  int index_bg_rho_mon;      /**< mon density */
-  /* End Monopole (BRINGMANN 2018) modification */
   int index_bg_rho_dr;        /**< dr density */
 
   /* Monopole (BRINGMANN 2018) modification */
+  int index_bg_rho_mon;      /**< mon density */
   int index_bg_Gamma_mon;      /**< mon density */
   /* End Monopole (BRINGMANN 2018) modification */
 
+  /* Accelerating DM */
+  // int index_bg_rho_wdm;      /**< wdm density */
+  // int index_bg_rho_nonwdm;   /**< nonwdm (cdm) density */
+  /* END Accelerating DM */
 
   int index_bg_phi_scf;       /**< scalar field value */
   int index_bg_phi_prime_scf; /**< scalar field derivative wrt conformal time */
@@ -279,6 +303,11 @@ struct background
   int index_bi_phi_scf;       /**< {B} scalar field value */
   int index_bi_phi_prime_scf; /**< {B} scalar field derivative wrt conformal time */
 
+  /* Accelerating DM */
+  // int index_bi_rho_wdm;      /**< {B} accelerating dark matter density */
+  // int index_bi_rho_nonwdm;   /**< {B} non-accelerating (cdm) dark matter density */
+  /* END accelerating DM */
+
   int index_bi_time;    /**< {C} proper (cosmological) time in Mpc */
   int index_bi_rs;      /**< {C} sound horizon */
   int index_bi_tau;     /**< {C} conformal time in Mpc */
@@ -303,10 +332,6 @@ struct background
   short has_cdm;       /**< presence of cold dark matter? */
   short has_idm;       /**< presence of interacting dark matter with photons, baryons, and idr */
   short has_dcdm;      /**< presence of decaying cold dark matter? */
-  /* Monopole (BRINGMANN 2018) modification */
-  short has_mon;      /**< presence of decaying monopoles? */
-  short monopole_step_transition;      /**< presence of monopoles step transition? */
-  /* End Monopole (BRINGMANN 2018) modification */
   short has_dr;        /**< presence of relativistic decay radiation? */
   short has_scf;       /**< presence of a scalar field? */
   short has_ncdm;      /**< presence of non-cold dark matter? */
@@ -316,6 +341,14 @@ struct background
   short has_idr;       /**< presence of interacting dark radiation? */
   short has_curvature; /**< presence of global spatial curvature? */
   short has_varconst;  /**< presence of varying fundamental constants? */
+
+  /* Monopole (BRINGMANN 2018) modification */
+  short has_mon;      /**< presence of decaying monopoles? */
+  /* End Monopole (BRINGMANN 2018) modification */
+
+  /* Accelerating DM */
+  short has_wdm;      /**< presence of accelerating dark matter? */
+  /* END Accelerating DM */
 
   //@}
 
@@ -490,7 +523,7 @@ extern "C" {
                            struct background *pba
                            );
 
-  int background_ncdm_momenta(
+  int background_ncdm_momenta(struct background *pba, /* This is necessary for our WDM implementation */
                               double * qvec,
                               double * wvec,
                               int qsize,
