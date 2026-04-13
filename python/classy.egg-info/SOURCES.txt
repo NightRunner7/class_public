@@ -1,6 +1,6 @@
 README
 setup.py
-/home/krzysztof/Workspace/class_3.3.0/python/../python/classy.cpp
+/mnt/e/Workplace/_Projects/monopole_project/class_accDM/python/../python/classy.cpp
 classy.egg-info/PKG-INFO
 classy.egg-info/SOURCES.txt
 classy.egg-info/dependency_links.txt
