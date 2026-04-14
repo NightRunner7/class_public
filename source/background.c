@@ -527,6 +527,7 @@ int background_functions(
                                          pba->M_ncdm[n_ncdm],
                                          pba->factor_ncdm[n_ncdm],
                                          1./a-1.,
+                                         n_ncdm,
                                          NULL,
                                          &rho_ncdm,
                                          &p_ncdm,
@@ -1347,7 +1348,8 @@ int background_ncdm_distribution(
     /*    ACCELERATING DARK MATTER PHASE-SPACE APPROACH   */
     /******************************************************/
 
-    if (n_ncdm==1 && pba->has_wdm == _TRUE_) {
+    if (n_ncdm==pba->N_ncdm-1 && pba->has_wdm == _TRUE_) {
+
       /* Convert T_cmb to eV and GeV for later use */
       double T_cmb_in_eV = pba->T_cmb * _k_B_ / _eV_;
       double T_cmb_in_GeV = T_cmb_in_eV / 1.e9;
@@ -1358,60 +1360,48 @@ int background_ncdm_distribution(
       double M_cdm = pba->M_cdm_in_GeV; 
       double m_wdm = pba->m_wdm_in_GeV; 
 
+      /*** qcube and number density computation ***/
+      double rho_crit = 3.0 * pba->H0 * pba->H0 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
+      double rho_dcdm_ini = pba->Omega_ini_dcdm * rho_crit; 
+      double parent_mass_kg = M_cdm * 1e9 * _eV_ / (_c_ * _c_);
+      double n_dcdm_ini = rho_dcdm_ini / parent_mass_kg; // In 1/Mpc^3
+
+      double q_factor = (pba->T_cmb*pba->T_ncdm[n_ncdm] / (_h_P_ * _c_ / _k_B_ / 2 / _PI_ ) * _Mpc_over_m_);
+      double qcube = pow(q * q_factor, 3);
+
+      double constant_factor = pba->Gamma_dcdm * n_dcdm_ini / (4.0 * _PI_ * qcube);
+
+      /*** Hubble rate and time at for considered momentum q value ***/
+
       /* Momentum transfer from acceleration */
       double P_acc = m_wdm*sqrt(pba->eta_wdm*(pba->eta_wdm+2)); /* In GeV! */
 
       /* Scale factor corresponding to the considered comoving momentum q */
       double a_q = q*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
-      double z_q = 1/a_q - 1; /* Redshift corresponding to a_q */
 
       /* Estimate density parameters assuming LCDM */
       double Omega_m = pba->Omega0_b + pba->Omega0_cdm + pba->Omega_ini_dcdm; // why Omega_ini_dcdm and not Omega0_dcdm? Add Omega0_ncdm? 
       double Omega_r = pba->Omega0_g + pba->Omega0_ur;                        // Add Omega0_ncdm somehow?
       double Omega_Lambda = pba->Omega0_lambda;                               // Is this evaluated correctly at a_q?
-      //printf("DEBUG DISTRIBUTION: For q = %e, z_q = %e, Omega_m = %e, Omega_r = %e, Omega_Lambda = %e\n", q, z_q, Omega_m, Omega_r, Omega_Lambda);
+      double H_q = pba->H0*sqrt(Omega_r*pow(a_q,-4) + Omega_m*pow(a_q,-3) + Omega_Lambda); // Approximation of Hubble rate at a_q, assuming LCDM expansion history
 
-      /* CDM density at acceleration (Comoving, kg/Mpc^3) */
-      double rho_crit = 3.0 * pba->H0 * pba->H0 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
-      double rho_dcdm_ini = pba->Omega_ini_dcdm * rho_crit; 
-      double parent_mass_kg = M_cdm * 1e9 * _eV_ / (_c_ * _c_);
-      double n_dcdm_ini = rho_dcdm_ini / parent_mass_kg; // In 1/Mpc^3
-      double q_factor = (pba->T_cmb*pba->T_ncdm[n_ncdm] / (_h_P_ * _c_ / _k_B_ / 2 / _PI_ ) * _Mpc_over_m_);
+      double term1 = Omega_m * sqrt(Omega_r+Omega_m*a_q);
+      double term2 = 2.0 * pow(Omega_r, 1.5)/a_q;
+      double term3 = 2.0 * Omega_r * sqrt((Omega_r / a_q + Omega_m) / a_q);
 
-      // if (a_q < 1e-6) {
-      //     /* Analytical limit of t_q during radiation domination */
-      //     double t_q = a_q * a_q / (2.0 * pba->H0 * sqrt(Omega_r));
-          
-      //     /* Combine qcube and H_q algebraically to avoid 0 * Infinity: 
-      //        H_q = H0*sqrt(Omega_r)/a_q^2  -->  qcube*H_q = q^3 * factor^3 * H0*sqrt(Omega_r)/(q*T/P)^2 */
-      //     double qcube_Hq = q * pow(q_factor, 3) * pba->H0 * sqrt(Omega_r) * pow(P_acc / T_ncdm_today_GeV, 2);
-          
-      //     *f0 = pba->Gamma_dcdm * n_dcdm_ini * exp(-pba->Gamma_dcdm * t_q) / (4.0 * _PI_ * qcube_Hq);
-      //     //printf("DEBUG DISTRIBUTION 2: Using radiation domination approximation for q = %e, z_q = %e, t_q = %e, f0 = %e\n", q, z_q, t_q, *f0);
-      //     }
-      // else {
-         /* Full exact formula for standard q bins */
-          double H_q = pba->H0*sqrt(Omega_r*pow(a_q,-4) + Omega_m*pow(a_q,-3) + Omega_Lambda); // Approximation of Hubble rate at a_q, assuming LCDM expansion history
+      double t_q = 2.0 * (term1+term2-term3) / (3.0 * Omega_m*Omega_m/a_q*pba->H0);
+      t_q = MAX(0.0, t_q); 
 
-          double term1 = Omega_m * sqrt(Omega_r+Omega_m*a_q);
-          double term2 = 2.0 * pow(Omega_r, 1.5)/a_q;
-          double term3 = 2.0 * Omega_r * sqrt((Omega_r / a_q + Omega_m) / a_q);
+      double time_dependent_factor = exp(-pba->Gamma_dcdm * t_q)/H_q;
 
-          double t_q = 2.0 * (term1+term2-term3) / (3.0 * Omega_m*Omega_m/a_q*pba->H0);
-          t_q = MAX(0.0, t_q); 
+      /*** Final expression for f0 ***/
+      
+      *f0 = pba->Gamma_dcdm * n_dcdm_ini / (4.0 * _PI_ * qcube) * (exp(-pba->Gamma_dcdm * t_q)/H_q);
 
-          double qcube = pow(q * q_factor, 3);
-          
-          *f0 = pba->Gamma_dcdm * n_dcdm_ini * exp(-pba->Gamma_dcdm * t_q) / (4.0 * _PI_ * qcube * H_q);
-          // if (z_q >2 && z_q < 20 && *f0 > 1e-155) {
-          //   printf("DEBUG DISTRIBUTION 2: Using full formula for q = %e, z_q = %e, f0 = %e\n", q, z_q, *f0);
-          // }
-        // }
-
-        /* Catch underflows */
-        if (*f0 < 1e-300 || isnan(*f0)) {
-          *f0 = 1e-300;
-        }
+      /* Catch underflows */
+      if (*f0 < 1e-300 || isnan(*f0)) {
+        *f0 = 1e-300;
+      }
 
     }
 
@@ -1737,6 +1727,7 @@ int background_ncdm_init(
  * @param M        Input: mass
  * @param factor   Input: normalization factor for the p.s.d.
  * @param z        Input: redshift
+ * @param n_ncdm   Input: index of ncdm species under consideration, used to determine if we are dealing with the WDM species
  * @param n        Output: number density
  * @param rho      Output: energy density
  * @param p        Output: pressure
@@ -1754,6 +1745,7 @@ int background_ncdm_momenta(
                             double M,
                             double factor,
                             double z,
+                            int n_ncdm,
                             double * n,
                             double * rho, // density
                             double * p,   // pressure
@@ -1766,9 +1758,12 @@ int background_ncdm_momenta(
   double q2;
   double factor2;
 
+  /* Variables for WDM case: */
   double z_q;
   double P_acc = 1.;  
-  double T_cmb = 1.;                          
+  double T_cmb_in_GeV = 1.0;
+  double T_ncdm_today_GeV = 1.0; 
+  int is_wdm = 0;                         
 
   /** Summary: */
 
@@ -1782,33 +1777,25 @@ int background_ncdm_momenta(
   if (drho_dM!=NULL) *drho_dM = 0.;
   if (pseudo_p!=NULL) *pseudo_p = 0.;
 
+  if (pba->has_wdm == _TRUE_ && n_ncdm == pba->N_ncdm - 1) {
+    is_wdm = 1;
+    T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1.e9;
+    T_ncdm_today_GeV = T_cmb_in_GeV * pba->T_ncdm[n_ncdm]; 
+
+    P_acc = pba->m_wdm_in_GeV * sqrt(pba->eta_wdm*(pba->eta_wdm+2.0)); /* In GeV! */
+  }      
+
   /** - loop over momenta */
   for (index_q=0; index_q<qsize; index_q++) {
 
-    z_q = 1e100;
+    z_q = 1e100; // some large value, so that it'll always compute for non-WDM species
 
-    if (pba->has_wdm == _TRUE_ && M>1e4) { /* PLACEHOLDER, however M in our case should usually be much larger anyway*/
-      double T_cmb_in_eV = pba->T_cmb * _k_B_ / _eV_;
-      double T_cmb_in_GeV = T_cmb_in_eV / 1.e9;
-      double T_ncdm_today_GeV = T_cmb_in_GeV * pba->T_ncdm[pba->N_ncdm - 1]; 
-      double m_wdm = pba->m_wdm_in_GeV; 
-
-      P_acc = m_wdm*sqrt(pba->eta_wdm*(pba->eta_wdm+2)); /* In GeV! */
+    if (is_wdm) {
       double a_q = qvec[index_q]*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
       z_q = 1.0/a_q - 1.0; // Redshift corresponding to a_q */
-      //z_q = 100;
-      //printf("DEBUG: index_q = %d, q_value = %e, z_q = %e, M = %e\n", index_q, qvec[index_q], z_q, M);
     }
 
-    if (z>z_q){
-        if (n!=NULL) *n += 0;
-        if (rho!=NULL) *rho += 0;
-        if (p!=NULL) *p += 0;
-        if (drho_dM!=NULL) *drho_dM += 0;
-        if (pseudo_p!=NULL) *pseudo_p +=  0;
-    }
-
-    else{
+    if (z <= z_q){ // Neglect contribution of WDM particles that have not yet been produced at redshift z.
       /* squared momentum */
       q2 = qvec[index_q]*qvec[index_q];
 
@@ -1823,11 +1810,6 @@ int background_ncdm_momenta(
       if (pseudo_p!=NULL) *pseudo_p += pow(q2/epsilon,3)/3.0*wvec[index_q];
     }
   }
-
-  if (pba->has_wdm == _TRUE_ && M>1e4) { /* PLACEHOLDER, however M in our case should usually be much larger anyway*/
-    factor2 *= 1; // AD HOC
-  }
-
 
   /** - adjust normalization */
   if (n!=NULL) *n *= factor2/(1.+z);
@@ -1873,6 +1855,7 @@ int background_ncdm_M_from_Omega(
                           M,
                           pba->factor_ncdm[n_ncdm],
                           0.,
+                          n_ncdm,
                           &n,
                           &rho,
                           NULL,
@@ -1896,6 +1879,7 @@ int background_ncdm_M_from_Omega(
                             M,
                             pba->factor_ncdm[n_ncdm],
                             0.,
+                            n_ncdm,
                             NULL,
                             &rho,
                             NULL,
@@ -2020,6 +2004,7 @@ int background_checks(
                                 0.,
                                 pba->factor_ncdm[n_ncdm],
                                 0.,
+                                n_ncdm,
                                 NULL,
                                 &rho_ncdm_rel,
                                 NULL,
@@ -2421,6 +2406,7 @@ int background_initial_conditions(
                                            pba->M_ncdm[n_ncdm],
                                            pba->factor_ncdm[n_ncdm],
                                            1./a-1.0,
+                                           n_ncdm,
                                            NULL,
                                            &rho_ncdm,
                                            &p_ncdm,

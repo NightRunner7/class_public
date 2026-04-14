@@ -530,6 +530,7 @@ extern "C" {
                               double M,
                               double factor,
                               double z,
+                              int n_ncdm,
                               double * n,
                               double * rho,
                               double * p,

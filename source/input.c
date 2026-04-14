@@ -2791,13 +2791,9 @@ int input_read_parameters_species(struct file_content * pfc,
     /* Read */
     class_read_list_of_doubles_or_default("m_ncdm",pba->m_ncdm_in_eV,0.0,N_ncdm);
 
-    /* If N_ncdm = 2, then the first species are neutrinos and the 2nd is our AccDM */
-    /* It will probably require passing some random value in the m_ncdm list as an input in CLASS, however the 2nd term will be overwritten here. */
-    if (N_ncdm > 1) {
-      pba->m_ncdm_in_eV[1] = pba->m_wdm_in_GeV*1e9; // Set a default value for the second species
-      // if (input_verbose > 2) {
-      //   printf("DEBUG: m_wdm_in_GeV = %e GeV, which corresponds to m_ncdm[1] = %e eV. \n", pba->m_wdm_in_GeV, pba->m_ncdm_in_eV[1]);
-      // }
+    /* The last index is supposed to be reserved for the WDM component of the ADM model, so if the user has provided a mass for WDM, we set it as the default value for the last ncdm species. */
+    if (pba->N_ncdm > 0) {
+      pba->m_ncdm_in_eV[pba->N_ncdm - 1] = pba->m_wdm_in_GeV*1e9; // Set a default value for the last species
     }
     for (n=0; n<N_ncdm; n++){
       class_test(pba->m_ncdm_in_eV[n]<0,
@@ -2864,17 +2860,17 @@ int input_read_parameters_species(struct file_content * pfc,
       class_read_list_of_doubles_or_default("ncdm_maximum_q", pba->ncdm_qmax, 15, N_ncdm);
     }
 
-    if (pba->m_wdm_in_GeV > 0. && pba-> N_ncdm > 1) {
+    if (pba->m_wdm_in_GeV > 0. && pba-> N_ncdm > 0) {
+
+        int idx_wdm = pba->N_ncdm - 1;
+
         /* Calculate physical momentum P_acc in GeV */
         double m_wdm = pba->m_wdm_in_GeV; 
         double P_acc = m_wdm * sqrt(pba->eta_wdm * (pba->eta_wdm + 2.0)); /* in GeV */
         
         /* Convert T_cmb to GeV */
         double T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1e9;
-        double T_ncdm_in_GeV = pba->T_ncdm[1] * T_cmb_in_GeV; // Assuming the second species is WDM
-        
-        /* If WDM is the last species: */
-        int idx_wdm = pba->N_ncdm - 1; 
+        double T_ncdm_in_GeV = pba->T_ncdm[idx_wdm] * T_cmb_in_GeV; // Assuming the last species is WDM
         
         /* Set qmax to safely encompass the momentum peak */
         pba->ncdm_qmax[idx_wdm] = 15.0 * P_acc / T_ncdm_in_GeV; // Set qmax to 2 times the peak momentum, which should be sufficient to capture the distribution. You can adjust this factor if needed.
@@ -2907,14 +2903,10 @@ int input_read_parameters_species(struct file_content * pfc,
         /* Case of only mass or mass and Omega/omega: */
 
         /* This is a simple placeholder implementation, to be improved later */
-        if (n == 0) {
-          pba->M_ncdm[n] = pba->m_ncdm_in_eV[n]/_k_B_*_eV_/pba->T_ncdm[n]/pba->T_cmb;
-        }
-        if (n == 1) {
+        if (n == pba->N_ncdm - 1) {
           pba->M_ncdm[n] = pba->m_wdm_in_GeV*1e9/_k_B_*_eV_/pba->T_ncdm[n]/pba->T_cmb;
-          //printf("Setting M_ncdm[1] to %e based on m_wdm_in_GeV = %e GeV, T_ncdm[1] = %e*T_cmb and T_cmb = %e K.\n", pba->M_ncdm[1], pba->m_wdm_in_GeV, pba->T_ncdm[1], pba->T_cmb);
         }
-        if (n>1) {
+        else {
           pba->M_ncdm[n] = pba->m_ncdm_in_eV[n]/_k_B_*_eV_/pba->T_ncdm[n]/pba->T_cmb;
         }
         class_call(background_ncdm_momenta(
@@ -2925,6 +2917,7 @@ int input_read_parameters_species(struct file_content * pfc,
                                            pba->M_ncdm[n],
                                            pba->factor_ncdm[n],
                                            0.,
+                                           n,
                                            NULL,
                                            &rho_ncdm,
                                            NULL,
@@ -2932,22 +2925,14 @@ int input_read_parameters_species(struct file_content * pfc,
                                            NULL),
                    pba->error_message,
                    errmsg);
-        if (n == 0 || n == 1) {
-          if (pba->Omega0_ncdm[n] == 0.0){
-            pba->Omega0_ncdm[n] = rho_ncdm/pba->H0/pba->H0;
-          }
-          else{
-            fnu_factor = (pba->H0*pba->H0*pba->Omega0_ncdm[n]/rho_ncdm);
-            pba->factor_ncdm[n] *= fnu_factor;
-            pba->deg_ncdm[n] *=fnu_factor;
-          }
+
+        if (pba->Omega0_ncdm[n] == 0.0){
+          pba->Omega0_ncdm[n] = rho_ncdm/pba->H0/pba->H0;
         }
-        // if (n == 1){
-        //   pba->Omega0_ncdm[n] = 1e-10; // Some very small placeholder value
-        //}
-        if (n>1){
-          pba->Omega0_ncdm[n] = 0.0; // Set the density of any additional species to zero by default
-          printf("Warning: you have defined more than 2 ncdm species, but only the first two will be given a non-zero density as we consider only neutrinos+accDM.");
+        else{
+          fnu_factor = (pba->H0*pba->H0*pba->Omega0_ncdm[n]/rho_ncdm);
+          pba->factor_ncdm[n] *= fnu_factor;
+          pba->deg_ncdm[n] *=fnu_factor;
         }
       }
       else{
