@@ -348,6 +348,7 @@ struct background
 
   /* Accelerating DM */
   short has_wdm;      /**< presence of accelerating dark matter? */
+  short has_varGamma_dcdm; /**< presence of time-varying decay rate for decaying cold dark matter? */
   /* END Accelerating DM */
 
   //@}

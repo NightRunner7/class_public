@@ -2425,8 +2425,8 @@ int input_read_parameters_species(struct file_content * pfc,
   /** Summary: */
 
   /** - Define local variables */
-  int flag1, flag2, flag3, flag4, flag5, flag6;
-  double param1, param2, param3, param4, param5, param6;
+  int flag1, flag2, flag3, flag4, flag5, flag6, flag7, flag8;
+  double param1, param2, param3, param4, param5, param6, param7, param8;
   char string1[_ARGUMENT_LENGTH_MAX_];
   int fileentries;
   int N_ncdm=0, n, entries_read;
@@ -2650,9 +2650,12 @@ int input_read_parameters_species(struct file_content * pfc,
   class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
 
   class_call(parser_read_double(pfc,"m_wdm_in_GeV",&param2,&flag2,errmsg), errmsg, errmsg);
+  class_call(parser_read_double(pfc,"f_wdm",&param3,&flag3,errmsg), errmsg, errmsg);
+
   /* Proceed only if WDM is active in this run */
-  if (pba->Omega0_dcdmwdm > 0. || (pba->Omega_ini_dcdm > 0. && flag2 == _TRUE_)) {
+  if (pba->Omega0_dcdmwdm > 0. || pba->Omega_ini_dcdm > 0. || (flag3 == _TRUE_ && param3 > 0.)) {
     pba->has_wdm = _TRUE_;
+    if (flag3 == _TRUE_) pba->f_wdm = param3;
 
     /* --- Handle Energy Boost (eta = E/m_acc-1) --- */
     class_call(parser_read_double(pfc,"eta_wdm",&param1,&flag1,errmsg),
@@ -2678,11 +2681,6 @@ int input_read_parameters_species(struct file_content * pfc,
                 errmsg, 
                 "To compute PSD of WDM we need the mass of CDM in GeV.");
 
-    /* Error if user provides neither eta, nor the complete set of m and E */
-    // class_test((flag1 == _FALSE_) && (flag2 == _FALSE_ || flag3 == _FALSE_), 
-    //             errmsg, 
-    //             "You must provide either 'eta_wdm', OR both 'm_wdm_in_GeV' and 'E_wdm_in_GeV'.");
-
     if (flag1 == _TRUE_) {
         pba->eta_wdm = param1;
       } 
@@ -2692,21 +2690,14 @@ int input_read_parameters_species(struct file_content * pfc,
     if (flag3 == _TRUE_) {
         pba->M_cdm_in_GeV = param3;
       }
-    // else if (flag2 == _TRUE_ && flag3 == _TRUE_) {
-    //   pba->m_wdm_in_GeV = param2;
-    //   pba->E_wdm_in_GeV = param3;
-    //   pba->eta_wdm = param3/param2 - 1.;
-    // }
-    // else {
-    //   printf("Warning: WDM energy boost not provided. Assuming no energy boost (eta_wdm = 0). Note that if you want to provide an energy boost, you must provide either 'eta_wdm' directly, or both 'm_wdm_in_GeV' and 'E_wdm_in_GeV' to compute eta_wdm. \n");
-    //   pba->eta_wdm = 0.;
-    // }
 
     /* Finally let's deal with Gamma_wdm */
-
+    
     class_call(parser_read_double(pfc,"Gamma_wdm",&param1,&flag1,errmsg), errmsg, errmsg);
     class_call(parser_read_double(pfc,"tau_wdm",&param2,&flag2,errmsg), errmsg, errmsg);
-    class_call(parser_read_double(pfc,"f_wdm",&param3,&flag3,errmsg), errmsg, errmsg);
+
+    class_call(parser_read_double(pfc,"vary_Gamma_wdm",&param4,&flag4,errmsg), errmsg, errmsg);
+
 
     /* Require exactly one decay parameter */
     class_test((flag1 == _TRUE_) && (flag2 == _TRUE_), 
@@ -2715,31 +2706,67 @@ int input_read_parameters_species(struct file_content * pfc,
     class_test((flag1 == _FALSE_) && (flag2 == _FALSE_), 
                 errmsg, 
                 "You must provide a decay parameter: either 'Gamma_wdm' or 'tau_wdm'.");
-
-    /* Require the fraction rho_wdm/(rho_wdm+rho_cdm) in far past */
-    // class_test((flag3 == _FALSE_), 
-    //             errmsg, 
-    //             "You must provide the initial (i.e. in far past) ratio of wdm to total DM (wdm+CDM) 'f_wdm'.");
-
-    /* Assign the ratio */
-    if (flag3 == _TRUE_) { /* I am not sure it's needed tbh */
-        pba->f_wdm = param3; 
-    }
     
     if (flag1 == _TRUE_) {
         /* User provided Gamma directly. Input is in km/s/Mpc. */
         pba->Gamma_dcdm = param1 * (1.e3 / _c_);       // [Mpc]
         pba->tau_dcdm = _Mpc_over_m_ * 1e-3 / param1;  // [s]
-        // if (input_verbose > 2) {
-        //     printf("DEBUG: You provided 'Gamma_wdm' directly. Setting Gamma_wdm = %e Mpc, which corresponds to tau_wdm = %e s. \n", pba->Gamma_dcdm, pba->tau_dcdm);
-        // }
     }
     else if (flag2 == _TRUE_) { 
       pba->tau_dcdm = param2; // [s]
       pba->Gamma_dcdm = _Mpc_over_m_/(param2*_c_);  // [Mpc]
-      // if (input_verbose > 2) {
-      //     printf("DEBUG: You provided 'tau_wdm' directly. Setting tau_wdm = %e s, which corresponds to Gamma_wdm = %e Mpc.\n", pba->tau_dcdm, pba->Gamma_dcdm);
-      // }
+    }
+
+    if (flag4 == _TRUE_) {
+      if (param4 == 0.) {
+        pba->has_varGamma_dcdm = _FALSE_;
+      }
+      else if (param4 == 1.) {
+        pba->has_varGamma_dcdm = _TRUE_;
+        pba->has_mon = _FALSE_; 
+
+        /* SET THE INITIAL DENSITY STRICTLY ANALYTICALLY */
+        pba->Omega_ini_dcdm = pba->Omega0_cdm * pba->f_wdm;
+
+        /* Read kappa_mon or log10kappa_mon */
+        class_call(parser_read_double(pfc,"kappa_mon",&param5,&flag5,errmsg),errmsg,errmsg);
+        class_call(parser_read_double(pfc,"log10kappa_mon",&param6,&flag6,errmsg),errmsg,errmsg);
+        class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa__mon or log10kappa_mon, choose one");
+        if (flag5 == _TRUE_) {
+          pba->kappa_mon = param5;
+          if (pba->kappa_mon==1.0) {
+            pba->kappa_mon = 0.99999;
+          }
+        }
+        else if (flag6 == _TRUE_) {
+          pba->kappa_mon = pow(10.0,param6);
+          if (pba->kappa_mon==1.0) {
+            pba->kappa_mon = 0.99999;
+          }
+        }
+        else {
+          class_test(_TRUE_, errmsg, "You need to provide a value for kappa_mon or log10kappa_mon if you want to vary Gamma_dcdm.");
+        }
+
+        /* Read a_t_mon or log10a_t_mon */
+        class_call(parser_read_double(pfc,"a_t_mon",&param7,&flag7,errmsg), errmsg, errmsg);
+        class_call(parser_read_double(pfc,"log10a_t_mon",&param8,&flag8,errmsg), errmsg, errmsg);
+        class_test(((flag7 == _TRUE_) && (flag8 == _TRUE_)),
+              errmsg,
+              "In input file, you can only enter one of a_t_mon or log10a_t_mon, choose one");
+        if (flag7 == _TRUE_) {
+        pba->a_t_mon = param7;
+        }
+        if (flag8 == _TRUE_) {
+        pba->a_t_mon = pow(10.0,param8);
+        }
+
+        // pba->Omega_ini_dcdm = 0.;
+
+      }
+      else {
+        class_test(_TRUE_, errmsg, "The parameter 'vary_Gamma_dcdm' can only be set to 0 or 1.");
+      }
     }
   }
 
@@ -2865,8 +2892,9 @@ int input_read_parameters_species(struct file_content * pfc,
         int idx_wdm = pba->N_ncdm - 1;
 
         /* Calculate physical momentum P_acc in GeV */
-        double m_wdm = pba->m_wdm_in_GeV; 
-        double P_acc = m_wdm * sqrt(pba->eta_wdm * (pba->eta_wdm + 2.0)); /* in GeV */
+        double m_wdm = pba->m_wdm_in_GeV;
+        double M_cdm = pba->M_cdm_in_GeV; 
+        double P_acc = M_cdm * sqrt(pba->eta_wdm * (pba->eta_wdm + 2.0)); /* in GeV */
         
         /* Convert T_cmb to GeV */
         double T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1e9;
@@ -2902,8 +2930,8 @@ int input_read_parameters_species(struct file_content * pfc,
       if (pba->m_ncdm_in_eV[n] != 0.0){
         /* Case of only mass or mass and Omega/omega: */
 
-        /* This is a simple placeholder implementation, to be improved later */
-        if (n == pba->N_ncdm - 1) {
+        if (n == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
+            /* Special case for WDM, as we want to set its mass from the input parameter m_wdm_in_GeV, but we still need to compute its Omega from the distribution function. */
           pba->M_ncdm[n] = pba->m_wdm_in_GeV*1e9/_k_B_*_eV_/pba->T_ncdm[n]/pba->T_cmb;
         }
         else {
@@ -3120,6 +3148,7 @@ int input_read_parameters_species(struct file_content * pfc,
     class_test(pba->Gamma_dcdm<0.,
                errmsg,
                "You need to enter a decay constant for the decaying DM 'Gamma_dcdm > 0.'");
+  
   }
   
   if (has_m_budget == _TRUE_) {
@@ -3556,17 +3585,15 @@ int input_read_parameters_species(struct file_content * pfc,
   Omega_tot += pba->Omega0_idm;
   Omega_tot += pba->Omega0_dcdmdr;
   Omega_tot += pba->Omega0_dcdmwdm;
-  //printf("Omega0_dcdm = %e\n", pba->Omega0_dcdm);
-  //printf("Omega0_dcdmwdm = %e\n", pba->Omega0_dcdmwdm);
   Omega_tot += pba->Omega0_idr;
 
-  //printf("Omega0_ncdm_tot = %e\n", pba->Omega0_ncdm_tot);
-  double Omega0_ncdm_no_wdm = pba->Omega0_ncdm_tot;
-  if (pba->has_wdm == _TRUE_ && pba->N_ncdm > 0) {
-    Omega0_ncdm_no_wdm -= pba->Omega0_ncdm[pba->N_ncdm - 1];
-  }
-  Omega_tot += Omega0_ncdm_no_wdm;
-  //Omega_tot += pba->Omega0_ncdm_tot;
+  // double Omega0_ncdm_no_wdm = pba->Omega0_ncdm_tot;
+  // if (pba->has_wdm == _TRUE_ && pba->N_ncdm > 0) {
+  //   Omega0_ncdm_no_wdm -= pba->Omega0_ncdm[pba->N_ncdm - 1];
+  // }
+  // Omega_tot += Omega0_ncdm_no_wdm;
+
+  Omega_tot += pba->Omega0_ncdm_tot;
 
   /* Step 1 */
   if (flag1 == _TRUE_){
@@ -6217,6 +6244,7 @@ int input_default_params(struct background *pba,
   pba->M_cdm_in_GeV = 0.;
   pba->f_wdm = 0.;
   pba->Omega0_dcdmwdm = 0.0;
+  pba->has_varGamma_dcdm = _FALSE_;
 
   /* END Accelerating DM */
 
