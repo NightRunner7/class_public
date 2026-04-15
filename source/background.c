@@ -1377,44 +1377,25 @@ int background_ncdm_distribution(
       /* Scale factor corresponding to the considered comoving momentum q */
       double a_q = q*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
 
-      /*** qcube and number density computation -- rho_dcdm has different functional form so it WON'T evolve as exp(-Gamma*q) ***/
-      double rho_dcdm_comoving = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_wdm *(1-pow(a_q, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon)) * 3 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
-      // double rho_crit = 3.0 * pba->H0 * pba->H0 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
-      // double rho_dcdm_ini = pba->Omega_ini_dcdm * rho_crit; 
-      double parent_mass_kg = M_cdm * 1e9 * _eV_ / (_c_ * _c_);
-      double n_dcdm_comoving = rho_dcdm_comoving / parent_mass_kg; // In 1/Mpc^3
+      if (a_q > 1.0) {
+        /* If a_q > 1, it means that the considered momentum q is not yet reached by the acceleration mechanism, so f0 should be zero */
+        *f0 = 0.0;
+      }
+      else {
+        /*** qcube and number density computation -- rho_dcdm has different functional form so it WON'T evolve as exp(-Gamma*q) ***/
+        double rho_dcdm_comoving = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_wdm *(1-pow(a_q, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon)) * 3 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
+        double parent_mass_kg = M_cdm * 1e9 * _eV_ / (_c_ * _c_);
+        double n_dcdm_comoving = rho_dcdm_comoving / parent_mass_kg; // In 1/Mpc^3
 
-      /* Estimate density parameters assuming LCDM */
-      // double Omega_m = pba->Omega0_b + pba->Omega0_cdm + pba->Omega_ini_dcdm; 
-      // double Omega_r = pba->Omega0_g + pba->Omega0_ur;                        
-      // double Omega_Lambda = pba->Omega0_lambda;                               
-      // double H_q = pba->H0*sqrt(Omega_r*pow(a_q,-4) + Omega_m*pow(a_q,-3) + Omega_Lambda); // Approximation of Hubble rate at a_q, assuming LCDM expansion history
+        /*** General Gamma ***/
+        double Gamma_q_over_H_q = pba->kappa_mon * (pow(a_q, pba->kappa_mon)+pow(a_q/pba->a_t_mon, pba->kappa_mon))/(1-pow(a_q, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon));
+        // Ensure that Gamma_q_over_H_q does not exceed 100 to avoid numerical issues
+        Gamma_q_over_H_q = MIN(Gamma_q_over_H_q, 100.0);
 
-      // double term1 = Omega_m * sqrt(Omega_r+Omega_m*a_q);
-      // double term2 = 2.0 * pow(Omega_r, 1.5)/a_q;
-      // double term3 = 2.0 * Omega_r * sqrt((Omega_r / a_q + Omega_m) / a_q);
-
-      // double t_q = 2.0 * (term1+term2-term3) / (3.0 * Omega_m*Omega_m/a_q*pba->H0);
-      // t_q = MAX(0.0, t_q); 
-
-      /*** General Gamma ***/
-      // double Gamma_q = H_q*pba->kappa_mon * (pow(a_q, pba->kappa_mon)+pow(a_q/pba->a_t_mon, pba->kappa_mon))/(1-pow(a_q, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon));
-      double Gamma_q_over_H_q = pba->kappa_mon * (pow(a_q, pba->kappa_mon)+pow(a_q/pba->a_t_mon, pba->kappa_mon))/(1-pow(a_q, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon));
-      // Ensure that Gamma_q_over_H_q does not exceed 100 to avoid numerical issues
-      Gamma_q_over_H_q = MIN(Gamma_q_over_H_q, 100.0);
-      // double Gamma_q = H_q * pba->kappa_mon * (pow(a_q, pba->kappa_mon)+pow(a_q/pba->a_t_mon, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon));
-
-      /*** Final expression for f0 ***/
-      
-      *f0 = n_dcdm_comoving / (4.0 * _PI_ * qcube) * Gamma_q_over_H_q; // * exp(-Gamma_q * t_q);
-
-      // *f0 = n_dcdm_ini / (4.0 * _PI_ * qcube) * pba->Gamma_dcdm * (exp(-pba->Gamma_dcdm * t_q)/H_q);
-
-      /* Catch underflows */
-      // if (*f0 < 1e-200 || isnan(*f0)) {
-      //   *f0 = 1e-200;
-      // }
-
+        /*** Final expression for f0 ***/
+        
+        *f0 = n_dcdm_comoving / (4.0 * _PI_ * qcube) * Gamma_q_over_H_q; // * exp(-Gamma_q * t_q);
+        }
     }
 
 
