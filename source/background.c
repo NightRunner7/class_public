@@ -1364,15 +1364,15 @@ int background_ncdm_distribution(
 
       /* Extract masses in GeV */
       double M_cdm = pba->M_cdm_in_GeV; 
-      double m_wdm = pba->m_wdm_in_GeV; 
+      // double m_wdm = pba->m_wdm_in_GeV; 
 
       double q_factor = (pba->T_cmb*pba->T_ncdm[n_ncdm] / (_h_P_ * _c_ / _k_B_ / 2 / _PI_ ) * _Mpc_over_m_);
       double qcube = pow(q * q_factor, 3);
 
       /*** Hubble rate and time at for considered momentum q value ***/
 
-      /* Momentum transfer from acceleration */
-      double P_acc = M_cdm*sqrt(pba->eta_wdm*(pba->eta_wdm+2)); /* In GeV! */
+      /* Momentum transfer from acceleration (precomputed in input) */
+      double P_acc = pba->P_acc_wdm; /* In GeV! */
 
       /* Scale factor corresponding to the considered comoving momentum q */
       double a_q = q*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
@@ -1775,7 +1775,7 @@ int background_ncdm_momenta(
     T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1.e9;
     T_ncdm_today_GeV = T_cmb_in_GeV * pba->T_ncdm[n_ncdm]; 
 
-    P_acc = pba->M_cdm_in_GeV * sqrt(pba->eta_wdm*(pba->eta_wdm+2.0)); /* In GeV! */
+    P_acc = pba->P_acc_wdm; /* In GeV, precomputed in input */
   }      
 
   /** - loop over momenta */

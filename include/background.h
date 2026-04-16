@@ -97,6 +97,7 @@ struct background
   double E_wdm_in_GeV;   /**< \f$ E_{wdm} \f$: energy of the accelerating dark matter particle in GeV */
 
   double M_cdm_in_GeV;   /**< \f$ m_{cdm} \f$: mass of Cold Dark Matter particle in GeV, necessary to compute number density, should be large. */
+  double P_acc_wdm;      /**< \f$ P_{acc} \f$: momentum kick imparted to WDM daughter in parent rest frame [GeV], precomputed as M_cdm*sqrt(eta*(eta+2)) */
 
   // double Omega_ini_accdm;  /**< \f$ \Omega_{ini,adm} \f$: rescaled initial value for accelerating dark matter density */
   double Omega0_dcdmwdm;           /**< \f$ \Omega_{0 wdm}+\Omega_{0 cdm} \f$: Cold Dark Matter (cdm) accelerating to WDM (wdm) */

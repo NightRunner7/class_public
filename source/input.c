@@ -1309,7 +1309,6 @@ int input_get_guess(double *xguess,
     case omega_dcdmwdm:
       Omega_M = ba.Omega0_cdm+ba.Omega0_idm+ba.Omega0_dcdmwdm+ba.Omega0_b;
       gamma = ba.Gamma_dcdm/ba.H0;
-      printf("Omega_M = %e, gamma = %e\n", Omega_M, gamma);
       if (gamma < 1)
         a_decay = 1.0;
       else
@@ -2683,21 +2682,20 @@ int input_read_parameters_species(struct file_content * pfc,
 
     if (flag1 == _TRUE_) {
         pba->eta_wdm = param1;
-      } 
+      }
     if (flag2 == _TRUE_) {
         pba->m_wdm_in_GeV = param2;
       }
     if (flag3 == _TRUE_) {
         pba->M_cdm_in_GeV = param3;
       }
+    /* Precompute kick momentum once: used in f0, ncdm_momenta, and ncdm_qmax */
+    pba->P_acc_wdm = pba->M_cdm_in_GeV * sqrt(pba->eta_wdm * (pba->eta_wdm + 2.0));
 
     /* Finally let's deal with Gamma_wdm */
     
     class_call(parser_read_double(pfc,"Gamma_wdm",&param1,&flag1,errmsg), errmsg, errmsg);
     class_call(parser_read_double(pfc,"tau_wdm",&param2,&flag2,errmsg), errmsg, errmsg);
-
-    class_call(parser_read_double(pfc,"vary_Gamma_wdm",&param4,&flag4,errmsg), errmsg, errmsg);
-
 
     /* Require exactly one decay parameter */
     class_test((flag1 == _TRUE_) && (flag2 == _TRUE_), 
@@ -2717,56 +2715,39 @@ int input_read_parameters_species(struct file_content * pfc,
       pba->Gamma_dcdm = _Mpc_over_m_/(param2*_c_);  // [Mpc]
     }
 
-    if (flag4 == _TRUE_) {
-      if (param4 == 0.) {
-        pba->has_varGamma_dcdm = _FALSE_;
+    int vary_Gamma_wdm = _FALSE_;
+    class_read_flag("vary_Gamma_wdm", vary_Gamma_wdm);
+    if (vary_Gamma_wdm == _TRUE_) {
+      pba->has_varGamma_dcdm = _TRUE_;
+      pba->has_mon = _FALSE_;
+
+      /* SET THE INITIAL DENSITY STRICTLY ANALYTICALLY */
+      pba->Omega_ini_dcdm = pba->Omega0_cdm * pba->f_wdm;
+
+      /* Read kappa_mon or log10kappa_mon */
+      class_call(parser_read_double(pfc,"kappa_mon",&param5,&flag5,errmsg),errmsg,errmsg);
+      class_call(parser_read_double(pfc,"log10kappa_mon",&param6,&flag6,errmsg),errmsg,errmsg);
+      class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa_mon or log10kappa_mon, choose one");
+      if (flag5 == _TRUE_) {
+        pba->kappa_mon = param5;
+        if (pba->kappa_mon == 1.0) pba->kappa_mon = 0.99999;
       }
-      else if (param4 == 1.) {
-        pba->has_varGamma_dcdm = _TRUE_;
-        pba->has_mon = _FALSE_; 
-
-        /* SET THE INITIAL DENSITY STRICTLY ANALYTICALLY */
-        pba->Omega_ini_dcdm = pba->Omega0_cdm * pba->f_wdm;
-
-        /* Read kappa_mon or log10kappa_mon */
-        class_call(parser_read_double(pfc,"kappa_mon",&param5,&flag5,errmsg),errmsg,errmsg);
-        class_call(parser_read_double(pfc,"log10kappa_mon",&param6,&flag6,errmsg),errmsg,errmsg);
-        class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa__mon or log10kappa_mon, choose one");
-        if (flag5 == _TRUE_) {
-          pba->kappa_mon = param5;
-          if (pba->kappa_mon==1.0) {
-            pba->kappa_mon = 0.99999;
-          }
-        }
-        else if (flag6 == _TRUE_) {
-          pba->kappa_mon = pow(10.0,param6);
-          if (pba->kappa_mon==1.0) {
-            pba->kappa_mon = 0.99999;
-          }
-        }
-        else {
-          class_test(_TRUE_, errmsg, "You need to provide a value for kappa_mon or log10kappa_mon if you want to vary Gamma_dcdm.");
-        }
-
-        /* Read a_t_mon or log10a_t_mon */
-        class_call(parser_read_double(pfc,"a_t_mon",&param7,&flag7,errmsg), errmsg, errmsg);
-        class_call(parser_read_double(pfc,"log10a_t_mon",&param8,&flag8,errmsg), errmsg, errmsg);
-        class_test(((flag7 == _TRUE_) && (flag8 == _TRUE_)),
-              errmsg,
-              "In input file, you can only enter one of a_t_mon or log10a_t_mon, choose one");
-        if (flag7 == _TRUE_) {
-        pba->a_t_mon = param7;
-        }
-        if (flag8 == _TRUE_) {
-        pba->a_t_mon = pow(10.0,param8);
-        }
-
-        // pba->Omega_ini_dcdm = 0.;
-
+      else if (flag6 == _TRUE_) {
+        pba->kappa_mon = pow(10.0, param6);
+        if (pba->kappa_mon == 1.0) pba->kappa_mon = 0.99999;
       }
       else {
-        class_test(_TRUE_, errmsg, "The parameter 'vary_Gamma_dcdm' can only be set to 0 or 1.");
+        class_test(_TRUE_, errmsg, "You need to provide kappa_mon or log10kappa_mon when vary_Gamma_wdm = yes.");
       }
+
+      /* Read a_t_mon or log10a_t_mon */
+      class_call(parser_read_double(pfc,"a_t_mon",&param7,&flag7,errmsg), errmsg, errmsg);
+      class_call(parser_read_double(pfc,"log10a_t_mon",&param8,&flag8,errmsg), errmsg, errmsg);
+      class_test(((flag7 == _TRUE_) && (flag8 == _TRUE_)),
+            errmsg,
+            "In input file, you can only enter one of a_t_mon or log10a_t_mon, choose one");
+      if (flag7 == _TRUE_) pba->a_t_mon = param7;
+      if (flag8 == _TRUE_) pba->a_t_mon = pow(10.0, param8);
     }
   }
 
@@ -2891,17 +2872,15 @@ int input_read_parameters_species(struct file_content * pfc,
 
         int idx_wdm = pba->N_ncdm - 1;
 
-        /* Calculate physical momentum P_acc in GeV */
-        double m_wdm = pba->m_wdm_in_GeV;
-        double M_cdm = pba->M_cdm_in_GeV; 
-        double P_acc = M_cdm * sqrt(pba->eta_wdm * (pba->eta_wdm + 2.0)); /* in GeV */
+        /* Physical momentum kick [GeV], precomputed earlier in this function */
+        double P_acc = pba->P_acc_wdm;
         
         /* Convert T_cmb to GeV */
         double T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1e9;
         double T_ncdm_in_GeV = pba->T_ncdm[idx_wdm] * T_cmb_in_GeV; // Assuming the last species is WDM
         
         /* Set qmax to safely encompass the momentum peak */
-        pba->ncdm_qmax[idx_wdm] = 15.0 * P_acc / T_ncdm_in_GeV; // Set qmax to 2 times the peak momentum, which should be sufficient to capture the distribution. You can adjust this factor if needed.
+        pba->ncdm_qmax[idx_wdm] = 15.0 * P_acc / T_ncdm_in_GeV; // Set qmax to 15.0 times the peak momentum, which should be sufficient to capture the distribution. You can adjust this factor if needed.
         if (input_verbose > 2) {
             printf("Setting ncdm_qmax for WDM species (index %d) to %e to capture the momentum distribution peak at P_acc = %e GeV.\n", idx_wdm, pba->ncdm_qmax[idx_wdm], P_acc);
         }
@@ -6242,6 +6221,7 @@ int input_default_params(struct background *pba,
   pba->eta_wdm = 0.;
   pba->m_wdm_in_GeV = 0.;
   pba->M_cdm_in_GeV = 0.;
+  pba->P_acc_wdm = 0.;
   pba->f_wdm = 0.;
   pba->Omega0_dcdmwdm = 0.0;
   pba->has_varGamma_dcdm = _FALSE_;
