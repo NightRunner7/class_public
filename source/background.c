@@ -477,7 +477,7 @@ int background_functions(
   /* Monopoles */
   if (pba->has_mon == _TRUE_) {
     /* Pass value of rho_mon to output */
-    pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon *(1-a_k)/(1+at_k);
+    pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon * (1-a_k)/(1+at_k);
     rho_tot += pvecback[pba->index_bg_rho_mon];
     p_tot += 0.;
     rho_m += pvecback[pba->index_bg_rho_mon];
@@ -487,12 +487,12 @@ int background_functions(
   if (pba->has_dr == _TRUE_) {
     /* Pass value of rho_dr to output */
     if (pba->has_mon == _TRUE_){
-      if (fabs(-1.*pow((a)/pba->a_t_mon,pba->kappa_mon)) < 1.)
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+at_k)/(a_k+at_k) * ((a_k+at_k) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(a/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon));
+      if (fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) < 1.)
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(a_k+pow(pba->a_t_mon,pba->kappa_mon)) * ((a_k+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(a/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon));
       else if ((fabs(-1.*at_k) >= 1.) && (fabs(-1.*at_k) < 100.))
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+at_k)/(a_k+at_k) * ((a_k+at_k) * (1./(1.-(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(a/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(a_k+pow(pba->a_t_mon,pba->kappa_mon)) * ((a_k+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(a/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
       else
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+at_k)/(a_k+at_k) * ((a_k+at_k) * (pow(1./pow(a/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(a/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(a_k+pow(pba->a_t_mon,pba->kappa_mon)) * ((a_k+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(a/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(a/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
     }
     else {
       pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
@@ -562,7 +562,7 @@ int background_functions(
          to rho_ncdm1 */
       rho_m += rho_ncdm - 3.* p_ncdm;
 
-      if (n_ncdm == pba->N_ncdm-1 && pba->has_mon == _TRUE_){
+      if (n_ncdm == pba->N_ncdm-1 && pba->has_wdm == _TRUE_){
         /* Pass value of rho_ncdm1 to output */
         pvecback[pba->index_bg_Gamma_acc] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
             ((1.-a_k)*(1.+at_k));
@@ -645,7 +645,7 @@ int background_functions(
   /* Gamma_mon, the time-dependent inverse lifetime of DM */
   if (pba->has_mon == _TRUE_) {
     pvecback[pba->index_bg_Gamma_mon] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
-            ((1.-pow(a,pba->kappa_mon))*(1.+at_k));
+            ((1.-a_k)*(1.+at_k));
     // Regulate divergence:
     if (pvecback[pba->index_bg_Gamma_mon] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
             pvecback[pba->index_bg_Gamma_mon]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
@@ -1401,7 +1401,7 @@ int background_ncdm_distribution(
       /* Scale factor corresponding to the considered comoving momentum q */
       double a_q = q*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
 
-      if (a_q >= 1.0 || a_q <= 1e-14) {
+      if (a_q >= 1.0 || a_q < 1e-14) {
         /* If a_q > 1, it means that the considered momentum q is not yet reached by the acceleration mechanism, so f0 should be zero */
         *f0 = 0.0;
       }
@@ -1676,6 +1676,7 @@ int background_ncdm_init(
       q = pba->q_ncdm[k][index_q];
       class_call(background_ncdm_distribution(&pbadist,q,&f0),
                  pba->error_message,pba->error_message);
+
       if (k == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
         pba->aq_ncdm_wdm[k][index_q] = q * pba->T_acc_GeV / pba->P_acc_wdm;
       }
@@ -1715,7 +1716,7 @@ int background_ncdm_init(
       else{
         if (k == pba->N_ncdm - 1) {
           // AG: Do nothing? This is recomputed later on anyway. 
-          //pba->dlnf0_dlnq_ncdm[k][index_q] = q*df0dq; // GFA Instead of evolving psi, we directly evolve f0*psi. Hence, the f0 at the denominator cancels out.
+          // pba->dlnf0_dlnq_ncdm[k][index_q] = q*df0dq; // GFA Instead of evolving psi, we directly evolve f0*psi. Hence, the f0 at the denominator cancels out.
         }
         else{
           pba->dlnf0_dlnq_ncdm[k][index_q] = q/f0*df0dq;
@@ -1801,10 +1802,10 @@ int background_ncdm_momenta(
 
   if (pba->has_wdm == _TRUE_ && n_ncdm == pba->N_ncdm - 1) {
     is_wdm = 1;
-    T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1.e9;
-    T_ncdm_today_GeV = T_cmb_in_GeV * pba->T_ncdm[n_ncdm]; 
+    // T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1.e9;
+    // T_ncdm_today_GeV = T_cmb_in_GeV * pba->T_ncdm[n_ncdm]; 
 
-    P_acc = pba->P_acc_wdm; /* In GeV, precomputed in input */
+    // P_acc = pba->P_acc_wdm; /* In GeV, precomputed in input */
   }      
 
   /** - loop over momenta */
@@ -2218,7 +2219,6 @@ int background_solve(
         rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1./pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
       else
         rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1./pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1./pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
-
 
       pba->Omega0_dr = rhodr_0/pba->H0/pba->H0;  
 

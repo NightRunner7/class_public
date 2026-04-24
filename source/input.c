@@ -2608,6 +2608,8 @@ int input_read_parameters_species(struct file_content * pfc,
   /** II) General Accelerating Dark Matter      ======================================================*/
   /** ================================================================================================*/
 
+  /* AG: MOVE THIS BACK TO CORRECT PLACE */
+
   /* Basically copied the inmplementation of DCDM, but with addition of our new param f_adm, however the equations describing this evolution are different. */
   /* Read */
   class_call(parser_read_double(pfc,"Omega_dcdmwdm",&param1,&flag1,errmsg),
@@ -2648,9 +2650,15 @@ int input_read_parameters_species(struct file_content * pfc,
   }
   class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
 
-  class_call(parser_read_double(pfc,"m_wdm_in_GeV",&param2,&flag2,errmsg), errmsg, errmsg);
-  class_call(parser_read_double(pfc,"f_wdm",&param3,&flag3,errmsg), errmsg, errmsg);
+  // class_call(parser_read_double(pfc,"m_wdm_in_GeV",&param2,&flag2,errmsg), errmsg, errmsg);
+  // class_call(parser_read_int(pfc,"acc_ncdm_index",&param1,&flag1,errmsg), errmsg, errmsg);
+  // pba->acc_ncdm_index = (int)param1;
+  // // If acc_ncdm_indec != NULL, then check whether N_ncdm>0 and whether the index is in the correct range. If not, stop with an error message.
+  // class_test(flag1 == _TRUE_ && (pba->N_ncdm == 0 || pba->acc_ncdm_index > pba->N_ncdm), errmsg, 
+  // "If you want to have WDM you need to specify which ncdm species is the one that corresponds to WDM. You can do that by setting 'acc_ncdm_index' to the correct value between 1 and N_ncdm. Currently you set 'acc_ncdm_index' to %d, but N_ncdm is equal to %d.", pba->acc_ncdm_index, pba->N_ncdm);
 
+  class_call(parser_read_double(pfc,"f_wdm",&param3,&flag3,errmsg), errmsg, errmsg);
+  
   /* Proceed only if WDM is active in this run */
   if (pba->Omega0_dcdmwdm > 0. || pba->Omega_ini_dcdm > 0. || (flag3 == _TRUE_ && param3 > 0.)) {
     pba->has_wdm = _TRUE_;
@@ -2880,26 +2888,22 @@ int input_read_parameters_species(struct file_content * pfc,
     if (pba->m_wdm_in_GeV > 0. && pba-> N_ncdm > 0) {
 
         int idx_wdm = pba->N_ncdm - 1;
-
-        /* Physical momentum kick [GeV], precomputed earlier in this function */
-        double P_acc = pba->P_acc_wdm;
         
         /* Convert T_cmb to GeV */
         double T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1e9;
         double T_ncdm_in_GeV = pba->T_ncdm[idx_wdm] * T_cmb_in_GeV; // Assuming the last species is WDM
         pba->T_acc_GeV = T_ncdm_in_GeV;
 
-
         /* Set qmax to safely encompass the momentum peak */
 
-        if (pba->has_varGamma_dcdm == _TRUE_) { // AG: Production should be concentrated around the scale factor a_t_mon, so we can use it to set qmax more precisely. The factor of 5.0 is somewhat arbitrary but should be sufficient to capture the distribution while avoiding unnecessarily large qmax values that would slow down the code.
-          pba->ncdm_qmax[idx_wdm] = 5.0 * pba->a_t_mon * P_acc / pba->T_acc_GeV;
-        } else {
-          pba->ncdm_qmax[idx_wdm] = 1.3 * P_acc / pba->T_acc_GeV;  // fallback
-        }
+        // if (pba->has_varGamma_dcdm == _TRUE_) { // AG: Production should be concentrated around the scale factor a_t_mon... NOT TRUE! THIS DEPENDS ON KAPPA, for small kappa the transition is slow so this breaks down.
+        //   pba->ncdm_qmax[idx_wdm] = 1.3 * P_acc / pba->T_acc_GeV;   // 5.0 * pba->a_t_mon * P_acc / pba->T_acc_GeV;
+        // } else {
+        pba->ncdm_qmax[idx_wdm] = 1.3 * pba->P_acc_wdm / pba->T_acc_GeV;  // fallback
+        // }
         
         if (input_verbose > 2) {
-            printf("Setting ncdm_qmax for WDM species (index %d) to %e to capture the momentum distribution peak at P_acc = %e GeV.\n", idx_wdm, pba->ncdm_qmax[idx_wdm], P_acc);
+            printf("Setting ncdm_qmax for WDM species (index %d) to %e to capture the momentum distribution peak at P_acc = %e GeV.\n", idx_wdm, pba->ncdm_qmax[idx_wdm], pba->P_acc_wdm);
         }
       }
     /* ========================================================= */
@@ -6244,6 +6248,8 @@ int input_default_params(struct background *pba,
   pba->has_varGamma_dcdm = _FALSE_;
   ppt->switch_off_shear_wdm = _TRUE_;
   ppt->switch_on_eq_delta_p_wdm = _FALSE_;
+
+  pba->acc_ncdm_index = NULL; 
 
   /* END Accelerating DM */
 

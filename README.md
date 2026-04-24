@@ -1,6 +1,10 @@
-CLASS: Cosmic Linear Anisotropy Solving System  {#mainpage}
+A FORK FOR ACCELERATING DARK MATTER {#mainpage}
 ==============================================
 
+This is a fork of CLASS aiming to implement some kind of accelerating DM. The implementation is based heavily on the one present in https://github.com/PoulinV/class_decays i.e. DCDM->DR+WDM used in 2102.12498, 2008.09615, but generalized to use expressions for rho_dcdm and Gamma_dcdm from 1803.03644 and 2210.14339. 
+
+CLASS: Cosmic Linear Anisotropy Solving System  
+==============================================
 Authors: Julien Lesgourgues, Thomas Tram, Nils Schoeneberg
 
 with several major inputs from other people, especially Benjamin
