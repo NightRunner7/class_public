@@ -2682,6 +2682,9 @@ int input_read_parameters_species(struct file_content * pfc,
 
     if (flag1 == _TRUE_) {
         pba->eta_wdm = param1;
+        double eta = pba->eta_wdm;
+        double eta2 = eta*eta;
+        pba->eps_acc = - eta2 + sqrt(eta2*eta2 + 4*eta2*eta + 5*eta2 + 2*eta) - 2*eta;
       }
     if (flag2 == _TRUE_) {
         pba->m_wdm_in_GeV = param2;
@@ -2691,7 +2694,7 @@ int input_read_parameters_species(struct file_content * pfc,
       }
     /* Precompute kick momentum once: used in f0, ncdm_momenta, and ncdm_qmax */
     pba->P_acc_wdm = pba->M_cdm_in_GeV * sqrt(pba->eta_wdm * (pba->eta_wdm + 2.0));
-
+    
     /* Finally let's deal with Gamma_wdm */
     
     class_call(parser_read_double(pfc,"Gamma_wdm",&param1,&flag1,errmsg), errmsg, errmsg);
@@ -2749,6 +2752,12 @@ int input_read_parameters_species(struct file_content * pfc,
       if (flag7 == _TRUE_) pba->a_t_mon = param7;
       if (flag8 == _TRUE_) pba->a_t_mon = pow(10.0, param8);
     }
+  
+    // ppt->switch_on_eq_delta_p_wdm = _TRUE_;
+    class_read_flag("switch_on_eq_delta_p_wdm", ppt->switch_on_eq_delta_p_wdm);
+    // ppt->switch_off_shear_wdm = _FALSE_;
+    class_read_flag("switch_off_shear_wdm", ppt->switch_off_shear_wdm);
+
   }
 
   /** 5) Non-cold relics (ncdm) */
@@ -2878,9 +2887,17 @@ int input_read_parameters_species(struct file_content * pfc,
         /* Convert T_cmb to GeV */
         double T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1e9;
         double T_ncdm_in_GeV = pba->T_ncdm[idx_wdm] * T_cmb_in_GeV; // Assuming the last species is WDM
-        
+        pba->T_acc_GeV = T_ncdm_in_GeV;
+
+
         /* Set qmax to safely encompass the momentum peak */
-        pba->ncdm_qmax[idx_wdm] = 15.0 * P_acc / T_ncdm_in_GeV; // Set qmax to 15.0 times the peak momentum, which should be sufficient to capture the distribution. You can adjust this factor if needed.
+
+        if (pba->has_varGamma_dcdm == _TRUE_) { // AG: Production should be concentrated around the scale factor a_t_mon, so we can use it to set qmax more precisely. The factor of 5.0 is somewhat arbitrary but should be sufficient to capture the distribution while avoiding unnecessarily large qmax values that would slow down the code.
+          pba->ncdm_qmax[idx_wdm] = 5.0 * pba->a_t_mon * P_acc / pba->T_acc_GeV;
+        } else {
+          pba->ncdm_qmax[idx_wdm] = 1.3 * P_acc / pba->T_acc_GeV;  // fallback
+        }
+        
         if (input_verbose > 2) {
             printf("Setting ncdm_qmax for WDM species (index %d) to %e to capture the momentum distribution peak at P_acc = %e GeV.\n", idx_wdm, pba->ncdm_qmax[idx_wdm], P_acc);
         }
@@ -3565,12 +3582,9 @@ int input_read_parameters_species(struct file_content * pfc,
   Omega_tot += pba->Omega0_dcdmdr;
   Omega_tot += pba->Omega0_dcdmwdm;
   Omega_tot += pba->Omega0_idr;
-
-  // double Omega0_ncdm_no_wdm = pba->Omega0_ncdm_tot;
-  // if (pba->has_wdm == _TRUE_ && pba->N_ncdm > 0) {
-  //   Omega0_ncdm_no_wdm -= pba->Omega0_ncdm[pba->N_ncdm - 1];
-  // }
-  // Omega_tot += Omega0_ncdm_no_wdm;
+  if (pba->has_mon == _TRUE_){
+    Omega_tot += pba->Omega0_dr;
+  }
 
   Omega_tot += pba->Omega0_ncdm_tot;
 
@@ -6192,6 +6206,7 @@ int input_default_params(struct background *pba,
   /** 5.e) ncdm temperature */
   pba->T_ncdm_default = 0.71611; /* this value gives m/omega = 93.14 eV b*/
   pba->T_ncdm = NULL;
+  pba->T_acc_GeV = 0.;
   /** 5.f) ncdm chemical potential */
   pba->ksi_ncdm_default = 0.;
   pba->ksi_ncdm = NULL;
@@ -6211,6 +6226,7 @@ int input_default_params(struct background *pba,
   /** 7.1.a) Current fractional density of dcdm+dr */
   pba->Omega0_dcdmdr = 0.0;
   pba->Omega0_dcdm = 0.0;
+  pba->Omega0_mondr = 0.0;
   /** 7.1.b) Initial fractional density of dcdm+dr */
   pba->Omega_ini_dcdm = 0.;
   /** 7.1.c) Decay constant */
@@ -6219,12 +6235,15 @@ int input_default_params(struct background *pba,
 
   /* START Accelerating DM */
   pba->eta_wdm = 0.;
+  pba->eps_acc = 0.;
   pba->m_wdm_in_GeV = 0.;
   pba->M_cdm_in_GeV = 0.;
   pba->P_acc_wdm = 0.;
   pba->f_wdm = 0.;
   pba->Omega0_dcdmwdm = 0.0;
   pba->has_varGamma_dcdm = _FALSE_;
+  ppt->switch_off_shear_wdm = _TRUE_;
+  ppt->switch_on_eq_delta_p_wdm = _FALSE_;
 
   /* END Accelerating DM */
 

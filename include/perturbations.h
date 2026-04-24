@@ -310,6 +310,9 @@ struct perturbations
   int index_tp_delta_ncdm1; /**< index value for delta of first non-cold dark matter species (e.g. massive neutrinos) */
   int index_tp_perturbed_recombination_delta_temp;		/**< Gas temperature perturbation */
   int index_tp_perturbed_recombination_delta_chi;		/**< Inionization fraction perturbation */
+  /* START AccDM*/
+  int index_tp_delta_p_over_delta_rho_ncdm1; /**< GFA */
+  /* END AccDM */
 
   int index_tp_theta_m;     /**< index value for matter velocity fluctuation */
   int index_tp_theta_cb;    /**< index value for theta cb */
@@ -459,6 +462,10 @@ struct perturbations
   short is_allocated; /**< flag is set to true if allocated */
 
   //@}
+
+  short switch_on_eq_delta_p_wdm; /* GFA, just for testing  */
+  short switch_off_shear_wdm; /* GFA, just for testing  */
+
 
 };
 
@@ -612,6 +619,9 @@ struct perturbations_workspace
   double * delta_ncdm;	/**< relative density perturbation of each ncdm species */
   double * theta_ncdm;	/**< velocity divergence theta of each ncdm species */
   double * shear_ncdm;	/**< shear for each ncdm species */
+  /* START AccDM */
+  double * delta_p_over_delta_rho_ncdm;	/**< sound speed for each ncdm species */
+  /* END AccDM */
 
   double delta_m;	/**< relative density perturbation of all non-relativistic species */
   double theta_m;	/**< velocity divergence theta of all non-relativistic species */
@@ -990,6 +1000,18 @@ extern "C" {
                                             struct perturbations_workspace * ppw,
                                             ErrorMsg error_message
                                             );
+
+  int compute_dfdlnq_ncdm(  struct precision *ppr,
+                            struct background *pba,
+                            struct perturbations *ppt,
+                            int n_ncdm);
+
+  int background_ncdm_distribution_perts(
+                                   struct background *pba,
+                                   double q,
+                                   int n_ncdm,
+                                   double * f0
+                                 ) ;
 
 #ifdef __cplusplus
 }

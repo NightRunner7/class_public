@@ -98,6 +98,9 @@ struct background
 
   double M_cdm_in_GeV;   /**< \f$ m_{cdm} \f$: mass of Cold Dark Matter particle in GeV, necessary to compute number density, should be large. */
   double P_acc_wdm;      /**< \f$ P_{acc} \f$: momentum kick imparted to WDM daughter in parent rest frame [GeV], precomputed as M_cdm*sqrt(eta*(eta+2)) */
+  double T_acc_GeV;   
+  double eps_acc;
+  double k_fss_wdm;
 
   // double Omega_ini_accdm;  /**< \f$ \Omega_{ini,adm} \f$: rescaled initial value for accelerating dark matter density */
   double Omega0_dcdmwdm;           /**< \f$ \Omega_{0 wdm}+\Omega_{0 cdm} \f$: Cold Dark Matter (cdm) accelerating to WDM (wdm) */
@@ -215,7 +218,7 @@ struct background
   /* End Monopole (BRINGMANN 2018) modification */
 
   /* Accelerating DM */
-  // int index_bg_rho_wdm;      /**< wdm density */
+  int index_bg_Gamma_acc;      /**< acc DM density */
   // int index_bg_rho_nonwdm;   /**< nonwdm (cdm) density */
   /* END Accelerating DM */
 
@@ -367,6 +370,8 @@ struct background
   double ** q_ncdm;     /**< Pointers to vectors of perturbation sampling in q */
   double ** w_ncdm;     /**< Pointers to vectors of corresponding quadrature weights w */
   double ** dlnf0_dlnq_ncdm; /**< Pointers to vectors of logarithmic derivatives of p-s-d */
+  double ** f0_ncdm_wdm;   /**< Precomputed f0(q) for WDM perturbation species */
+  double ** aq_ncdm_wdm;   /**< Precomputed a_q = q*T_acc/P_acc per q-bin */
   int * q_size_ncdm_bg; /**< Size of the q_ncdm_bg arrays */
   int * q_size_ncdm;    /**< Size of the q_ncdm arrays */
   double * factor_ncdm; /**< List of normalization factors for calculating energy density etc.*/

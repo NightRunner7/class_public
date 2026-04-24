@@ -424,6 +424,11 @@ int background_functions(
   /** - pass value of \f$ a\f$ to output */
   pvecback[pba->index_bg_a] = a;
 
+  /** Precompute some quantities for AccDM */
+  double a_k = pow(a, pba->kappa_mon);
+  double at_k = pow(a/pba->a_t_mon, pba->kappa_mon);
+  double ratio_k = a_k/at_k;
+
   /** - compute each component's density and pressure */
 
   /* photons */
@@ -459,7 +464,7 @@ int background_functions(
   if (pba->has_dcdm == _TRUE_) {
     /* Pass value of rho_dcdm to output */
     if (pba->has_varGamma_dcdm == _TRUE_){
-      pvecback[pba->index_bg_rho_dcdm] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_wdm *(1-pow(a,pba->kappa_mon))/(1+pow(a/pba->a_t_mon,pba->kappa_mon));
+      pvecback[pba->index_bg_rho_dcdm] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a, 3) * pba->f_wdm *(1-a_k)/(1+at_k);
     }
     else{
       pvecback[pba->index_bg_rho_dcdm] = pvecback_B[pba->index_bi_rho_dcdm];
@@ -472,7 +477,7 @@ int background_functions(
   /* Monopoles */
   if (pba->has_mon == _TRUE_) {
     /* Pass value of rho_mon to output */
-    pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon *(1-pow(a,pba->kappa_mon))/(1+pow(a/pba->a_t_mon,pba->kappa_mon));
+    pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon *(1-a_k)/(1+at_k);
     rho_tot += pvecback[pba->index_bg_rho_mon];
     p_tot += 0.;
     rho_m += pvecback[pba->index_bg_rho_mon];
@@ -483,11 +488,11 @@ int background_functions(
     /* Pass value of rho_dr to output */
     if (pba->has_mon == _TRUE_){
       if (fabs(-1.*pow((a)/pba->a_t_mon,pba->kappa_mon)) < 1.)
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(a/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon));
-      else if ((fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) < 100.))
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(a/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+at_k)/(a_k+at_k) * ((a_k+at_k) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(a/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon));
+      else if ((fabs(-1.*at_k) >= 1.) && (fabs(-1.*at_k) < 100.))
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+at_k)/(a_k+at_k) * ((a_k+at_k) * (1./(1.-(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(a/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
       else
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * ((pow(a,pba->kappa_mon)+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(a/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(a/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
+        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+at_k)/(a_k+at_k) * ((a_k+at_k) * (pow(1./pow(a/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(a/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
     }
     else {
       pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
@@ -556,8 +561,18 @@ int background_functions(
       /* (rho_ncdm1 - 3 p_ncdm1) is the "non-relativistic" contribution
          to rho_ncdm1 */
       rho_m += rho_ncdm - 3.* p_ncdm;
+
+      if (n_ncdm == pba->N_ncdm-1) {
+        /* Pass value of rho_ncdm1 to output */
+        pvecback[pba->index_bg_Gamma_acc] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
+            ((1.-a_k)*(1.+at_k));
+        // Regulate divergence:
+        if (pvecback[pba->index_bg_Gamma_acc] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
+            pvecback[pba->index_bg_Gamma_acc]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
+        }
+      } 
     }
-  }
+}
 
   /* Lambda */
   if (pba->has_lambda == _TRUE_) {
@@ -632,8 +647,9 @@ int background_functions(
     pvecback[pba->index_bg_Gamma_mon] = pvecback[pba->index_bg_H]*pba->kappa_mon*(pow(a,pba->kappa_mon)+pow(a/pba->a_t_mon,pba->kappa_mon))/
             ((1.-pow(a,pba->kappa_mon))*(1.+pow(a/pba->a_t_mon,pba->kappa_mon)));
     // Regulate divergence:
-    if (pvecback[pba->index_bg_Gamma_mon] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.)
+    if (pvecback[pba->index_bg_Gamma_mon] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
             pvecback[pba->index_bg_Gamma_mon]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
+    }
   }
   /* End Monopole (BRINGMANN 2018) modification */
 
@@ -963,6 +979,8 @@ int background_free_input(
       free(pba->q_ncdm_bg[k]);
       free(pba->w_ncdm_bg[k]);
       free(pba->dlnf0_dlnq_ncdm[k]);
+      free(pba->f0_ncdm_wdm[k]);
+      free(pba->aq_ncdm_wdm[k]);
     }
     free(pba->ncdm_quadrature_strategy);
     free(pba->ncdm_input_q_size);
@@ -972,6 +990,8 @@ int background_free_input(
     free(pba->q_ncdm_bg);
     free(pba->w_ncdm_bg);
     free(pba->dlnf0_dlnq_ncdm);
+    free(pba->f0_ncdm_wdm);
+    free(pba->aq_ncdm_wdm);
     free(pba->q_size_ncdm);
     free(pba->q_size_ncdm_bg);
     free(pba->M_ncdm);
@@ -1130,6 +1150,10 @@ int background_indices(
   /* - index for gamma_mon */
   class_define_index(pba->index_bg_Gamma_mon,pba->has_mon,index_bg,1);
   /* End Monopole (BRINGMANN 2018) modification */
+
+  /* START accDM */
+  class_define_index(pba->index_bg_Gamma_acc,pba->has_wdm,index_bg,1);;
+  /* END accDM */
 
   /* - index for dr */
   class_define_index(pba->index_bg_rho_dr,pba->has_dr,index_bg,1);
@@ -1377,7 +1401,7 @@ int background_ncdm_distribution(
       /* Scale factor corresponding to the considered comoving momentum q */
       double a_q = q*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
 
-      if (a_q > 1.0) {
+      if (a_q >= 1.0 || a_q <= 1e-14) {
         /* If a_q > 1, it means that the considered momentum q is not yet reached by the acceleration mechanism, so f0 should be zero */
         *f0 = 0.0;
       }
@@ -1504,6 +1528,8 @@ int background_ncdm_init(
   class_alloc(pba->q_ncdm_bg, sizeof(double*)*pba->N_ncdm,pba->error_message);
   class_alloc(pba->w_ncdm_bg, sizeof(double*)*pba->N_ncdm,pba->error_message);
   class_alloc(pba->dlnf0_dlnq_ncdm, sizeof(double*)*pba->N_ncdm,pba->error_message);
+  class_alloc(pba->f0_ncdm_wdm,  sizeof(double*)*pba->N_ncdm, pba->error_message);
+  class_alloc(pba->aq_ncdm_wdm,  sizeof(double*)*pba->N_ncdm, pba->error_message);
 
   /* Allocate pointers: */
   class_alloc(pba->q_size_ncdm,sizeof(int)*pba->N_ncdm,pba->error_message);
@@ -1642,15 +1668,15 @@ int background_ncdm_init(
     class_alloc(pba->dlnf0_dlnq_ncdm[k],
                 pba->q_size_ncdm[k]*sizeof(double),
                 pba->error_message);
+    class_alloc(pba->f0_ncdm_wdm[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
+    class_alloc(pba->aq_ncdm_wdm[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
 
 
     for (index_q=0; index_q<pba->q_size_ncdm[k]; index_q++) {
       q = pba->q_ncdm[k][index_q];
       class_call(background_ncdm_distribution(&pbadist,q,&f0),
                  pba->error_message,pba->error_message);
-      // if (k == 1 && pba->has_wdm == _TRUE_) {
-      //     printf("DEBUG INIT: q = %e, f0 = %e\n", q, f0);
-      // }
+      pba->aq_ncdm_wdm[k][index_q] = q * pba->T_acc_GeV / pba->P_acc_wdm;
 
       //Loop to find appropriate dq:
       for (tolexp=_PSD_DERIVATIVE_EXP_MIN_; tolexp<_PSD_DERIVATIVE_EXP_MAX_; tolexp++) {
@@ -1685,8 +1711,9 @@ int background_ncdm_init(
         pba->dlnf0_dlnq_ncdm[k][index_q] = -q; /* valid for whatever f0 with exponential tail in exp(-q) */
       }
       else{
-        if (k == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
-          pba->dlnf0_dlnq_ncdm[k][index_q] = q*df0dq; //Instead of evolving psi, we directly evolve f0*psi. Hence, the f0 at the denominator cancels out.
+        if (k == pba->N_ncdm - 1) {
+          // AG: Do nothing? This is recomputed later on anyway. 
+          //pba->dlnf0_dlnq_ncdm[k][index_q] = q*df0dq; // GFA Instead of evolving psi, we directly evolve f0*psi. Hence, the f0 at the denominator cancels out.
         }
         else{
           pba->dlnf0_dlnq_ncdm[k][index_q] = q/f0*df0dq;
@@ -1784,11 +1811,11 @@ int background_ncdm_momenta(
     z_q = 1e100; // some large value, so that it'll always compute for non-WDM species
 
     if (is_wdm) {
-      double a_q = qvec[index_q]*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
-      z_q = 1.0/a_q - 1.0; // Redshift corresponding to a_q */
+      //double a_q = qvec[index_q]*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
+      z_q = 1.0/pba->aq_ncdm_wdm[n_ncdm][index_q] - 1.0; // Redshift corresponding to a_q */
     }
 
-    if (z <= z_q){ // Neglect contribution of WDM particles that have not yet been produced at redshift z.
+    if (z < z_q){ // Neglect contribution of WDM particles that have not yet been produced at redshift z.
       /* squared momentum */
       q2 = qvec[index_q]*qvec[index_q];
 
@@ -2281,7 +2308,7 @@ int background_solve(
       printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
     }
     /* Monopole (BRINGMANN 2018) modification */
-    if ((pba->has_dcdm == _TRUE_)&&(pba->has_dr == _TRUE_)) {
+    if ((pba->has_mon == _TRUE_)&&(pba->has_dr == _TRUE_)) {
       printf("    Decaying Monopoles details: (MON --> DR)\n");
       printf("     -> Omega0_mon = %f\n",pba->Omega0_mon);
       printf("     -> Omega0_dr = %f\n",pba->Omega0_dr);
@@ -2292,9 +2319,9 @@ int background_solve(
     if ((pba->has_dcdm == _TRUE_)&&(pba->has_wdm == _TRUE_)) {
       printf("    Decaying Cold Dark Matter details: (DCDM --> WDM)\n");
       printf("     -> Omega0_dcdm = %f\n",pba->Omega0_dcdm);
-      printf("     -> Omega0_wdm = %f\n",pba->Omega0_ncdm[1]);
+      printf("     -> Omega0_wdm = %f\n",pba->Omega0_ncdm[pba->N_ncdm-1]);
       printf("     -> Omega0_wdm+Omega0_dcdm = %f, input value = %f\n",
-             pba->Omega0_ncdm[1]+pba->Omega0_dcdm,pba->Omega0_dcdmwdm);
+             pba->Omega0_ncdm[pba->N_ncdm-1]+pba->Omega0_dcdm,pba->Omega0_dcdmwdm);
       printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
     }
     /* End Monopole (BRINGMANN 2018) modification */
@@ -2686,6 +2713,9 @@ int background_output_titles(
       class_store_columntitle(titles,tmp,_TRUE_);
       class_sprintf(tmp,"(.)p_ncdm[%d]",n);
       class_store_columntitle(titles,tmp,_TRUE_);
+      if (n == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
+        class_store_columntitle(titles,"(.)Gamma_acc",pba->has_wdm);
+      }
     }
   }
   class_store_columntitle(titles,"(.)rho_lambda",pba->has_lambda);
@@ -2762,6 +2792,9 @@ int background_output_data(
       for (n=0; n<pba->N_ncdm; n++) {
         class_store_double(dataptr,pvecback[pba->index_bg_rho_ncdm1+n],_TRUE_,storeidx);
         class_store_double(dataptr,pvecback[pba->index_bg_p_ncdm1+n],_TRUE_,storeidx);
+        if (n == pba->N_ncdm - 1 && pba->has_wdm) {
+          class_store_double(dataptr,pvecback[pba->index_bg_Gamma_acc],pba->has_wdm,storeidx);
+        }
       }
     }
     class_store_double(dataptr,pvecback[pba->index_bg_rho_lambda],pba->has_lambda,storeidx);
