@@ -1449,6 +1449,7 @@ int perturbations_indices(
       class_define_index(ppt->index_tp_delta_ur,   ppt->has_source_delta_ur,  index_type,1);
       class_define_index(ppt->index_tp_delta_idr,  ppt->has_source_delta_idr, index_type,1);
       class_define_index(ppt->index_tp_delta_ncdm1,ppt->has_source_delta_ncdm,index_type,pba->N_ncdm);
+      class_define_index(ppt->index_tp_delta_p_over_delta_rho_ncdm1,ppt->has_source_delta_ncdm,index_type,pba->N_ncdm);
       class_define_index(ppt->index_tp_theta_m,    ppt->has_source_theta_m,   index_type,1);
       class_define_index(ppt->index_tp_theta_cb,   ppt->has_source_theta_cb,  index_type,1);
       class_define_index(ppt->index_tp_theta_tot,  ppt->has_source_theta_tot, index_type,1);
@@ -3401,12 +3402,12 @@ int perturbations_prepare_k_output(struct background * pba,
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_);
           class_sprintf(tmp,"cs2_ncdm[%d]",n_ncdm);               // GFA //
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
-          // class_sprintf(tmp,"w_p[%d]",n_ncdm);                    // GFA // AG: Commented our as we probably don't need these.
-          // class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
-          // class_sprintf(tmp,"w_theta[%d]",n_ncdm);                // GFA //
-          // class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
-          // class_sprintf(tmp,"w_sigma[%d]",n_ncdm);                // GFA //
-          // class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
+          class_sprintf(tmp,"w_p[%d]",n_ncdm);                    // GFA // AG: Commented our as we probably don't need these.
+          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
+          class_sprintf(tmp,"w_theta[%d]",n_ncdm);                // GFA //
+          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
+          class_sprintf(tmp,"w_sigma[%d]",n_ncdm);                // GFA //
+          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
           class_sprintf(tmp,"k_fss_wdm[%d]",n_ncdm);              // GFA //
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
         }
@@ -7008,11 +7009,11 @@ int perturbations_total_stress_energy(
   double rho_ncdm_bg_m;
   double ratio_rho, rho_dcdm_bg, H, eta, gamma, f_dr; 
   double weight_0=0., weight_1=0., weight_2=0., weight_3 =0.;
-  double* kfs;
+  // double* kfs;
 
-  if(pba->has_ncdm==_TRUE_){
-    class_alloc(kfs, sizeof(double)*pba->N_ncdm,pba->error_message);
-  }
+  // if(pba->has_ncdm==_TRUE_){
+  //   class_alloc(kfs, sizeof(double)*pba->N_ncdm,pba->error_message);
+  // }
 
   double z;
   /** Accelerating Dark Matter END */

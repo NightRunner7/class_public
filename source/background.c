@@ -562,7 +562,7 @@ int background_functions(
          to rho_ncdm1 */
       rho_m += rho_ncdm - 3.* p_ncdm;
 
-      if (n_ncdm == pba->N_ncdm-1) {
+      if (n_ncdm == pba->N_ncdm-1 && pba->has_mon == _TRUE_){
         /* Pass value of rho_ncdm1 to output */
         pvecback[pba->index_bg_Gamma_acc] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
             ((1.-a_k)*(1.+at_k));
@@ -644,8 +644,8 @@ int background_functions(
   /* Monopole (BRINGMANN 2018) modification */
   /* Gamma_mon, the time-dependent inverse lifetime of DM */
   if (pba->has_mon == _TRUE_) {
-    pvecback[pba->index_bg_Gamma_mon] = pvecback[pba->index_bg_H]*pba->kappa_mon*(pow(a,pba->kappa_mon)+pow(a/pba->a_t_mon,pba->kappa_mon))/
-            ((1.-pow(a,pba->kappa_mon))*(1.+pow(a/pba->a_t_mon,pba->kappa_mon)));
+    pvecback[pba->index_bg_Gamma_mon] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
+            ((1.-pow(a,pba->kappa_mon))*(1.+at_k));
     // Regulate divergence:
     if (pvecback[pba->index_bg_Gamma_mon] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
             pvecback[pba->index_bg_Gamma_mon]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
@@ -1676,7 +1676,9 @@ int background_ncdm_init(
       q = pba->q_ncdm[k][index_q];
       class_call(background_ncdm_distribution(&pbadist,q,&f0),
                  pba->error_message,pba->error_message);
-      pba->aq_ncdm_wdm[k][index_q] = q * pba->T_acc_GeV / pba->P_acc_wdm;
+      if (k == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
+        pba->aq_ncdm_wdm[k][index_q] = q * pba->T_acc_GeV / pba->P_acc_wdm;
+      }
 
       //Loop to find appropriate dq:
       for (tolexp=_PSD_DERIVATIVE_EXP_MIN_; tolexp<_PSD_DERIVATIVE_EXP_MAX_; tolexp++) {
