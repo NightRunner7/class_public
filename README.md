@@ -5,7 +5,7 @@ This is a fork of CLASS aiming to implement some kind of accelerating DM. The im
 
 
 TO DO: 
-1. Test implementation more thoroughly.
+1. Test implementation more thoroughly -- gauges do not agree right now, why? Is it wholly consistent? 
 2. Clean up the code, remove old comments, dead code etc.
 3. Remove the old DCDM->DR implementation (labelled as Monopole (Bringmann) ) once the DCDM->WDM is verified.
 
