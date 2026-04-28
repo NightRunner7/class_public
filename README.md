@@ -3,6 +3,12 @@ A FORK FOR ACCELERATING DARK MATTER {#mainpage}
 
 This is a fork of CLASS aiming to implement some kind of accelerating DM. The implementation is based heavily on the one present in https://github.com/PoulinV/class_decays i.e. DCDM->DR+WDM used in 2102.12498, 2008.09615, but generalized to use expressions for rho_dcdm and Gamma_dcdm from 1803.03644 and 2210.14339. 
 
+
+TO DO: 
+1. Test implementation more thoroughly.
+2. Clean up the code, remove old comments, dead code etc.
+3. Remove the old DCDM->DR implementation (labelled as Monopole (Bringmann) ) once the DCDM->WDM is verified.
+
 CLASS: Cosmic Linear Anisotropy Solving System  
 ==============================================
 Authors: Julien Lesgourgues, Thomas Tram, Nils Schoeneberg

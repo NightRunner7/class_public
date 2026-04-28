@@ -3373,6 +3373,10 @@ int perturbations_prepare_k_output(struct background * pba,
       class_store_columntitle(ppt->scalar_titles,"eta_prime",_TRUE_); // GFA
       class_store_columntitle(ppt->scalar_titles,"h_prime",_TRUE_); // GFA
       class_store_columntitle(ppt->scalar_titles,"phi_prime",_TRUE_); // GFA
+      class_store_columntitle(ppt->scalar_titles, "rho_plus_p_theta", _TRUE_); // AG: For testing
+      class_store_columntitle(ppt->scalar_titles, "delta_rho_tot", _TRUE_); // AG: For testing
+      class_store_columntitle(ppt->scalar_titles, "eta", ppt->gauge == synchronous); // AG: For testing
+
       /* Perturbed recombination */
       class_store_columntitle(ppt->scalar_titles,"delta_Tb",ppt->has_perturbed_recombination);
       class_store_columntitle(ppt->scalar_titles,"delta_chi",ppt->has_perturbed_recombination);
@@ -5424,6 +5428,7 @@ int perturbations_initial_conditions(struct precision * ppr,
   double ktau_two,ktau_three;
   double f_dr;
   double f0 = 0; // GFA
+  double Gamma; // AG
 
   double delta_tot;
   double velocity_tot;
@@ -5431,7 +5436,7 @@ int perturbations_initial_conditions(struct precision * ppr,
   double h_corr_2,rho_fs; //For corrections to initial conditions to tensor modes
 
   /** for the decaying DM with massive daugthers */
-  double * pvecback;
+  //double * pvecback;
   int first_index_back, l;
   double exp_factor, exp_factor_old, dlnf0_dlnq, dlnf0_dlnq_old, t;
 
@@ -5449,15 +5454,15 @@ int perturbations_initial_conditions(struct precision * ppr,
              ppt->error_message);
 
   // GFA: redo this, just to store pvecback (needed later for the f0 computation)
-  class_alloc(pvecback,pba->bg_size*sizeof(double),pba->error_message);
-  class_call(background_at_tau(pba,
-                               tau,
-                               long_info,
-                               inter_normal,
-                               &(ppw->last_index_back),
-                               pvecback),
-            pba->error_message,
-            ppt->error_message);
+  // class_alloc(pvecback,pba->bg_size*sizeof(double),pba->error_message);
+  // class_call(background_at_tau(pba,
+  //                              tau,
+  //                              long_info,
+  //                              inter_normal,
+  //                              &(ppw->last_index_back),
+  //                              pvecback),
+  //           pba->error_message,
+  //           ppt->error_message);
 
   /* 8piG/3 rho_r(t_i) */
   rho_r = ppw->pvecback[pba->index_bg_rho_g];
@@ -5905,7 +5910,15 @@ int perturbations_initial_conditions(struct precision * ppr,
       }
 
       if (pba->has_dcdm == _TRUE_) {
-        ppw->pv->y[ppw->pv->index_pt_delta_dcdm] -= (3.*a_prime_over_a + a*pba->Gamma_dcdm)*alpha;
+        
+        if (pba->has_wdm == _TRUE_){
+          Gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
+        }
+        else {
+          Gamma = pba->Gamma_dcdm;
+        }
+
+        ppw->pv->y[ppw->pv->index_pt_delta_dcdm] -= (3.*a_prime_over_a + a*Gamma)*alpha;
         ppw->pv->y[ppw->pv->index_pt_theta_dcdm] = k*k*alpha;
       }
 
@@ -5998,6 +6011,10 @@ int perturbations_initial_conditions(struct precision * ppr,
             //class_call(background_ncdm_distribution_perts(pba,q,n_ncdm,&f0),
             //          pba->error_message,ppr->error_message);
             f0 = pba->f0_ncdm_wdm[n_ncdm][index_q]; // AG: use precomputed psd for wdm
+
+            double H_ini = ppw->pvecback[pba->index_bg_H];
+            double hp = ppw->pvecmetric[ppw->index_mt_h_prime];
+            double delta_dcdm_ini = ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
 
             ppw->pv->y[idx] = f0*ppw->pv->y[ppw->pv->index_pt_delta_dcdm]; // GFA: with this we are imposing that delta_wdm = delta_dcdm,
             // which is reasonable since delta_wdm and delta_dcdm are always coupled at initial times
@@ -7300,11 +7317,17 @@ int perturbations_total_stress_energy(
 
           if (n_ncdm == pba->N_ncdm-1){
             rho_ncdm_bg_m = rho_ncdm_bg*(1.0-3.0*w_ncdm); /* contribution to matter, it will be used below  */
-            rho_dcdm_bg = ppw->pvecback[pba->index_bg_rho_dcdm]; 
+            rho_dcdm_bg = ppw->pvecback[pba->index_bg_rho_dcdm];
             ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
             gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
             eta = pba->eta_wdm;
-            cg2_ncdm = w_ncdm*(5.0-(pseudo_p_ncdm/p_ncdm_bg)-ratio_rho*(gamma/(3.0*w_ncdm*H))*eta*eta/(1.+eta))/(3.0*(1.0+w_ncdm)-ratio_rho*(gamma/H)*(1.+eta));
+            { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
+              double term3 = ratio_rho * gamma / (3.0 * H) * eta * eta / (1. + eta);
+              double cg2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
+              double cg2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
+              cg2_ncdm = cg2_num / cg2_den;
+              if (cg2_ncdm < 0.) cg2_ncdm = 0.; /* guard sqrt */
+            }
           }
           else{
             cg2_ncdm = w_ncdm*(1.0-1.0/(3.0+3.0*w_ncdm)*(3.0*w_ncdm-2.0+pseudo_p_ncdm/p_ncdm_bg));
@@ -7779,6 +7802,7 @@ int perturbations_sources(
   double dkappa, ddkappa, exp_m_kappa, g, g_prime;
   double theta_idm = 0., theta_idm_prime = 0.;
   double dmu_idm_g = 0., ddmu_idm_g = 0., exp_mu_idm_g = 0.;
+  double Gamma = 0.; /* AG */
   /** - rename structure fields (just to avoid heavy notations) */
 
   pppaw = (struct perturbations_parameters_and_workspace *)parameters_and_workspace;
@@ -8163,8 +8187,13 @@ int perturbations_sources(
 
     /* delta_dcdm */
     if (ppt->has_source_delta_dcdm == _TRUE_) {
+      if (pba->has_wdm == _TRUE_)
+        Gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
+      else{
+        Gamma = pba->Gamma_dcdm;
+      }
       _set_source_(ppt->index_tp_delta_dcdm) = y[ppw->pv->index_pt_delta_dcdm]
-        + (3.*a_prime_over_a+a*pba->Gamma_dcdm)*theta_over_k2; // N-body gauge correction;
+        + (3.*a_prime_over_a+a*Gamma)*theta_over_k2; // N-body gauge correction;
     }
 
     /* Monopole (BRINGMANN 2018) modification */
@@ -8500,6 +8529,7 @@ int perturbations_print_variables(double tau,
   double ratio_rho, rho_dcdm_bg, eta, gamma; /* GFA */
   double ca2_ncdm; /* GFA */
   double rho_plus_p_sshear_ncdm = 0.0; /* GFA */
+  double Gamma; /* AG */
   /** accDM END */
 
   double a,a2,H;
@@ -8725,8 +8755,14 @@ int perturbations_print_variables(double tau,
               ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
               gamma = pvecback[pba->index_bg_Gamma_acc];
               eta = pba->eta_wdm;
-              ca2_ncdm = w_ncdm*(5.0-(pseudo_p_ncdm/p_ncdm_bg)-ratio_rho*(gamma/(3.0*w_ncdm*H))*eta*eta/(1.+eta))/(3.0*(1.0+w_ncdm)-ratio_rho*(gamma/H)*(1.+eta));
-              k_fss_wdm[n_ncdm] = sqrt(3./2.)*a*H/sqrt(ca2_ncdm);
+              { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
+                double term3 = ratio_rho * gamma / (3.0 * H) * eta * eta / (1. + eta);
+                double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
+                double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
+                ca2_ncdm = ca2_num / ca2_den;
+                if (ca2_ncdm < 0.) ca2_ncdm = 0.; /* guard sqrt */
+              }
+              k_fss_wdm[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
           }
           else{
               rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
@@ -8734,11 +8770,12 @@ int perturbations_print_variables(double tau,
               pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
               w_ncdm = p_ncdm_bg/rho_ncdm_bg;
               ca2_ncdm = w_ncdm*(5.0-(pseudo_p_ncdm/p_ncdm_bg))/(3.0*(1.0+w_ncdm));
-              k_fss_wdm[n_ncdm] = sqrt(3./2.)*a*H/sqrt(ca2_ncdm);
+              if (ca2_ncdm < 0.) ca2_ncdm = 0.;
+              k_fss_wdm[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
           }
 
           /* AccDM END */
-          
+
           idx += ppw->pv->l_max_ncdm[n_ncdm]+1;
         }
       }
@@ -8764,22 +8801,22 @@ int perturbations_print_variables(double tau,
           factor = pba->factor_ncdm[n_ncdm]/a2/a2;
           mass_nu = pba->m_ncdm_in_eV[n_ncdm]*_eV_/_h_P_/2./_PI_/_c_*_Mpc_over_m_;
 
-          // factor = pba->factor_ncdm[n_ncdm]/pow(a,4);
+          factor = pba->factor_ncdm[n_ncdm]/pow(a,4);
 
-          // for (index_q=0; index_q < ppw->pv->q_size_ncdm[n_ncdm]; index_q ++) {
+          for (index_q=0; index_q < ppw->pv->q_size_ncdm[n_ncdm]; index_q ++) {
 
-          //   q = pba->q_ncdm[n_ncdm][index_q];
-          //   q2 = q*q;
-          //   epsilon = sqrt(q2+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]*a2);
+            q = pba->q_ncdm[n_ncdm][index_q];
+            q2 = q*q;
+            epsilon = sqrt(q2+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]*a2);
 
-          //   rho_delta_ncdm += q2*epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
-          //   rho_plus_p_theta_ncdm += q2*q*pba->w_ncdm[n_ncdm][index_q]*y[idx+1];
-          //   rho_plus_p_shear_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx+2];
-          //   delta_p_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
+            rho_delta_ncdm += q2*epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
+            rho_plus_p_theta_ncdm += q2*q*pba->w_ncdm[n_ncdm][index_q]*y[idx+1];
+            rho_plus_p_shear_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx+2];
+            delta_p_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
 
-          //   //Jump to next momentum bin:
-          //   idx+=(ppw->pv->l_max_ncdm[n_ncdm]+1);
-          // }
+            //Jump to next momentum bin:
+            idx+=(ppw->pv->l_max_ncdm[n_ncdm]+1);
+          }
                        
           rho_plus_p_theta_ncdm  *= k*factor;
           rho_plus_p_ttheta_ncdm *= k*factor;
@@ -8802,10 +8839,16 @@ int perturbations_print_variables(double tau,
               ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
               gamma = pvecback[pba->index_bg_Gamma_acc];
               eta = pba->eta_wdm;
-              ca2_ncdm = w_ncdm*(5.0-(pseudo_p_ncdm/p_ncdm_bg)-ratio_rho*(gamma/(3.0*w_ncdm*H))*eta*eta/(1.+eta))/(3.0*(1.0+w_ncdm)-ratio_rho*(gamma/H)*(1.+eta));
-              k_fss_wdm[n_ncdm] = sqrt(3./2.)*a*H/sqrt(ca2_ncdm);
+              { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
+                double term3 = ratio_rho * gamma / (3.0 * H) * eta * eta / (1. + eta);
+                double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
+                double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
+                ca2_ncdm = ca2_num / ca2_den;
+                if (ca2_ncdm < 0.) ca2_ncdm = 0.; /* guard sqrt */
+              }
+              k_fss_wdm[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
               w_trial_1 = ca2_ncdm;
-              w_trial_2 = ca2_ncdm*(1.0+ 0.25*pow(k/k_fss_wdm[n_ncdm],0.5)); //works better
+              w_trial_2 = (k_fss_wdm[n_ncdm] > 0.) ? ca2_ncdm*(1.0+ 0.25*pow(k/k_fss_wdm[n_ncdm],0.5)) : ca2_ncdm; //works better
           }  
           else {
               rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
@@ -8951,7 +8994,14 @@ int perturbations_print_variables(double tau,
       }
 
       if (pba->has_dcdm == _TRUE_) {
-        delta_dcdm += alpha*(-a*pba->Gamma_dcdm-3.*a*H);
+        if (pba->has_wdm == _TRUE_){
+          Gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
+        }
+        else{
+          Gamma = pba->Gamma_dcdm;
+        }
+
+        delta_dcdm += alpha*(-a*Gamma-3.*a*H);
         theta_dcdm += k*k*alpha;
       }
 
@@ -9005,6 +9055,10 @@ int perturbations_print_variables(double tau,
     class_store_double(dataptr, eta_prime, _TRUE_, storeidx); /* GFA */
     class_store_double(dataptr, h_prime, _TRUE_, storeidx);  /* GFA */
     class_store_double(dataptr, phi_prime, _TRUE_, storeidx);  /* GFA */
+    class_store_double(dataptr, ppw->rho_plus_p_theta, _TRUE_, storeidx); /* AG: For testing */
+    class_store_double(dataptr, y[ppw->pv->index_pt_eta], ppt->gauge == synchronous, storeidx); /* AG: For testing */
+    class_store_double(dataptr, ppw->delta_rho, _TRUE_, storeidx); /* AG: For testing, this is deltaT00*/
+
     /* perturbed recombination */
     class_store_double(dataptr, delta_temp, ppt->has_perturbed_recombination, storeidx);
     class_store_double(dataptr, delta_chi, ppt->has_perturbed_recombination, storeidx);
@@ -9298,7 +9352,8 @@ int perturbations_derivs(double tau,
   double w_theta, w_delta_p;
   double t, H;
   double qcube, FD_ncdm;
-  double metric_eta_prime, timescale; /* GFA */                   
+  double metric_eta_prime, timescale; /* GFA */     
+  double Gamma;              
 
   /** - rename the fields of the input structure (just to avoid heavy notations) */
 
@@ -9818,8 +9873,15 @@ int perturbations_derivs(double tau,
 
       /** - ----> dcdm */
 
+      if (pba->has_wdm == _TRUE_) {
+        Gamma = pvecback[pba->index_bg_Gamma_acc];
+      }
+      else {
+        Gamma = pba->Gamma_dcdm;
+      }
+
       dy[pv->index_pt_delta_dcdm] = -(y[pv->index_pt_theta_dcdm]+metric_continuity)
-        - a * pba->Gamma_dcdm / k2 * metric_euler; /* dcdm density */
+        - a * Gamma / k2 * metric_euler; /* dcdm density */
 
       dy[pv->index_pt_theta_dcdm] = - a_prime_over_a*y[pv->index_pt_theta_dcdm] + metric_euler; /* dcdm velocity */
     }
@@ -10062,15 +10124,21 @@ int perturbations_derivs(double tau,
       if (ppw->approx[ppw->index_ap_ncdmfa] == (int)ncdmfa_on) {
 
         /** - -----> loop over species */
-        H = pvecback[pba->index_bg_H];
+        
         for (n_ncdm=0; n_ncdm<pv->N_ncdm; n_ncdm++) {
 
           /** - -----> define intermediate quantitites */
 
           rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm]; /* background density */
-          p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm]; /* background pressure */
+          p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm]; /* background pressure */ /* AG: Spline breaks this down probably*/
           pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm]; /* pseudo-pressure (see CLASS IV paper) */
           w_ncdm = p_ncdm_bg/rho_ncdm_bg; /* equation of state parameter */
+
+          // if (w_ncdm < 0.){
+          //   printf("rho_ncdm_bg=%e p_ncdm_bg=%e pseudo_p_ncdm=%e\n", rho_ncdm_bg, p_ncdm_bg, pseudo_p_ncdm);
+          // }
+
+          // if (w_ncdm < 1.e-5) w_ncdm = 0.; /* to avoid numerical issues */
           
           //ca2_ncdm = w_ncdm/3.0/(1.0+w_ncdm)*(5.0-pseudo_p_ncdm/p_ncdm_bg); /* adiabatic sound speed */
 
@@ -10078,19 +10146,28 @@ int perturbations_derivs(double tau,
             rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* GFA */
             ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
             gamma = pvecback[pba->index_bg_Gamma_acc];
+            //printf("a=%e rho_dcdm=%e rho_ncdm=%e ratio=%e gamma=%e\n", a, rho_dcdm_bg, rho_ncdm_bg, ratio_rho, gamma);
+            H = pvecback[pba->index_bg_H];
             decay = a*gamma*ratio_rho; /* GFA*/
             eta = pba->eta_wdm;
           }
 
           /* adiabatic sound speed */
           if (n_ncdm == pba->N_ncdm-1 ) { /* GFA */
-           ca2_ncdm = w_ncdm*(5.0-(pseudo_p_ncdm/p_ncdm_bg)-ratio_rho*(gamma/(3.0*w_ncdm*H))*eta*eta/(1.+eta))/(3.0*(1.0+w_ncdm)-ratio_rho*(gamma/H)*(1.+eta));
-           // CS2DYN
+            /* AG: w_ncdm distributed analytically into numerator so 1/w_ncdm never appears */
+            double term3 = ratio_rho*(gamma/(3.0*H))*pba->eps_acc*pba->eps_acc/(1.-pba->eps_acc);
+            double numerator = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg)-term3;
+            double denominator = 3.0*(1.0+w_ncdm)-ratio_rho*(gamma/H)*(1.-pba->eps_acc);
+            ca2_ncdm = numerator/denominator;
+            if (ca2_ncdm < 0.) ca2_ncdm = 0.; /* guard sqrt below */
+            // CS2DYN
             if (ppt->switch_on_eq_delta_p_wdm == _FALSE_) {
-            ceff2_ncdm = ca2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(ca2_ncdm)/(a*H)));
+              ceff2_ncdm = ca2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(ca2_ncdm)/(a*H)));
             }
-           cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
-          } 
+            cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
+            // printf("g/H=%e num=%e den=%e ca2=%e, ceff2=%e, cvis2=%e", gamma/H, numerator, denominator, ca2_ncdm, ceff2_ncdm, cvis2_ncdm);
+
+            } 
           else {
             ca2_ncdm = w_ncdm/3.0/(1.0+w_ncdm)*(5.0-pseudo_p_ncdm/p_ncdm_bg);
           }
@@ -10122,7 +10199,6 @@ int perturbations_derivs(double tau,
                dy[idx] = -(1.0+w_ncdm)*(y[idx+1]+metric_continuity)
                  -3.0*a_prime_over_a*y[idx+3]+3.0*a_prime_over_a*w_ncdm*y[idx]
                  +a*gamma*(1.-pba->eps_acc)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
-
              } 
              else {
                dy[idx] = -(1.0+w_ncdm)*(y[idx+1]+metric_continuity)
@@ -11291,29 +11367,35 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
     ratio_rho     = rho_dcdm_bg/rho_ncdm_bg;
     gamma         = pvecback[pba->index_bg_Gamma_acc];
     eta = pba->eta_wdm;
-    ca2_ncdm = w_ncdm*(5.0-(pseudo_p_ncdm/p_ncdm_bg)-ratio_rho*(gamma/(3.0*w_ncdm*H_D))*eta*eta/(1.+eta))/(3.0*(1.0+w_ncdm)-ratio_rho*(gamma/H_D)*(1.+eta));
+    { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
+      double term3 = ratio_rho * gamma / (3.0 * H_D) * eta * eta / (1. + eta);
+      double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
+      double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H_D)*(1.+eta);
+      ca2_ncdm = ca2_num / ca2_den;
+      if (ca2_ncdm < 0.) ca2_ncdm = 0.;
+    }
 
     /* GFA: compute free-streaming length of the warm dark daughter,
     evaluated at the time of decay a_D (equal to present time if lifetime >age universe) */
-    pba->k_fss_wdm = sqrt(3./2.)*a_D*H_D/sqrt(ca2_ncdm);
+    pba->k_fss_wdm = (ca2_ncdm > 0.) ? sqrt(3./2.)*a_D*H_D/sqrt(ca2_ncdm) : 0.;
     //Note: works well for lifetime > age_universe, but not on the contrary, maybe I should evaluate it before a_D
     // for lifetimes smaller than age of universe, maybe I should evaluate at a_nr, smaller than a_D by some velocity factors (see page 13 in Aoyama paper)
 
     /** Manual q-sampling for this species. Same sampling used for both perturbation and background sampling, since this will usually be a high precision setting anyway */
     //pba->ncdm_qmax[n_ncdm] = 5*pba->a_t_mon*pba->P_acc_wdm/pba->T_acc_GeV;
 
-    class_call(get_qsampling_manual(pba->q_ncdm[n_ncdm],
-                                    pba->w_ncdm[n_ncdm],
-                                    pba->q_size_ncdm[n_ncdm],
-                                    pba->ncdm_qmax[n_ncdm],
-                                    pba->ncdm_quadrature_strategy[n_ncdm],
-                                    pbadist.q,
-                                    pbadist.tablesize,
-                                    background_ncdm_distribution,
-                                    &pbadist,
-                                    pba->error_message),
-                                    pba->error_message,
-                                    pba->error_message);
+    // class_call(get_qsampling_manual(pba->q_ncdm[n_ncdm],
+    //                                 pba->w_ncdm[n_ncdm],
+    //                                 pba->q_size_ncdm[n_ncdm],
+    //                                 pba->ncdm_qmax[n_ncdm],
+    //                                 pba->ncdm_quadrature_strategy[n_ncdm],
+    //                                 pbadist.q,
+    //                                 pbadist.tablesize,
+    //                                 background_ncdm_distribution,
+    //                                 &pbadist,
+    //                                 pba->error_message),
+    //                                 pba->error_message,
+    //                                 pba->error_message);
 
   /* Use the same q-grid as the background (set in input.c via ncdm_qmax).
      Resampling here would break delta_ncdm = delta_dcdm at IC time because

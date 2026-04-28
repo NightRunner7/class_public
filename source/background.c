@@ -562,15 +562,6 @@ int background_functions(
          to rho_ncdm1 */
       rho_m += rho_ncdm - 3.* p_ncdm;
 
-      if (n_ncdm == pba->N_ncdm-1 && pba->has_wdm == _TRUE_){
-        /* Pass value of rho_ncdm1 to output */
-        pvecback[pba->index_bg_Gamma_acc] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
-            ((1.-a_k)*(1.+at_k));
-        // Regulate divergence:
-        if (pvecback[pba->index_bg_Gamma_acc] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
-            pvecback[pba->index_bg_Gamma_acc]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
-        }
-      } 
     }
 }
 
@@ -652,6 +643,23 @@ int background_functions(
     }
   }
   /* End Monopole (BRINGMANN 2018) modification */
+
+  /* AG: Gamma_acc, the decay rate for the wdm species. Must be computed
+     after pvecback[index_bg_H] is set above. */
+  if (pba->has_wdm == _TRUE_) {
+    if (a_k == 1.) {
+      pvecback[pba->index_bg_Gamma_acc] = 0.;
+    }
+    else {
+      pvecback[pba->index_bg_Gamma_acc] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
+          ((1.-a_k)*(1.+at_k));
+    }
+    // Regulate divergence:
+    if (pvecback[pba->index_bg_Gamma_acc] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
+        pvecback[pba->index_bg_Gamma_acc]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
+    }
+    pvecback[pba->index_bg_Gamma_acc] = MAX(0., pvecback[pba->index_bg_Gamma_acc]); // AG: Set to zero if negative, but this should be investigated further
+  }
 
   /** - compute critical density */
   rho_crit = rho_tot-pba->K/a/a;

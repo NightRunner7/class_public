@@ -102,6 +102,8 @@ struct background
   double eps_acc;
   double k_fss_wdm;
 
+  int acc_ncdm_index; /** Index for the accelerating ncdm species */
+
   // double Omega_ini_accdm;  /**< \f$ \Omega_{ini,adm} \f$: rescaled initial value for accelerating dark matter density */
   double Omega0_dcdmwdm;           /**< \f$ \Omega_{0 wdm}+\Omega_{0 cdm} \f$: Cold Dark Matter (cdm) accelerating to WDM (wdm) */
   // double Omega_ini_acc;  /**< \f$ \Omega_{ini,acc} \f$: rescaled initial value for non-accelerating (cdm) dark matter density */
