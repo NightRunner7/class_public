@@ -3016,6 +3016,7 @@ int perturbations_solve(
   ppw->last_index_back=0;
   ppw->last_index_thermo=0;
   ppw->inter_mode = inter_normal;
+  ppw->ca2_ncdm_bad = _FALSE_;
 
   /** - get wavenumber value */
   k = ppt->k[index_md][index_k];
@@ -3279,24 +3280,38 @@ int perturbations_solve(
       generic_evolver = evolver_ndf15;
     }
 
-    class_call(generic_evolver(perturbations_derivs,
-                               interval_limit[index_interval],
-                               interval_limit[index_interval+1],
-                               ppw->pv->y,
-                               ppw->pv->used_in_sources,
-                               ppw->pv->pt_size,
-                               &ppaw,
-                               ppr->tol_perturbations_integration,
-                               ppr->smallest_allowed_variation,
-                               perturbations_timescale,
-                               ppr->perturbations_integration_stepsize,
-                               ppt->tau_sampling,
-                               tau_actual_size,
-                               perturbations_sources,
-                               perhaps_print_variables,
-                               ppt->error_message),
+    class_call_except(generic_evolver(perturbations_derivs,
+                                      interval_limit[index_interval],
+                                      interval_limit[index_interval+1],
+                                      ppw->pv->y,
+                                      ppw->pv->used_in_sources,
+                                      ppw->pv->pt_size,
+                                      &ppaw,
+                                      ppr->tol_perturbations_integration,
+                                      ppr->smallest_allowed_variation,
+                                      perturbations_timescale,
+                                      ppr->perturbations_integration_stepsize,
+                                      ppt->tau_sampling,
+                                      tau_actual_size,
+                                      perturbations_sources,
+                                      perhaps_print_variables,
+                                      ppt->error_message),
+                      ppt->error_message,
+                      ppt->error_message,
+                      {
+                        ErrorMsg _saved_err;
+                        strncpy(_saved_err, ppt->error_message, _ERRORMSGSIZE_-1);
+                        _saved_err[_ERRORMSGSIZE_-1] = '\0';
+                        snprintf(ppt->error_message, _ERRORMSGSIZE_,
+                                 "%s [ca2_ncdm_bad=%d]",
+                                 _saved_err,
+                                 ppw->ca2_ncdm_bad == _TRUE_ ? 1 : 0);
+                      });
+
+    class_test(ppw->ca2_ncdm_bad == _TRUE_,
                ppt->error_message,
-               ppt->error_message);
+               "ncdm ca2 non-physical at k=%g 1/Mpc; bad parameter point",
+               k);
 
   }
 
@@ -3406,7 +3421,7 @@ int perturbations_prepare_k_output(struct background * pba,
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_);
           class_sprintf(tmp,"cs2_ncdm[%d]",n_ncdm);               // GFA //
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
-          class_sprintf(tmp,"w_p[%d]",n_ncdm);                    // GFA // AG: Commented our as we probably don't need these.
+          class_sprintf(tmp,"w_p[%d]",n_ncdm);                    // GFA //
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
           class_sprintf(tmp,"w_theta[%d]",n_ncdm);                // GFA //
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
@@ -6488,8 +6503,26 @@ int perturbations_approximations(
 
     if (pba->has_ncdm == _TRUE_) {
 
+      /* AG: for accDM models, hold ncdmfa off until accDM has been produced
+         from dcdm decay. The analytical sound-speed at perturbations.c:~10171
+         goes singular when rho_ncdm is essentially zero: ratio_rho is huge,
+         gamma/H is tiny, and their finite product can hit
+         3*(1+w_ncdm)/(1-eps_acc), zeroing the denominator. */
+      short accDM_ready = _TRUE_;
+      if (pba->has_wdm == _TRUE_) {
+        double rho_dcdm_bg  = ppw->pvecback[pba->index_bg_rho_dcdm];
+        double rho_accDM_bg = ppw->pvecback[pba->index_bg_rho_ncdm1 + pba->N_ncdm - 1];
+        if (rho_dcdm_bg > 0. &&
+            rho_accDM_bg/rho_dcdm_bg < ppr->ncdm_fluid_trigger_rho_accDM_over_rho_dcdm) {
+          accDM_ready = _FALSE_;
+        }
+      }
+
       if ((tau/tau_k > ppr->ncdm_fluid_trigger_tau_over_tau_k) &&
-          (ppr->ncdm_fluid_approximation != ncdmfa_none)) {
+          (ppr->ncdm_fluid_approximation != ncdmfa_none) 
+          && (accDM_ready == _TRUE_)
+          ) 
+          {
 
         ppw->approx[ppw->index_ap_ncdmfa] = (int)ncdmfa_on;
       }
@@ -7024,7 +7057,7 @@ int perturbations_total_stress_energy(
   /** Accelerating Dark Matter START */
   double aq; 
   double rho_ncdm_bg_m;
-  double ratio_rho, rho_dcdm_bg, H, eta, gamma, f_dr; 
+  double ratio_rho, rho_cdm_bg, rho_dcdm_bg, H, eta, gamma, f_dr; 
   double weight_0=0., weight_1=0., weight_2=0., weight_3 =0.;
   // double* kfs;
 
@@ -7315,17 +7348,24 @@ int perturbations_total_stress_energy(
           rho_plus_p_ncdm = rho_ncdm_bg + p_ncdm_bg;
           w_ncdm = p_ncdm_bg/rho_ncdm_bg;
 
+          H = ppw->pvecback[pba->index_bg_H];
+
           if (n_ncdm == pba->N_ncdm-1){
             rho_ncdm_bg_m = rho_ncdm_bg*(1.0-3.0*w_ncdm); /* contribution to matter, it will be used below  */
             rho_dcdm_bg = ppw->pvecback[pba->index_bg_rho_dcdm];
+            rho_cdm_bg = ppw->pvecback[pba->index_bg_rho_cdm];
+            w_ncdm = p_ncdm_bg/rho_ncdm_bg;
             ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
             gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
             eta = pba->eta_wdm;
             { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
-              double term3 = ratio_rho * gamma / (3.0 * H) * eta * eta / (1. + eta);
+              double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta + 2*eta) / (1. + eta); // AG:+2*eta somewhere?
               double cg2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
               double cg2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
               cg2_ncdm = cg2_num / cg2_den;
+              if (isnan(cg2_ncdm) || isinf(cg2_ncdm)) {
+                printf("DEBUG 1: ratio=%e gamma=%e term3=%e numerator=%e denominator=%e\n", ratio_rho, gamma, term3, cg2_num, cg2_den);
+              }
               if (cg2_ncdm < 0.) cg2_ncdm = 0.; /* guard sqrt */
             }
           }
@@ -8526,7 +8566,7 @@ int perturbations_print_variables(double tau,
   double w_trial_1=0., w_trial_2=0.; // GFA //
   double rho_plus_p_ttheta_ncdm = 0.0; // GFA //
   double delta_pp_ncdm = 0.0; // GFA //
-  double ratio_rho, rho_dcdm_bg, eta, gamma; /* GFA */
+  double ratio_rho, rho_cdm_bg, rho_dcdm_bg, eta, gamma; /* GFA */
   double ca2_ncdm; /* GFA */
   double rho_plus_p_sshear_ncdm = 0.0; /* GFA */
   double Gamma; /* AG */
@@ -8748,18 +8788,22 @@ int perturbations_print_variables(double tau,
 
           if (n_ncdm == pba->N_ncdm-1){
               rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
+              rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
+              rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
               p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
               pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
-              w_ncdm = p_ncdm_bg/rho_ncdm_bg;
-              rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* GFA */
+              w_ncdm = p_ncdm_bg/rho_ncdm_bg; /* AG: Overwrite for this species */
               ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
               gamma = pvecback[pba->index_bg_Gamma_acc];
               eta = pba->eta_wdm;
               { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
-                double term3 = ratio_rho * gamma / (3.0 * H) * eta * eta / (1. + eta);
+                double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta+2.0*eta) / (1. + eta); // AG: +2* eta smewhere?
                 double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
                 double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
                 ca2_ncdm = ca2_num / ca2_den;
+                if (isnan(ca2_ncdm) || isinf(ca2_ncdm)){
+                    printf("DEBUG 2: term3 = %e, ca2_num = %e, ca2_den = %e\n", term3, ca2_num, ca2_den);
+                }
                 if (ca2_ncdm < 0.) ca2_ncdm = 0.; /* guard sqrt */
               }
               k_fss_wdm[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
@@ -8832,18 +8876,22 @@ int perturbations_print_variables(double tau,
 
           if (n_ncdm == pba->N_ncdm-1) { /* GFA */
               rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
+              rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
+              rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
               p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
               pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
               w_ncdm = p_ncdm_bg/rho_ncdm_bg;
-              rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* GFA */
-              ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
+              ratio_rho = (rho_dcdm_bg) / rho_ncdm_bg;
               gamma = pvecback[pba->index_bg_Gamma_acc];
               eta = pba->eta_wdm;
               { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
-                double term3 = ratio_rho * gamma / (3.0 * H) * eta * eta / (1. + eta);
+                double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta+2.0*eta) / (1. + eta); // AG: +2* eta smewhere?
                 double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
                 double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
                 ca2_ncdm = ca2_num / ca2_den;
+                if (isnan(ca2_ncdm) || isinf(ca2_ncdm)){
+                    printf("DEBUG 3: w_ncdm = %e, term3 = %e, ca2_num = %e, ca2_den = %e\n", w_ncdm, term3, ca2_num, ca2_den);
+                }
                 if (ca2_ncdm < 0.) ca2_ncdm = 0.; /* guard sqrt */
               }
               k_fss_wdm[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
@@ -8974,7 +9022,13 @@ int perturbations_print_variables(double tau,
         for (n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++){
           rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
           p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
-          w_ncdm = p_ncdm_bg/rho_ncdm_bg;
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_dcdm == _TRUE_){
+              rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
+              w_ncdm = p_ncdm_bg/rho_ncdm_bg; 
+          }
+          else{
+              w_ncdm = p_ncdm_bg/rho_ncdm_bg;
+          }
 
           pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
           /* The following equation for p'/rho can be infered from the
@@ -9346,14 +9400,15 @@ int perturbations_derivs(double tau,
   double f_dr, fprime_dr;
 
   /* for use with accDM */
-  double aq, rho_dcdm, rho_dcdm_bg, n_dcdm; /* aq used in source terms below */
+  double aq, rho_dcdm, rho_cdm_bg, rho_dcdm_bg, n_dcdm; /* aq used in source terms below */
   double decay, ratio_rho, gamma, eta;
   double rho_plus_p_sshear_ncdm;
   double w_theta, w_delta_p;
   double t, H;
   double qcube, FD_ncdm;
   double metric_eta_prime, timescale; /* GFA */     
-  double Gamma;              
+  double Gamma;     
+  double weighted_delta;         
 
   /** - rename the fields of the input structure (just to avoid heavy notations) */
 
@@ -10132,21 +10187,19 @@ int perturbations_derivs(double tau,
           rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm]; /* background density */
           p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm]; /* background pressure */ /* AG: Spline breaks this down probably*/
           pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm]; /* pseudo-pressure (see CLASS IV paper) */
+          //if (rho_ncdm_bg > 0.) { /* AG: Our WDM has 0 density at start so let's take that into account */
           w_ncdm = p_ncdm_bg/rho_ncdm_bg; /* equation of state parameter */
-
-          // if (w_ncdm < 0.){
-          //   printf("rho_ncdm_bg=%e p_ncdm_bg=%e pseudo_p_ncdm=%e\n", rho_ncdm_bg, p_ncdm_bg, pseudo_p_ncdm);
+          // } else {
+          //   w_ncdm = 0.; 
           // }
-
-          // if (w_ncdm < 1.e-5) w_ncdm = 0.; /* to avoid numerical issues */
-          
           //ca2_ncdm = w_ncdm/3.0/(1.0+w_ncdm)*(5.0-pseudo_p_ncdm/p_ncdm_bg); /* adiabatic sound speed */
 
           if (n_ncdm == pba->N_ncdm-1) {
             rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* GFA */
-            ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
+            rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
+            w_ncdm = p_ncdm_bg/rho_ncdm_bg;
+            ratio_rho = (rho_dcdm_bg) / rho_ncdm_bg;
             gamma = pvecback[pba->index_bg_Gamma_acc];
-            //printf("a=%e rho_dcdm=%e rho_ncdm=%e ratio=%e gamma=%e\n", a, rho_dcdm_bg, rho_ncdm_bg, ratio_rho, gamma);
             H = pvecback[pba->index_bg_H];
             decay = a*gamma*ratio_rho; /* GFA*/
             eta = pba->eta_wdm;
@@ -10155,17 +10208,33 @@ int perturbations_derivs(double tau,
           /* adiabatic sound speed */
           if (n_ncdm == pba->N_ncdm-1 ) { /* GFA */
             /* AG: w_ncdm distributed analytically into numerator so 1/w_ncdm never appears */
-            double term3 = ratio_rho*(gamma/(3.0*H))*pba->eps_acc*pba->eps_acc/(1.-pba->eps_acc);
-            double numerator = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg)-term3;
-            double denominator = 3.0*(1.0+w_ncdm)-ratio_rho*(gamma/H)*(1.-pba->eps_acc);
-            ca2_ncdm = numerator/denominator;
-            if (ca2_ncdm < 0.) ca2_ncdm = 0.; /* guard sqrt below */
+            double term1_num = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg);
+            //double term2_num = ratio_rho*(gamma/(3.0*H))*pba->eps_acc*pba->eps_acc/(1.-pba->eps_acc); // AG: Epsilon version
+            double term2_num = ratio_rho*(gamma/(3.0*H))*eta*(2+eta)/(1+eta); // AG: Eta version
+            double numerator = term1_num - term2_num;
+
+            double term1_den = 3.0*(1.0+w_ncdm);
+            //double term2_den = ratio_rho*(gamma/H)*(1.-pba->eps_acc); // AG: Epsilon version
+            double term2_den = ratio_rho*(gamma/H)*(1+eta); // AG: Eta version
+            double denominator = term1_den - term2_den;
+
+            if (denominator == 0.) {
+              ppw->ca2_ncdm_bad = _TRUE_;
+              ca2_ncdm = 0.;
+            }
+            else {
+              ca2_ncdm = numerator/denominator;
+            }
+
+            if (ca2_ncdm < 0. || isnan(ca2_ncdm) || isinf(ca2_ncdm)) {
+              ppw->ca2_ncdm_bad = _TRUE_;
+              ca2_ncdm = 0.; /* guard sqrt below */
+            }
             // CS2DYN
             if (ppt->switch_on_eq_delta_p_wdm == _FALSE_) {
               ceff2_ncdm = ca2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(ca2_ncdm)/(a*H)));
             }
             cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
-            // printf("g/H=%e num=%e den=%e ca2=%e, ceff2=%e, cvis2=%e", gamma/H, numerator, denominator, ca2_ncdm, ceff2_ncdm, cvis2_ncdm);
 
             } 
           else {
@@ -10183,11 +10252,11 @@ int perturbations_derivs(double tau,
             ceff2_ncdm = ca2_ncdm;
             cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
           }
-          if (ppr->ncdm_fluid_approximation == ncdmfa_hu && n_ncdm != pba->N_ncdm-1) {
+          if (ppr->ncdm_fluid_approximation == ncdmfa_hu && n_ncdm != pba->N_ncdm-1) { /* GFA */
             ceff2_ncdm = ca2_ncdm;
             cvis2_ncdm = w_ncdm;
           }
-          if (ppr->ncdm_fluid_approximation == ncdmfa_CLASS && n_ncdm != pba->N_ncdm-1) {
+          if (ppr->ncdm_fluid_approximation == ncdmfa_CLASS && n_ncdm != pba->N_ncdm-1) { /* GFA */
             ceff2_ncdm = ca2_ncdm;
             cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
           }
@@ -10195,15 +10264,17 @@ int perturbations_derivs(double tau,
           if (n_ncdm == pba->N_ncdm-1) { /* GFA */
              /** - -----> exact continuity equation */
 
+             //weighted_delta = (rho_dcdm_bg*y[pv->index_pt_delta_dcdm]+rho_cdm_bg*y[pv->index_pt_delta_cdm])/(rho_dcdm_bg+rho_cdm_bg); /* AG: weighted delta for the source term in the continuity and Euler equations */
+              
              if (ppt->switch_on_eq_delta_p_wdm == _TRUE_) {
                dy[idx] = -(1.0+w_ncdm)*(y[idx+1]+metric_continuity)
                  -3.0*a_prime_over_a*y[idx+3]+3.0*a_prime_over_a*w_ncdm*y[idx]
-                 +a*gamma*(1.-pba->eps_acc)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
+                 +a*gamma*(1.-pba->eps_acc)*ratio_rho*(weighted_delta-y[idx]+metric_euler/k2);
              } 
              else {
                dy[idx] = -(1.0+w_ncdm)*(y[idx+1]+metric_continuity)
                  -3.0*a_prime_over_a*(ceff2_ncdm-w_ncdm)*y[idx]
-                 +a*gamma*(1.-pba->eps_acc)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
+                 +a*gamma*(1.-pba->eps_acc)*(ratio_rho)*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
              }
 
             //this is the relativistic limit, for testing
@@ -10221,9 +10292,6 @@ int perturbations_derivs(double tau,
                 + metric_euler-a*gamma*(1.-pba->eps_acc)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
             }
 
-            //this is the relativistic limit, for testing
-            // dy[idx+1] = (1./4.)*k2*y[idx]-k2*y[idx+2]+metric_euler-(1./2.)*a*gamma*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
-
           /** - ----->  ansatz for approximate shear derivative */
 
           // just for testing
@@ -10234,7 +10302,7 @@ int perturbations_derivs(double tau,
             else { // AG: UNDERSTAND THIS EQUATION and then convert from pba->eps_acc to eta
               dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+1./tau+a*gamma*(1.-pba->eps_acc)*((1.+ca2_ncdm)/(3.+3.*w_ncdm))*ratio_rho)*y[idx+2]
                           +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*(y[idx+1]+metric_ufa_class)
-                          -2.0/3.0*pba->eps_acc*pba->eps_acc*a*gamma*ratio_rho/(1-pba->eps_acc)*y[pv->index_pt_delta_dcdm]/(1.+w_ncdm);
+                          -2.0/3.0*pba->eps_acc*pba->eps_acc*a*gamma*ratio_rho/(1-pba->eps_acc)*weighted_delta/(1.+w_ncdm);
 
             }
 
@@ -10253,7 +10321,7 @@ int perturbations_derivs(double tau,
              dy[idx+3] = -3.*a_prime_over_a*y[idx+3]*((2./3.)-w_ncdm-w_delta_p)
                        -w_theta*(1.+w_ncdm)*y[idx+1]
                        -(metric_ufa_class/3)*w_ncdm*(5.-(pseudo_p_ncdm/p_ncdm_bg))
-                       +a*gamma*ratio_rho*((pba->eps_acc*pba->eps_acc/(1-pba->eps_acc))*(y[pv->index_pt_delta_dcdm]/3.)-(1.-pba->eps_acc)*y[idx+3]);
+                       +a*gamma*ratio_rho*((pba->eps_acc*pba->eps_acc/(1-pba->eps_acc))*(weighted_delta/3.)-(1.-pba->eps_acc)*y[idx+3]);
            }
 
           } 
@@ -10324,10 +10392,14 @@ int perturbations_derivs(double tau,
               //aq = q/pba->P_acc_wdm*pba->T_acc_GeV;
               aq = pba->aq_ncdm_wdm[n_ncdm][index_q];
 
-              if(a<=aq){
-
+              if(a<=aq){ // AG: Track the DCDM perturbs until production
                 //background_ncdm_distribution_perts(pba, q, n_ncdm, &FD_ncdm);
                 FD_ncdm = pba->f0_ncdm_wdm[n_ncdm][index_q];
+
+                rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
+                rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
+
+                //weighted_delta = (rho_dcdm_bg*y[pv->index_pt_delta_dcdm]+rho_cdm_bg*y[pv->index_pt_delta_cdm])/(rho_cdm_bg+rho_dcdm_bg); /* AG: weighted delta for the source term in the continuity and Euler equations */
 
                 y[idx] =(y[pv->index_pt_delta_dcdm]-metric_continuity/3/a/pvecback[pba->index_bg_H]) * FD_ncdm;
                 y[idx+1] = 0;
@@ -11341,7 +11413,7 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
     double tau;
     double qmin_tmp;
     double ca2_ncdm; /* GFA */
-    double rho_ncdm_bg, p_ncdm_bg, pseudo_p_ncdm, w_ncdm, rho_dcdm_bg, ratio_rho, gamma, eta; /* GFA*/
+    double rho_cdm_bg, rho_ncdm_bg, p_ncdm_bg, pseudo_p_ncdm, w_ncdm, rho_dcdm_bg, ratio_rho, gamma, eta; /* GFA*/
     struct background_parameters_for_distributions pbadist;
 
     pbadist.pba = pba;
@@ -11360,18 +11432,22 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
 
     H_D = pvecback[pba->index_bg_H];
     rho_ncdm_bg   = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
+    rho_dcdm_bg   = pvecback[pba->index_bg_rho_dcdm];
+    rho_cdm_bg    = pvecback[pba->index_bg_rho_cdm];
     p_ncdm_bg     = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
     pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
-    w_ncdm        = p_ncdm_bg/rho_ncdm_bg;
-    rho_dcdm_bg   = pvecback[pba->index_bg_rho_dcdm];
-    ratio_rho     = rho_dcdm_bg/rho_ncdm_bg;
+    w_ncdm        = p_ncdm_bg/(rho_ncdm_bg);
+    ratio_rho     = rho_dcdm_bg / rho_ncdm_bg;
     gamma         = pvecback[pba->index_bg_Gamma_acc];
     eta = pba->eta_wdm;
     { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
-      double term3 = ratio_rho * gamma / (3.0 * H_D) * eta * eta / (1. + eta);
+      double term3 = ratio_rho * gamma / (3.0 * H_D) * (eta * eta + 2*eta) / (1. + eta); // AG: +2*eta somewhere?
       double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
       double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H_D)*(1.+eta);
       ca2_ncdm = ca2_num / ca2_den;
+      if (isnan(ca2_ncdm) || isinf(ca2_ncdm)) {
+        printf("DEBUG 5: term3 = %e, ca2_num = %e, ca2_den = %e\n", term3, ca2_num, ca2_den);
+      }
       if (ca2_ncdm < 0.) ca2_ncdm = 0.;
     }
 

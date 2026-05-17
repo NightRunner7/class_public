@@ -676,6 +676,11 @@ struct perturbations_workspace
 
   //@}
 
+  /* AccDM: set inside perturbations_derivs when ca2_ncdm goes negative or
+     denominator hits zero; checked after the evolver returns so we abort
+     cleanly without overflowing the error_message buffer */
+  short ca2_ncdm_bad;
+
 };
 
 /**

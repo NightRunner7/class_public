@@ -102,11 +102,16 @@ struct background
   double eps_acc;
   double k_fss_wdm;
 
-  int acc_ncdm_index; /** Index for the accelerating ncdm species */
+  int acc_ncdm_index; /** Index for the accelerating ncdm species, UNUSED RIGHT NOW */
 
   // double Omega_ini_accdm;  /**< \f$ \Omega_{ini,adm} \f$: rescaled initial value for accelerating dark matter density */
   double Omega0_dcdmwdm;           /**< \f$ \Omega_{0 wdm}+\Omega_{0 cdm} \f$: Cold Dark Matter (cdm) accelerating to WDM (wdm) */
   // double Omega_ini_acc;  /**< \f$ \Omega_{ini,acc} \f$: rescaled initial value for non-accelerating (cdm) dark matter density */
+
+  // /* AG: Variables for testing ca2_ncdm */
+  // short ca2_ncdm_bad;
+  // double ca2_ncdm_min;
+  // double ca2_ncdm_min_tau;
 
   /* END Accelerating Dark Matter */
 
@@ -387,6 +392,14 @@ struct background
   short shooting_failed;  /**< flag is set to true if shooting failed. */
   ErrorMsg shooting_error; /**< Error message from shooting failed. */
 
+  /* AccDM diagnostics: filled by background_check_ca2_ncdm() after the table
+     is built. ca2_ncdm_bad is set when the formula goes non-physical at any
+     sampled tau. min/min_tau/min_a record the worst sample for triage. */
+  short ca2_ncdm_bad;
+  double ca2_ncdm_min;
+  double ca2_ncdm_min_tau;
+  double ca2_ncdm_min_a;
+
   short background_verbose; /**< flag regulating the amount of information sent to standard output (none if set to zero) */
 
   ErrorMsg error_message; /**< zone for writing error messages */
@@ -575,6 +588,10 @@ extern "C" {
                                struct precision *ppr,
                                struct background *pba
                                );
+
+  int background_check_ca2_ncdm(
+                                struct background *pba
+                                );
 
 
   int background_output_titles(struct background * pba,

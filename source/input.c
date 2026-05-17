@@ -2900,7 +2900,7 @@ int input_read_parameters_species(struct file_content * pfc,
         //   pba->ncdm_qmax[idx_wdm] = 1.3 * P_acc / pba->T_acc_GeV;   // 5.0 * pba->a_t_mon * P_acc / pba->T_acc_GeV;
         // } else {
         pba->ncdm_qmax[idx_wdm] = 1.3 * pba->P_acc_wdm / pba->T_acc_GeV;  // fallback
-        pba->ncdm_quadrature_strategy[idx_wdm] = qm_simpson_log;
+        // pba->ncdm_quadrature_strategy[idx_wdm] = qm_simpson_log;
         // }
         
         if (input_verbose > 2) {

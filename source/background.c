@@ -464,7 +464,7 @@ int background_functions(
   if (pba->has_dcdm == _TRUE_) {
     /* Pass value of rho_dcdm to output */
     if (pba->has_varGamma_dcdm == _TRUE_){
-      pvecback[pba->index_bg_rho_dcdm] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a, 3) * pba->f_wdm *(1-a_k)/(1+at_k);
+      pvecback[pba->index_bg_rho_dcdm] = pba->f_wdm * pba->Omega0_cdm * pow(pba->H0,2) / pow(a, 3) * (1-a_k)/(1+at_k);
     }
     else{
       pvecback[pba->index_bg_rho_dcdm] = pvecback_B[pba->index_bi_rho_dcdm];
@@ -647,13 +647,13 @@ int background_functions(
   /* AG: Gamma_acc, the decay rate for the wdm species. Must be computed
      after pvecback[index_bg_H] is set above. */
   if (pba->has_wdm == _TRUE_) {
-    if (a_k == 1.) {
-      pvecback[pba->index_bg_Gamma_acc] = 0.;
-    }
-    else {
+    // if (a_k == 1.) {
+    //   pvecback[pba->index_bg_Gamma_acc] = 0.;
+    // }
+    // else {
       pvecback[pba->index_bg_Gamma_acc] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
           ((1.-a_k)*(1.+at_k));
-    }
+    // }
     // Regulate divergence:
     if (pvecback[pba->index_bg_Gamma_acc] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
         pvecback[pba->index_bg_Gamma_acc]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
@@ -905,6 +905,12 @@ int background_init(
 
   /** - find and store a few derived parameters at radiation-matter equality */
   class_call(background_find_equality(ppr,pba),
+             pba->error_message,
+             pba->error_message);
+
+  /* AccDM: scan the background table for non-physical ncdm adiabatic sound
+     speed. Records min and flag in pba; does not abort. */
+  class_call(background_check_ca2_ncdm(pba),
              pba->error_message,
              pba->error_message);
 
@@ -2723,8 +2729,10 @@ int background_output_titles(
       class_store_columntitle(titles,tmp,_TRUE_);
       class_sprintf(tmp,"(.)p_ncdm[%d]",n);
       class_store_columntitle(titles,tmp,_TRUE_);
+      class_sprintf(tmp,"(.)pseudo_p_ncdm[%d]",n);
+      class_store_columntitle(titles,tmp,_TRUE_);
       if (n == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
-        class_store_columntitle(titles,"(.)Gamma_acc",pba->has_wdm);
+        class_store_columntitle(titles,"Gamma_acc",pba->has_wdm);
       }
     }
   }
@@ -2802,6 +2810,7 @@ int background_output_data(
       for (n=0; n<pba->N_ncdm; n++) {
         class_store_double(dataptr,pvecback[pba->index_bg_rho_ncdm1+n],_TRUE_,storeidx);
         class_store_double(dataptr,pvecback[pba->index_bg_p_ncdm1+n],_TRUE_,storeidx);
+        class_store_double(dataptr,pvecback[pba->index_bg_pseudo_p_ncdm1+n],_TRUE_,storeidx);
         if (n == pba->N_ncdm - 1 && pba->has_wdm) {
           class_store_double(dataptr,pvecback[pba->index_bg_Gamma_acc],pba->has_wdm,storeidx);
         }
@@ -3062,6 +3071,94 @@ int background_timescale(
   *timescale = 1.;
   return _SUCCESS_;
 }
+
+/**
+ * AccDM diagnostic: scan the finalized background table for non-physical
+ * values of the ncdm adiabatic sound speed used in the GFA fluid block of
+ * perturbations_derivs (see perturbations.c around the ncdmfa branch). The
+ * formula here mirrors the one used in derivs and depends only on
+ * background quantities (rho_ncdm, p_ncdm, pseudo_p_ncdm, rho_dcdm, H,
+ * Gamma_acc) plus the constant eps_acc.
+ *
+ * Records pba->ca2_ncdm_bad, ca2_ncdm_min, ca2_ncdm_min_tau, ca2_ncdm_min_a.
+ * Does not abort.
+ */
+
+int background_check_ca2_ncdm(
+                              struct background *pba
+                              ) {
+
+  int index_loga;
+  double *pvecback;
+  double a, tau, H, gamma, rho_cdm, rho_dcdm, rho_ncdm, p_ncdm, pseudo_p_ncdm;
+  double w_ncdm, ratio_rho, eps;
+  double num, den, ca2;
+  int idx_last_ncdm;
+
+  pba->ca2_ncdm_bad = _FALSE_;
+  pba->ca2_ncdm_min = 1.e300;
+  pba->ca2_ncdm_min_tau = 0.;
+  pba->ca2_ncdm_min_a = 0.;
+
+  if (pba->has_dcdm == _FALSE_ || pba->has_ncdm == _FALSE_) return _SUCCESS_;
+  if (pba->N_ncdm <= 0) return _SUCCESS_;
+
+  idx_last_ncdm = pba->N_ncdm - 1;
+  eps = pba->eps_acc;
+
+  for (index_loga = 0; index_loga < pba->bt_size; index_loga++) {
+
+    pvecback = pba->background_table + index_loga * pba->bg_size;
+    a = exp(pba->loga_table[index_loga]);
+    tau = pba->tau_table[index_loga];
+    H = pvecback[pba->index_bg_H];
+    gamma = pvecback[pba->index_bg_Gamma_acc];
+    rho_cdm = pvecback[pba->index_bg_rho_cdm];
+    rho_dcdm = pvecback[pba->index_bg_rho_dcdm];
+    rho_ncdm = pvecback[pba->index_bg_rho_ncdm1 + idx_last_ncdm];
+    p_ncdm = pvecback[pba->index_bg_p_ncdm1 + idx_last_ncdm];
+    pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1 + idx_last_ncdm];
+
+    if (rho_ncdm <= 0. || H <= 0. || p_ncdm <= 0.) continue;
+
+    w_ncdm = p_ncdm / rho_ncdm;
+    ratio_rho = (rho_dcdm + rho_cdm) / rho_ncdm;
+
+    num = w_ncdm * (5.0 - pseudo_p_ncdm / p_ncdm)
+          - ratio_rho * (gamma / (3.0 * H)) * eps * eps / (1.0 - eps);
+    den = 3.0 * (1.0 + w_ncdm) - ratio_rho * (gamma / H) * (1.0 - eps);
+
+    if (den == 0.) {
+      pba->ca2_ncdm_bad = _TRUE_;
+      if (pba->ca2_ncdm_min > -1.e300) {
+        pba->ca2_ncdm_min = -1.e300;
+        pba->ca2_ncdm_min_tau = tau;
+        pba->ca2_ncdm_min_a = a;
+      }
+      continue;
+    }
+
+    ca2 = num / den;
+
+    if (ca2 < pba->ca2_ncdm_min) {
+      pba->ca2_ncdm_min = ca2;
+      pba->ca2_ncdm_min_tau = tau;
+      pba->ca2_ncdm_min_a = a;
+    }
+    if (ca2 < 0. || isnan(ca2) || isinf(ca2)) {
+      pba->ca2_ncdm_bad = _TRUE_;
+    }
+  }
+
+  if (pba->background_verbose > 0 && pba->ca2_ncdm_bad == _TRUE_) {
+    fprintf(stderr,
+            "[accDM] ca2_ncdm went non-physical: min=%e at a=%e (tau=%e)\n",
+            pba->ca2_ncdm_min, pba->ca2_ncdm_min_a, pba->ca2_ncdm_min_tau);
+  }
+
+  return _SUCCESS_;
+}
+
 
 /**
  * Function outputting the fractions Omega of the total critical density

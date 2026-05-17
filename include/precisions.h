@@ -388,6 +388,15 @@ class_precision_parameter(ncdm_fluid_approximation,int,ncdmfa_CLASS) /**< method
  */
 class_precision_parameter(ncdm_fluid_trigger_tau_over_tau_k,double,31.0)
 /**
+ * minimum rho_accDM/rho_dcdm before ncdm fluid approximation is allowed
+ * to switch on. Below this, accDM has barely been produced; the analytical
+ * sound-speed denominator can pass through zero (tiny rho_ncdm makes
+ * ratio_rho huge while gamma/H is tiny, so their finite product can equal
+ * 3(1+w)/(1-eps_acc) and the formula becomes singular). Has no effect when
+ * has_wdm is false.
+ */
+class_precision_parameter(ncdm_fluid_trigger_rho_accDM_over_rho_dcdm,double,1.0e-6)
+/**
  * whether CMB source functions can be approximated as zero when
  * visibility function g(tau) is tiny
  */
