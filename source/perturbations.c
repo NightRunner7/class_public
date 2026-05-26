@@ -5860,7 +5860,19 @@ int perturbations_initial_conditions(struct precision * ppr,
         /* Monopole (BRINGMANN 2018) modification */
         if ((pba->has_dr == _TRUE_) && (pba->has_mon == _TRUE_)){
           pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
-          delta_dr += (-4.*a_prime_over_a + a*pba->Gamma_mon*ppw->pvecback[pba->index_bg_rho_mon]/ppw->pvecback[pba->index_bg_rho_dr])*alpha;
+
+          if (ppw->pvecback[pba->index_bg_rho_dr] > 1e-100) {
+            delta_dr += (
+              -4.*a_prime_over_a
+              + a*pba->Gamma_mon
+                * ppw->pvecback[pba->index_bg_rho_mon]
+                / ppw->pvecback[pba->index_bg_rho_dr]
+            ) * alpha;
+          }
+          else {
+            delta_dr += -4.*a_prime_over_a * alpha;
+          }
+          // delta_dr += (-4.*a_prime_over_a + a*pba->Gamma_mon*ppw->pvecback[pba->index_bg_rho_mon]/ppw->pvecback[pba->index_bg_rho_dr])*alpha;
         }
         /* End Monopole (BRINGMANN 2018) modification */
       }

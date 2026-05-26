@@ -2769,7 +2769,7 @@ int input_read_parameters_species(struct file_content * pfc,
       class_call(parser_read_double(pfc,"a_t_mon",&param2,&flag2,errmsg), errmsg, errmsg);
       class_call(parser_read_double(pfc,"log10a_t",&param3,&flag3,errmsg), errmsg, errmsg);
       class_test(((flag2 == _TRUE_) && (flag3 == _TRUE_)), errmsg, "In input file, you can only enter one of a_t_mon or log10a_t, choose one");
-      class_test(((flag2 == _FALSE_) && (flag3 == _FALSE_)),errmsg,"You must provide one of a_t_mon or log10a_t_mon when f_mon > 0");
+      class_test(((flag2 == _FALSE_) && (flag3 == _FALSE_)),errmsg,"You must provide one of a_t_mon or log10a_t when f_mon > 0");
 
       if (flag2 == _TRUE_) {
       pba->a_t_mon = param2;
@@ -3355,6 +3355,9 @@ int input_read_parameters_species(struct file_content * pfc,
   Omega_tot += pba->Omega0_cdm;
   Omega_tot += pba->Omega0_idm;
   Omega_tot += pba->Omega0_dcdmdr;
+  /* Monopole (BRINGMANN 2018) modification */
+  Omega_tot += pba->Omega0_mondr;
+  /* End Monopole (BRINGMANN 2018) modification*/ 
   Omega_tot += pba->Omega0_idr;
   Omega_tot += pba->Omega0_ncdm_tot;
   /* Step 1 */
@@ -5999,6 +6002,10 @@ int input_default_params(struct background *pba,
   /** 7.1.c) Decay constant */
   pba->Gamma_dcdm = 0.0;
   pba->tau_dcdm = 0.0;
+
+  /* Monopole (BRINGMANN 2018) modification */
+  pba->Omega0_mondr = 0.0;
+  /* End Monopole (BRINGMANN 2018) modification*/ 
 
   /** 7.2) Interacting Dark Matter */
   /** 7.2.1.a) Current factional density of idm */
