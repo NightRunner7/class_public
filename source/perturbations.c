@@ -4106,7 +4106,7 @@ int perturbations_vector_init(
         else{
           // In the fluid approximation, hierarchy is cut at lmax = 2 and q dependence is integrated out:
           if (n_ncdm == pba->N_ncdm-1 && ppt->switch_on_eq_delta_p_wdm == _TRUE_ && ppt->gauge == synchronous){
-            ppv->l_max_ncdm[n_ncdm] = 3; // since we are now also including a dynamical equation for the pressure perturbation
+            ppv->l_max_ncdm[n_ncdm] = 3; // GFA: since we are now also including a dynamical equation for the pressure perturbation
             ppv->q_size_ncdm[n_ncdm] = 1;
           }
           else{
@@ -9408,7 +9408,7 @@ int perturbations_derivs(double tau,
   double qcube, FD_ncdm;
   double metric_eta_prime, timescale; /* GFA */     
   double Gamma;     
-  double weighted_delta;         
+  //double weighted_delta;         
 
   /** - rename the fields of the input structure (just to avoid heavy notations) */
 
@@ -10209,12 +10209,10 @@ int perturbations_derivs(double tau,
           if (n_ncdm == pba->N_ncdm-1 ) { /* GFA */
             /* AG: w_ncdm distributed analytically into numerator so 1/w_ncdm never appears */
             double term1_num = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg);
-            //double term2_num = ratio_rho*(gamma/(3.0*H))*pba->eps_acc*pba->eps_acc/(1.-pba->eps_acc); // AG: Epsilon version
             double term2_num = ratio_rho*(gamma/(3.0*H))*eta*(2+eta)/(1+eta); // AG: Eta version
             double numerator = term1_num - term2_num;
 
             double term1_den = 3.0*(1.0+w_ncdm);
-            //double term2_den = ratio_rho*(gamma/H)*(1.-pba->eps_acc); // AG: Epsilon version
             double term2_den = ratio_rho*(gamma/H)*(1+eta); // AG: Eta version
             double denominator = term1_den - term2_den;
 
@@ -10269,12 +10267,12 @@ int perturbations_derivs(double tau,
              if (ppt->switch_on_eq_delta_p_wdm == _TRUE_) {
                dy[idx] = -(1.0+w_ncdm)*(y[idx+1]+metric_continuity)
                  -3.0*a_prime_over_a*y[idx+3]+3.0*a_prime_over_a*w_ncdm*y[idx]
-                 +a*gamma*(1.-pba->eps_acc)*ratio_rho*(weighted_delta-y[idx]+metric_euler/k2);
+                 +a*gamma*(1.+pba->eta_wdm)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
              } 
              else {
                dy[idx] = -(1.0+w_ncdm)*(y[idx+1]+metric_continuity)
                  -3.0*a_prime_over_a*(ceff2_ncdm-w_ncdm)*y[idx]
-                 +a*gamma*(1.-pba->eps_acc)*(ratio_rho)*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
+                 +a*gamma*(1.+pba->eta_wdm)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
              }
 
             //this is the relativistic limit, for testing
@@ -10284,12 +10282,12 @@ int perturbations_derivs(double tau,
             if (ppt->switch_on_eq_delta_p_wdm == _TRUE_) {
               dy[idx+1] = -a_prime_over_a*(1.0-3.0*ca2_ncdm)*y[idx+1]
                 + k2*y[idx+3]/(1.0+w_ncdm)-k2*y[idx+2]
-                + metric_euler-a*gamma*(1.-pba->eps_acc)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
+                + metric_euler-a*gamma*(1.+pba->eta_wdm)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
             } 
             else {
               dy[idx+1] = -a_prime_over_a*(1.0-3.0*ca2_ncdm)*y[idx+1]
                 +ceff2_ncdm/(1.0+w_ncdm)*k2*y[idx]-k2*y[idx+2]
-                + metric_euler-a*gamma*(1.-pba->eps_acc)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
+                + metric_euler-a*gamma*(1.+pba->eta_wdm)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
             }
 
           /** - ----->  ansatz for approximate shear derivative */
@@ -10299,11 +10297,15 @@ int perturbations_derivs(double tau,
             if (ppt->switch_off_shear_wdm == _TRUE_) {
               dy[idx+2] = 0.;
             } 
-            else { // AG: UNDERSTAND THIS EQUATION and then convert from pba->eps_acc to eta
-              dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+1./tau+a*gamma*(1.-pba->eps_acc)*((1.+ca2_ncdm)/(3.+3.*w_ncdm))*ratio_rho)*y[idx+2]
-                          +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*(y[idx+1]+metric_ufa_class)
-                          -2.0/3.0*pba->eps_acc*pba->eps_acc*a*gamma*ratio_rho/(1-pba->eps_acc)*weighted_delta/(1.+w_ncdm);
-
+            else {
+              if (pba->kappa_mon <= 3.0) { /* AG: It seems that for kappa less than 3 setting shear to zero gives better approximation */
+                dy[idx+2] = 0.;
+              }
+              else {
+                dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+1./tau+a*gamma*(1.+pba->eta_wdm)*((1.+ca2_ncdm)/(3.+3.*w_ncdm))*ratio_rho)*y[idx+2]
+                          +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*s_l[2]*(y[idx+1]+metric_ufa_class)      
+                          -2.0/3.0*pba->eta_wdm*(pba->eta_wdm+2.)/(1.+pba->eta_wdm)*a*gamma*ratio_rho*y[pv->index_pt_delta_dcdm]/(1.+w_ncdm);
+              }
             }
 
             //   (corrected)formula (A.8) of 1505.05511v2
@@ -10321,7 +10323,7 @@ int perturbations_derivs(double tau,
              dy[idx+3] = -3.*a_prime_over_a*y[idx+3]*((2./3.)-w_ncdm-w_delta_p)
                        -w_theta*(1.+w_ncdm)*y[idx+1]
                        -(metric_ufa_class/3)*w_ncdm*(5.-(pseudo_p_ncdm/p_ncdm_bg))
-                       +a*gamma*ratio_rho*((pba->eps_acc*pba->eps_acc/(1-pba->eps_acc))*(weighted_delta/3.)-(1.-pba->eps_acc)*y[idx+3]);
+                       +a*gamma*ratio_rho*((pba->eta_wdm*(pba->eta_wdm+2.)/(1+pba->eta_wdm))*(y[pv->index_pt_delta_dcdm]/3.)-(1.+pba->eta_wdm)*y[idx+3]);
            }
 
           } 
@@ -10354,10 +10356,8 @@ int perturbations_derivs(double tau,
             }
 
             if (ppr->ncdm_fluid_approximation == ncdmfa_CLASS) {
-
               dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+1./tau)*y[idx+2]
                 +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*s_l[2]*(y[idx+1]+metric_ufa_class);
-
             }
           }
 
@@ -10398,8 +10398,6 @@ int perturbations_derivs(double tau,
 
                 rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
                 rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
-
-                //weighted_delta = (rho_dcdm_bg*y[pv->index_pt_delta_dcdm]+rho_cdm_bg*y[pv->index_pt_delta_cdm])/(rho_cdm_bg+rho_dcdm_bg); /* AG: weighted delta for the source term in the continuity and Euler equations */
 
                 y[idx] =(y[pv->index_pt_delta_dcdm]-metric_continuity/3/a/pvecback[pba->index_bg_H]) * FD_ncdm;
                 y[idx+1] = 0;
