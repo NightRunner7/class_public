@@ -398,3 +398,17 @@ a separate plan once these numbers exist.
 - **Type consistency:** `ppw->acc_stiff_ratio` (double) declared in Task 2, written in Task 3,
   read in Task 4. `ppr->kappa_stiff` (double) declared in Task 1, read in Task 3. `run_model`
   signature/return keys consistent across Task 5 steps.
+
+---
+
+## Revision 2026-06-22b — Task 3 corrected (monotonic gate)
+
+Task 3's k-aware stiffness gate was implemented, tested, and **reverted**: the
+stiffness ratio is non-monotonic in tau, and CLASS requires monotonic/
+irreversible approximation flags, so it made `ncdmfa` reversible and aborted
+("switch 2 approximations at the same time"). The shipped Phase-1 gate is the
+**monotonic density ratio** `rho_accDM/rho_acc_cdm` (the original trigger);
+`perturbations_acc_stiff_ratio()` survives as the switch-on **diagnostic** only
+(Task 4), and `kappa_stiff` (Task 1) is reserved for Phase 2. Tasks 1, 2 (field
+later removed in review), 4, 5 stand as built. See the design spec's
+"Revision 2026-06-22b" for the full rationale.

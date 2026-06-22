@@ -129,3 +129,29 @@ After Phase 1 produces:
 - the exact-vs-fluid divergence near that transition,
 
 choose: (a) `κ_stiff` default, and (b) slaving order for `acctca` (0th vs 0th+slip).
+
+---
+
+## Revision 2026-06-22b — k-aware trigger reverted (monotonicity constraint)
+
+**Found during Phase-1 testing:** the k-aware stiffness *trigger* is incompatible
+with CLASS's approximation machinery. `perturbations_find_approximation_switches`
+requires every approximation flag to be a **monotonic / irreversible** step
+function of tau (its bisection assumes a single non-decreasing crossing per
+level; see the comment at `perturbations.c` ~3724). The stiffness ratio
+`Λ/max(aH, k·√ca2)` is **non-monotonic** in tau because `Γ_acc/H` rises while
+`ratio_rho` falls, so gating `ncdmfa` on it makes the approximation reversible
+(on→off→on) and aborts with *"you switch 2 approximations at the same time …
+one approx is reversible"* (observed for k=1e-2 at tau=3000).
+
+**Consequence for the design:** a genuinely k-aware stiffness *trigger* cannot be
+delivered through the standard switch machinery. Phase 1 therefore keeps the
+**monotonic** density-ratio gate (`rho_accDM/rho_acc_cdm`, the original trigger)
+and demotes the stiffness ratio to a **diagnostic** logged at switch-on. The
+`ca2_ncdm` guards remain the substantive Phase-1 robustness win.
+
+**Implication for Phase 2:** the `acctca → ncdmfa` transition is subject to the
+same monotonicity requirement. Its trigger must also be a monotonic function of
+tau (e.g. the density ratio), not the stiffness ratio. `kappa_stiff` is retained
+as a reserved parameter for Phase 2, where it can shape a monotonic threshold
+rather than serve as the raw gate.
