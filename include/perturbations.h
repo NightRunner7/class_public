@@ -665,6 +665,11 @@ struct perturbations_workspace
      cleanly without overflowing the error_message buffer */
   short ca2_ncdm_bad;
 
+  /* AccDM: last daughter stiffness ratio Lambda/max(aH,k*sqrt(ca2)) computed in
+     perturbations_approximations; logged at fluid switch-on for the Phase-2
+     slaving-order decision. Large value means "still stiff". */
+  double acc_stiff_ratio;
+
 };
 
 /**
