@@ -6456,15 +6456,25 @@ int perturbations_approximations(
 
     if (pba->has_ncdm == _TRUE_) {
 
-      /* AG: for accDM models, switch the daughter exact->fluid only when the
-         decay relaxation is no longer stiff for the explicit rk evolver, i.e.
-         when Lambda/max(aH,k*sqrt(ca2)) < kappa_stiff. This is per-k (small-k
-         modes tolerate the fluid earlier). Replaces the k-independent
-         density-ratio gate. See docs/superpowers/specs/2026-06-22-*. */
+      /* AG: for accDM models, hold ncdmfa off until the daughter abundance
+         rho_accDM/rho_acc_cdm exceeds a threshold. This quantity grows
+         MONOTONICALLY as the daughter is produced, so ncdmfa switches on
+         exactly once -- which CLASS's approximation machinery requires (the
+         switch search assumes every approximation flag is irreversible /
+         non-decreasing; see perturbations_find_approximation_switches).
+         NOTE: the per-k stiffness ratio Lambda/max(aH,k*sqrt(ca2)) is NOT
+         monotonic (Gamma_acc/H rises while ratio_rho falls), so it cannot be
+         used as a trigger -- it is logged at switch-on as a diagnostic only
+         (see perturbations_acc_stiff_ratio). ppr->kappa_stiff is reserved for
+         the Phase-2 acctca regime. */
       short accDM_ready = _TRUE_;
-      if (pba->has_acc == _TRUE_ &&
-          perturbations_acc_stiff_ratio(pba,ppw,k) > ppr->kappa_stiff) {
-        accDM_ready = _FALSE_;
+      if (pba->has_acc == _TRUE_) {
+        double rho_acc_cdm_bg = ppw->pvecback[pba->index_bg_rho_acc_cdm];
+        double rho_accDM_bg   = ppw->pvecback[pba->index_bg_rho_ncdm1 + pba->N_ncdm-1];
+        if (rho_acc_cdm_bg > 0. &&
+            rho_accDM_bg/rho_acc_cdm_bg < ppr->ncdm_fluid_trigger_rho_accDM_over_rho_dcdm) {
+          accDM_ready = _FALSE_;
+        }
       }
 
       if ((tau/tau_k > ppr->ncdm_fluid_trigger_tau_over_tau_k) &&

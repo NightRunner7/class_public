@@ -397,16 +397,17 @@ class_precision_parameter(ncdm_fluid_trigger_tau_over_tau_k,double,31.0)
  */
 class_precision_parameter(ncdm_fluid_trigger_rho_accDM_over_rho_dcdm,double,1.0e-6)
 /**
- * Stiffness-ratio threshold for switching the accDM daughter from the exact
- * hierarchy (Phase 1) / tight-coupling (Phase 2) into the fluid approximation.
- * The daughter fluid is allowed on only when
- *   Lambda / max(aH, k*sqrt(ca2)) < kappa_stiff,
- * where Lambda = a*Gamma*(1+eta)*((1+ca2)/(1+w))*ratio_rho is the decay
- * relaxation rate. Below this the relaxation is no longer fast compared to the
- * dynamical/oscillation rates, so the explicit rk evolver is stable. Order 1.
- * Has no effect when has_acc is false. Supersedes the k-independent
- * ncdm_fluid_trigger_rho_accDM_over_rho_dcdm gate for the daughter (that
- * parameter is retained, but unused, so existing .ini files still parse).
+ * Stiffness-ratio threshold  Lambda / max(aH, k*sqrt(ca2)) < kappa_stiff, where
+ * Lambda = a*Gamma*(1+eta)*((1+ca2)/(1+w))*ratio_rho is the daughter decay
+ * relaxation rate. Order 1.
+ * RESERVED FOR PHASE 2 (the acctca tight-coupling regime). It is NOT wired to
+ * the Phase-1 ncdmfa gate: that stiffness ratio is non-monotonic in tau
+ * (Gamma_acc/H rises while ratio_rho falls), and CLASS's switch search requires
+ * every approximation flag to be monotonic/irreversible, so the daughter
+ * exact->fluid switch is gated on the monotonic density ratio
+ * ncdm_fluid_trigger_rho_accDM_over_rho_dcdm instead. kappa_stiff currently
+ * only documents the diagnostic logged at switch-on. Has no effect when has_acc
+ * is false.
  */
 class_precision_parameter(kappa_stiff,double,1.0)
 /**
