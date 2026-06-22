@@ -478,9 +478,6 @@ int perturbations_output_data(
             }
           }
           class_store_double(dataptr,tk[ppt->index_tp_delta_dcdm],ppt->has_source_delta_dcdm,storeidx);
-          /* Monopole (BRINGMANN 2018) modification */
-          class_store_double(dataptr,tk[ppt->index_tp_delta_mon],ppt->has_source_delta_mon,storeidx);
-          /* End Monopole (BRINGMANN 2018) modification */
           class_store_double(dataptr,tk[ppt->index_tp_delta_dr],ppt->has_source_delta_dr,storeidx);
           class_store_double(dataptr,tk[ppt->index_tp_delta_scf],ppt->has_source_delta_scf,storeidx);
           class_store_double(dataptr,tk[ppt->index_tp_delta_m],ppt->has_source_delta_m,storeidx);
@@ -510,9 +507,6 @@ int perturbations_output_data(
             }
           }
           class_store_double(dataptr,tk[ppt->index_tp_theta_dcdm],ppt->has_source_theta_dcdm,storeidx);
-          /* Monopole (BRINGMANN 2018) modification */
-          class_store_double(dataptr,tk[ppt->index_tp_theta_mon],ppt->has_source_theta_mon,storeidx);
-          /* End Monopole (BRINGMANN 2018) modification */
           class_store_double(dataptr,tk[ppt->index_tp_theta_dr],ppt->has_source_theta_dr,storeidx);
           class_store_double(dataptr,tk[ppt->index_tp_theta_scf],ppt->has_source_theta_scf,storeidx);
           class_store_double(dataptr,tk[ppt->index_tp_theta_tot],ppt->has_source_theta_tot,storeidx);
@@ -572,10 +566,7 @@ int perturbations_output_titles(
           class_store_columntitle(titles,tmp,_TRUE_);
         }
       }
-      class_store_columntitle(titles,"d_dcdm",pba->has_dcdm);
-      /* Monopole (BRINGMANN 2018) modification */
-      class_store_columntitle(titles,"d_mon",pba->has_mon);
-      /* End Monopole (BRINGMANN 2018) modification */
+      class_store_columntitle(titles,"d_dcdm",(pba->has_dcdm || pba->has_acc));
       class_store_columntitle(titles,"d_dr",pba->has_dr);
       class_store_columntitle(titles,"d_scf",pba->has_scf);
       class_store_columntitle(titles,"d_m",ppt->has_source_delta_m);
@@ -604,10 +595,7 @@ int perturbations_output_titles(
           class_store_columntitle(titles,tmp,_TRUE_);
         }
       }
-      class_store_columntitle(titles,"t_dcdm",pba->has_dcdm);
-      /* Monopole (BRINGMANN 2018) modification */
-      class_store_columntitle(titles,"t_mon",pba->has_mon);
-      /* End Monopole (BRINGMANN 2018) modification */
+      class_store_columntitle(titles,"t_dcdm",(pba->has_dcdm || pba->has_acc));
       class_store_columntitle(titles,"t_dr",pba->has_dr);
       class_store_columntitle(titles,"t_scf",pba->has_scf);
       class_store_columntitle(titles,"t_tot",_TRUE_);
@@ -779,7 +767,7 @@ int perturbations_init(
     }
 
     for(n_ncdm = 0; n_ncdm < pba->N_ncdm; n_ncdm++){
-      if(n_ncdm == pba->N_ncdm-1 && pba->has_wdm == _TRUE_){
+      if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
         compute_dfdlnq_ncdm(ppr, pba, ppt, n_ncdm);
       }
     }
@@ -811,22 +799,13 @@ int perturbations_init(
 
   }
 
-  if (pba->has_dcdm == _TRUE_) {
+  if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_) {
 
     class_test((ppt->has_cdi == _TRUE_) || (ppt->has_bi == _TRUE_) || (ppt->has_nid == _TRUE_) || (ppt->has_niv == _TRUE_),
                ppt->error_message,
                "Non-adiabatic initial conditions not coded in presence of decaying dark matter");
 
   }
-  /* Monopole (BRINGMANN 2018) modification */
-  if (pba->has_mon == _TRUE_) {
-
-    class_test((ppt->has_cdi == _TRUE_) || (ppt->has_bi == _TRUE_) || (ppt->has_nid == _TRUE_) || (ppt->has_niv == _TRUE_),
-               ppt->error_message,
-               "Non-adiabatic initial conditions not coded in presence of decaying monopoles");
-
-  }
-  /* End Monopole (BRINGMANN 2018) modification */
 
   class_test(ppt->has_vectors == _TRUE_,
              ppt->error_message,
@@ -1212,9 +1191,6 @@ int perturbations_indices(
   ppt->has_source_delta_cdm = _FALSE_;
   ppt->has_source_delta_idm = _FALSE_;
   ppt->has_source_delta_dcdm = _FALSE_;
-  /* Monopole (BRINGMANN 2018) modification */
-  ppt->has_source_delta_mon = _FALSE_;
-  /* End Monopole (BRINGMANN 2018) modification */
   ppt->has_source_delta_fld = _FALSE_;
   ppt->has_source_delta_scf = _FALSE_;
   ppt->has_source_delta_dr = _FALSE_;
@@ -1230,9 +1206,6 @@ int perturbations_indices(
   ppt->has_source_theta_cdm = _FALSE_;
   ppt->has_source_theta_idm = _FALSE_;
   ppt->has_source_theta_dcdm = _FALSE_;
-  /* Monopole (BRINGMANN 2018) modification */
-  ppt->has_source_theta_mon = _FALSE_;
-  /* End Monopole (BRINGMANN 2018) modification */
   ppt->has_source_theta_fld = _FALSE_;
   ppt->has_source_theta_scf = _FALSE_;
   ppt->has_source_theta_dr = _FALSE_;
@@ -1323,12 +1296,8 @@ int perturbations_indices(
           ppt->has_source_delta_cdm = _TRUE_;
         if (pba->has_idm == _TRUE_)
           ppt->has_source_delta_idm = _TRUE_;
-        if (pba->has_dcdm == _TRUE_)
+        if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_)
           ppt->has_source_delta_dcdm = _TRUE_;
-        /* Monopole (BRINGMANN 2018) modification */
-        if (pba->has_mon == _TRUE_)
-          ppt->has_source_delta_mon = _TRUE_;
-        /* End Monopole (BRINGMANN 2018) modification */
         if (pba->has_fld == _TRUE_)
           ppt->has_source_delta_fld = _TRUE_;
         if (pba->has_scf == _TRUE_)
@@ -1358,12 +1327,8 @@ int perturbations_indices(
           ppt->has_source_theta_cdm = _TRUE_;
         if (pba->has_idm == _TRUE_)
           ppt->has_source_theta_idm = _TRUE_;
-        if (pba->has_dcdm == _TRUE_)
+        if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_)
           ppt->has_source_theta_dcdm = _TRUE_;
-        /* Monopole (BRINGMANN 2018) modification */
-        if (pba->has_mon == _TRUE_)
-          ppt->has_source_theta_mon = _TRUE_;
-        /* End Monopole (BRINGMANN 2018) modification */
         if (pba->has_fld == _TRUE_)
           ppt->has_source_theta_fld = _TRUE_;
         if (pba->has_scf == _TRUE_)
@@ -1440,9 +1405,6 @@ int perturbations_indices(
       class_define_index(ppt->index_tp_delta_cdm,  ppt->has_source_delta_cdm, index_type,1);
       class_define_index(ppt->index_tp_delta_idm,  ppt->has_source_delta_idm, index_type,1);
       class_define_index(ppt->index_tp_delta_dcdm, ppt->has_source_delta_dcdm,index_type,1);
-      /* Monopole (BRINGMANN 2018) modification */
-      class_define_index(ppt->index_tp_delta_mon, ppt->has_source_delta_mon,index_type,1);
-      /* End Monopole (BRINGMANN 2018) modification */
       class_define_index(ppt->index_tp_delta_fld,  ppt->has_source_delta_fld, index_type,1);
       class_define_index(ppt->index_tp_delta_scf,  ppt->has_source_delta_scf, index_type,1);
       class_define_index(ppt->index_tp_delta_dr,   ppt->has_source_delta_dr,  index_type,1);
@@ -1458,9 +1420,6 @@ int perturbations_indices(
       class_define_index(ppt->index_tp_theta_cdm,  ppt->has_source_theta_cdm, index_type,1);
       class_define_index(ppt->index_tp_theta_idm,  ppt->has_source_theta_idm, index_type,1);
       class_define_index(ppt->index_tp_theta_dcdm, ppt->has_source_theta_dcdm,index_type,1);
-      /* Monopole (BRINGMANN 2018) modification */
-      class_define_index(ppt->index_tp_theta_mon, ppt->has_source_theta_mon,index_type,1);
-      /* End Monopole (BRINGMANN 2018) modification */
       class_define_index(ppt->index_tp_theta_fld,  ppt->has_source_theta_fld, index_type,1);
       class_define_index(ppt->index_tp_theta_scf,  ppt->has_source_theta_scf, index_type,1);
       class_define_index(ppt->index_tp_theta_dr,   ppt->has_source_theta_dr,  index_type,1);
@@ -2873,7 +2832,7 @@ int perturbations_workspace_init(
       class_alloc(ppw->delta_ncdm,pba->N_ncdm*sizeof(double),ppt->error_message);
       class_alloc(ppw->theta_ncdm,pba->N_ncdm*sizeof(double),ppt->error_message);
       class_alloc(ppw->shear_ncdm,pba->N_ncdm*sizeof(double),ppt->error_message);
-      class_alloc(ppw->delta_p_over_delta_rho_ncdm,pba->N_ncdm*sizeof(double),ppt->error_message); // GFA
+      class_alloc(ppw->delta_p_over_delta_rho_ncdm,pba->N_ncdm*sizeof(double),ppt->error_message);
 
     }
 
@@ -3115,7 +3074,7 @@ int perturbations_solve(
     /* if there are non-cold relics, check that they are relativistic enough */
     if (pba->has_ncdm == _TRUE_) {
       for (n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++) {
-        if(n_ncdm != pba->N_ncdm-1) {
+        if(n_ncdm != pba->N_ncdm-1 || pba->has_acc == _FALSE_) {
           if (fabs(ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]-1./3.) > ppr->tol_ncdm_initial_w)
             is_early_enough = _FALSE_;
         }
@@ -3308,10 +3267,10 @@ int perturbations_solve(
                                  ppw->ca2_ncdm_bad == _TRUE_ ? 1 : 0);
                       });
 
-    class_test(ppw->ca2_ncdm_bad == _TRUE_,
-               ppt->error_message,
-               "ncdm ca2 non-physical at k=%g 1/Mpc; bad parameter point",
-               k);
+    // class_test(ppw->ca2_ncdm_bad == _TRUE_,
+    //            ppt->error_message,
+    //            "ncdm ca2 non-physical at k=%g 1/Mpc; bad parameter point",
+    //            k);
 
   }
 
@@ -3385,9 +3344,9 @@ int perturbations_prepare_k_output(struct background * pba,
       class_store_columntitle(ppt->scalar_titles,"theta_b",_TRUE_);
       class_store_columntitle(ppt->scalar_titles,"psi",_TRUE_);
       class_store_columntitle(ppt->scalar_titles,"phi",_TRUE_);
-      class_store_columntitle(ppt->scalar_titles,"eta_prime",_TRUE_); // GFA
-      class_store_columntitle(ppt->scalar_titles,"h_prime",_TRUE_); // GFA
-      class_store_columntitle(ppt->scalar_titles,"phi_prime",_TRUE_); // GFA
+      class_store_columntitle(ppt->scalar_titles,"eta_prime",_TRUE_); /* Original DCDM->DR+WDM Implementation */
+      class_store_columntitle(ppt->scalar_titles,"h_prime",_TRUE_); /* Original DCDM->DR+WDM Implementation */
+      class_store_columntitle(ppt->scalar_titles,"phi_prime",_TRUE_); /* Original DCDM->DR+WDM Implementation */
       class_store_columntitle(ppt->scalar_titles, "rho_plus_p_theta", _TRUE_); // AG: For testing
       class_store_columntitle(ppt->scalar_titles, "delta_rho_tot", _TRUE_); // AG: For testing
       class_store_columntitle(ppt->scalar_titles, "eta", ppt->gauge == synchronous); // AG: For testing
@@ -3419,28 +3378,25 @@ int perturbations_prepare_k_output(struct background * pba,
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_);
           class_sprintf(tmp,"shear_ncdm[%d]",n_ncdm);
           class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_);
-          class_sprintf(tmp,"cs2_ncdm[%d]",n_ncdm);               // GFA //
-          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
-          class_sprintf(tmp,"w_p[%d]",n_ncdm);                    // GFA //
-          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
-          class_sprintf(tmp,"w_theta[%d]",n_ncdm);                // GFA //
-          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
-          class_sprintf(tmp,"w_sigma[%d]",n_ncdm);                // GFA //
-          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
-          class_sprintf(tmp,"k_fss_wdm[%d]",n_ncdm);              // GFA //
-          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); // GFA //
+          class_sprintf(tmp,"cs2_ncdm[%d]",n_ncdm);               /* Original DCDM->DR+WDM Implementation */
+          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); /* Original DCDM->DR+WDM Implementation */
+          class_sprintf(tmp,"w_p[%d]",n_ncdm);                    /* Original DCDM->DR+WDM Implementation */
+          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); /* Original DCDM->DR+WDM Implementation */
+          class_sprintf(tmp,"w_theta[%d]",n_ncdm);                /* Original DCDM->DR+WDM Implementation */
+          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); /* Original DCDM->DR+WDM Implementation */
+          class_sprintf(tmp,"w_sigma[%d]",n_ncdm);                /* Original DCDM->DR+WDM Implementation */
+          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); /* Original DCDM->DR+WDM Implementation */
+          class_sprintf(tmp,"k_fss_acc[%d]",n_ncdm);              /* Original DCDM->DR+WDM Implementation */
+          class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_); /* Original DCDM->DR+WDM Implementation */
         }
       }
       /* START AccDM */
-      class_store_columntitle(ppt->scalar_titles, "w_trial_1", pba->has_ncdm); // GFA //
-      class_store_columntitle(ppt->scalar_titles, "w_trial_2", pba->has_ncdm); // GFA //
+      class_store_columntitle(ppt->scalar_titles, "w_trial_1", pba->has_ncdm); /* Original DCDM->DR+WDM Implementation */
+      class_store_columntitle(ppt->scalar_titles, "w_trial_2", pba->has_ncdm); /* Original DCDM->DR+WDM Implementation */
       /* END AccDM */
       /* Decaying cold dark matter */
-      class_store_columntitle(ppt->scalar_titles, "delta_dcdm", pba->has_dcdm);
-      class_store_columntitle(ppt->scalar_titles, "theta_dcdm", pba->has_dcdm);
-      /* Decaying monopoles */
-      class_store_columntitle(ppt->scalar_titles, "delta_mon", pba->has_mon);
-      class_store_columntitle(ppt->scalar_titles, "theta_mon", pba->has_mon);
+      class_store_columntitle(ppt->scalar_titles, "delta_dcdm", (pba->has_dcdm || pba->has_acc));
+      class_store_columntitle(ppt->scalar_titles, "theta_dcdm", (pba->has_dcdm || pba->has_acc));
       /* Decay radiation */
       class_store_columntitle(ppt->scalar_titles, "delta_dr", pba->has_dr);
       class_store_columntitle(ppt->scalar_titles, "theta_dr", pba->has_dr);
@@ -4018,13 +3974,8 @@ int perturbations_vector_init(
 
     /* dcdm */
 
-    class_define_index(ppv->index_pt_delta_dcdm,pba->has_dcdm,index_pt,1); /* dcdm density */
-    class_define_index(ppv->index_pt_theta_dcdm,pba->has_dcdm,index_pt,1); /* dcdm velocity */
-    
-    /* monopoles */
-
-    class_define_index(ppv->index_pt_delta_mon,pba->has_mon,index_pt,1); /* monopoles density */
-    class_define_index(ppv->index_pt_theta_mon,pba->has_mon,index_pt,1); /* monopoles velocity */
+    class_define_index(ppv->index_pt_delta_dcdm,(pba->has_dcdm || pba->has_acc),index_pt,1); /* dcdm/acc_cdm density */
+    class_define_index(ppv->index_pt_theta_dcdm,(pba->has_dcdm || pba->has_acc),index_pt,1); /* dcdm/acc_cdm velocity */
 
     /* ultra relativistic decay radiation */
     if (pba->has_dr==_TRUE_){
@@ -4105,8 +4056,8 @@ int perturbations_vector_init(
         }
         else{
           // In the fluid approximation, hierarchy is cut at lmax = 2 and q dependence is integrated out:
-          if (n_ncdm == pba->N_ncdm-1 && ppt->switch_on_eq_delta_p_wdm == _TRUE_ && ppt->gauge == synchronous){
-            ppv->l_max_ncdm[n_ncdm] = 3; // GFA: since we are now also including a dynamical equation for the pressure perturbation
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_ && ppt->switch_on_eq_delta_p_acc == _TRUE_ && ppt->gauge == synchronous){
+            ppv->l_max_ncdm[n_ncdm] = 3; // /* Original DCDM->DR+WDM Implementation: since we are now also including a dynamical equation for the pressure perturbation
             ppv->q_size_ncdm[n_ncdm] = 1;
           }
           else{
@@ -4487,7 +4438,7 @@ int perturbations_vector_init(
           ppw->pv->y[ppw->pv->index_pt_theta_idm];
       }
 
-      if (pba->has_dcdm == _TRUE_) {
+      if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_) {
 
         ppv->y[ppv->index_pt_delta_dcdm] =
           ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
@@ -4495,17 +4446,6 @@ int perturbations_vector_init(
         ppv->y[ppv->index_pt_theta_dcdm] =
           ppw->pv->y[ppw->pv->index_pt_theta_dcdm];
       }
-
-      /* Monopole (BRINGMANN 2018) modification */
-      if (pba->has_mon == _TRUE_) {
-
-        ppv->y[ppv->index_pt_delta_mon] =
-          ppw->pv->y[ppw->pv->index_pt_delta_mon];
-
-        ppv->y[ppv->index_pt_theta_mon] =
-          ppw->pv->y[ppw->pv->index_pt_theta_mon];
-      }
-      /* End Monopole (BRINGMANN 2018) modification */
 
       if (pba->has_dr == _TRUE_){
         for (l=0; l <= ppv->l_max_dr; l++)
@@ -5033,8 +4973,6 @@ int perturbations_vector_init(
 
         if ((pa_old[ppw->index_ap_ncdmfa] == (int)ncdmfa_off) && (ppw->approx[ppw->index_ap_ncdmfa] == (int)ncdmfa_on)) {
 
-          //printf("WE SHOULD NOT BE HERE\n"); /* GFA */
-
           if (ppt->perturbations_verbose>2)
             fprintf(stdout,"Mode k=%e: switch on ncdm fluid approximation at tau=%e\n",k,tau);
 
@@ -5147,7 +5085,7 @@ int perturbations_vector_init(
               ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+l] = 0.0;
             }
 
-            if(n_ncdm == pba->N_ncdm-1 && ppt->switch_on_eq_delta_p_wdm == _TRUE_){
+            if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_ && ppt->switch_on_eq_delta_p_acc == _TRUE_){
               ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+3] = 0.0; //CS2DYN, is this correct?
             }
 
@@ -5158,9 +5096,8 @@ int perturbations_vector_init(
               q2 = q*q;
               epsilon = sqrt(q2+a*a*pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
 
-              if(n_ncdm == pba->N_ncdm-1 && pba->has_wdm == _TRUE_){
-                //aq = q*pba->T_acc_GeV/pba->P_acc_wdm;
-                aq = pba->aq_ncdm_wdm[n_ncdm][index_q];
+              if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
+                aq = pba->aq_ncdm_acc[n_ncdm][index_q];
 
                 if (a > aq){
                   ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm] +=
@@ -5175,7 +5112,7 @@ int perturbations_vector_init(
                     pba->w_ncdm[n_ncdm][index_q]*q2*q2/epsilon*
                     ppw->pv->y[index_pt+2];
 
-                  if (ppt->switch_on_eq_delta_p_wdm == _TRUE_) {
+                  if (ppt->switch_on_eq_delta_p_acc == _TRUE_) {
                     ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+3] +=
                       pba->w_ncdm[n_ncdm][index_q]*q2*q2/epsilon*
                       ppw->pv->y[index_pt]; //CS2DYN
@@ -5203,7 +5140,7 @@ int perturbations_vector_init(
             ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm] *=factor/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
             ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+1] *=k*factor/rho_plus_p_ncdm;
             ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+2] *=2.0/3.0*factor/rho_plus_p_ncdm;
-            if(n_ncdm == pba->N_ncdm-1 && ppt->switch_on_eq_delta_p_wdm == _TRUE_){
+            if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_ && ppt->switch_on_eq_delta_p_acc == _TRUE_){
               ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+3] *= (1./3.)*factor/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]; //CS2DYN
             }
           }
@@ -5442,8 +5379,8 @@ int perturbations_initial_conditions(struct precision * ppr,
   double om;
   double ktau_two,ktau_three;
   double f_dr;
-  double f0 = 0; // GFA
-  double Gamma; // AG
+  double f0 = 0; /* Original DCDM->DR+WDM Implementation */
+  double Gamma; /* Original DCDM->DR+WDM Implementation */
 
   double delta_tot;
   double velocity_tot;
@@ -5468,17 +5405,6 @@ int perturbations_initial_conditions(struct precision * ppr,
              pba->error_message,
              ppt->error_message);
 
-  // GFA: redo this, just to store pvecback (needed later for the f0 computation)
-  // class_alloc(pvecback,pba->bg_size*sizeof(double),pba->error_message);
-  // class_call(background_at_tau(pba,
-  //                              tau,
-  //                              long_info,
-  //                              inter_normal,
-  //                              &(ppw->last_index_back),
-  //                              pvecback),
-  //           pba->error_message,
-  //           ppt->error_message);
-
   /* 8piG/3 rho_r(t_i) */
   rho_r = ppw->pvecback[pba->index_bg_rho_g];
 
@@ -5500,11 +5426,9 @@ int perturbations_initial_conditions(struct precision * ppr,
     rho_m += ppw->pvecback[pba->index_bg_rho_dcdm];
   }
 
-  /* Monopole (BRINGMANN 2018) modification */
-  if (pba->has_mon == _TRUE_) {
-    rho_m += ppw->pvecback[pba->index_bg_rho_mon];
+  if (pba->has_acc == _TRUE_) {
+    rho_m += ppw->pvecback[pba->index_bg_rho_acc_cdm];
   }
-  /* End Monopole (BRINGMANN 2018) modification */
 
   if (pba->has_dr == _TRUE_) {
     rho_r += ppw->pvecback[pba->index_bg_rho_dr];
@@ -5523,7 +5447,7 @@ int perturbations_initial_conditions(struct precision * ppr,
 
   if (pba->has_ncdm == _TRUE_) {
     for (n_ncdm=0; n_ncdm<pba->N_ncdm; n_ncdm++){ // Modify for accDM?
-      if (n_ncdm != pba->N_ncdm-1) {
+      if (n_ncdm != pba->N_ncdm-1 || pba->has_acc == _FALSE_){ // If we are not in the case of accDM, or if we are but we are looking at a non-accDM species, then we add the contribution to rho_r and rho_nu as usual.{
         rho_r += ppw->pvecback[pba->index_bg_rho_ncdm1 + n_ncdm];
         rho_nu += ppw->pvecback[pba->index_bg_rho_ncdm1 + n_ncdm];
       } /* GFA: are we sure that the massive_daughter needs not to be considered here? */
@@ -5628,18 +5552,11 @@ int perturbations_initial_conditions(struct precision * ppr,
         ppw->pv->y[ppw->pv->index_pt_theta_idm] = ppw->pv->y[ppw->pv->index_pt_theta_g];
       }
 
-      if (pba->has_dcdm == _TRUE_) {
-        ppw->pv->y[ppw->pv->index_pt_delta_dcdm] = 3./4.*ppw->pv->y[ppw->pv->index_pt_delta_g]; /* dcdm density */
-        /* dcdm velocity velocity vanishes initially in the synchronous gauge */
+      if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_) {
+        ppw->pv->y[ppw->pv->index_pt_delta_dcdm] = 3./4.*ppw->pv->y[ppw->pv->index_pt_delta_g]; /* dcdm/acc_cdm density */
+        /* dcdm/acc_cdm velocity vanishes initially in the synchronous gauge */
 
       }
-
-      /* Monopole (BRINGMANN 2018) modification */
-      if (pba->has_mon == _TRUE_) {
-        ppw->pv->y[ppw->pv->index_pt_delta_mon] = 3./4.*ppw->pv->y[ppw->pv->index_pt_delta_g]; /* monopoles density */
-        /* monopoles velocity velocity vanishes initially in the synchronous gauge */
-      }
-      /* End Monopole (BRINGMANN 2018) modification */
 
       /* fluid (assumes wa=0, if this is not the case the
          fluid will catch anyway the attractor solution) */
@@ -5881,13 +5798,10 @@ int perturbations_initial_conditions(struct precision * ppr,
         delta_cdm += ppw->pvecback[pba->index_bg_rho_dcdm] * ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
         rho_cdm += ppw->pvecback[pba->index_bg_rho_dcdm];
       }
-      /* Monopole (BRINGMANN 2018) modification */
-      if (pba->has_mon == _TRUE_){
-        delta_cdm += ppw->pvecback[pba->index_bg_rho_mon] * ppw->pv->y[ppw->pv->index_pt_delta_mon];
-        rho_cdm += ppw->pvecback[pba->index_bg_rho_mon];
+      if (pba->has_acc == _TRUE_){
+        delta_cdm += ppw->pvecback[pba->index_bg_rho_acc_cdm] * ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
+        rho_cdm += ppw->pvecback[pba->index_bg_rho_acc_cdm];
       }
-      /* End Monopole (BRINGMANN 2018) modification */
-
       if (rho_cdm > 0 ) {
         delta_cdm /= rho_cdm;
         fraccdm = rho_cdm/rho_m;
@@ -5924,9 +5838,9 @@ int perturbations_initial_conditions(struct precision * ppr,
         ppw->pv->y[ppw->pv->index_pt_theta_idm] += k*k*alpha;
       }
 
-      if (pba->has_dcdm == _TRUE_) {
-        
-        if (pba->has_wdm == _TRUE_){
+      if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_) {
+
+        if (pba->has_acc == _TRUE_){
           Gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
         }
         else {
@@ -5936,14 +5850,6 @@ int perturbations_initial_conditions(struct precision * ppr,
         ppw->pv->y[ppw->pv->index_pt_delta_dcdm] -= (3.*a_prime_over_a + a*Gamma)*alpha;
         ppw->pv->y[ppw->pv->index_pt_theta_dcdm] = k*k*alpha;
       }
-
-      /* Monopole (BRINGMANN 2018) modification */
-      if (pba->has_mon == _TRUE_) {
-        pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
-        ppw->pv->y[ppw->pv->index_pt_delta_mon] -= (3.*a_prime_over_a + a*pba->Gamma_mon)*alpha;
-        ppw->pv->y[ppw->pv->index_pt_theta_mon] = k*k*alpha;
-      }
-      /* End Monopole (BRINGMANN 2018) modification */
 
       /* fluid */
       if ((pba->has_fld == _TRUE_) && (pba->use_ppf == _FALSE_)) {
@@ -5975,12 +5881,6 @@ int perturbations_initial_conditions(struct precision * ppr,
 
         if ((pba->has_dr == _TRUE_) && (pba->has_dcdm == _TRUE_))
           delta_dr += (-4.*a_prime_over_a + a*pba->Gamma_dcdm*ppw->pvecback[pba->index_bg_rho_dcdm]/ppw->pvecback[pba->index_bg_rho_dr])*alpha;
-        /* Monopole (BRINGMANN 2018) modification */
-        if ((pba->has_dr == _TRUE_) && (pba->has_mon == _TRUE_)){
-          pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
-          delta_dr += (-4.*a_prime_over_a + a*pba->Gamma_mon*ppw->pvecback[pba->index_bg_rho_mon]/ppw->pvecback[pba->index_bg_rho_dr])*alpha;
-        }
-        /* End Monopole (BRINGMANN 2018) modification */
       }
 
     } /* end of gauge transformation to newtonian gauge */
@@ -6020,20 +5920,17 @@ int perturbations_initial_conditions(struct precision * ppr,
           q = pba->q_ncdm[n_ncdm][index_q];
 
 
-          if (n_ncdm == pba->N_ncdm-1 && pba->has_wdm == _TRUE_){
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
             epsilon = sqrt(q*q+a*a*pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
-            // GFA: compute the background psd of the wdm
-            //class_call(background_ncdm_distribution_perts(pba,q,n_ncdm,&f0),
-            //          pba->error_message,ppr->error_message);
-            f0 = pba->f0_ncdm_wdm[n_ncdm][index_q]; // AG: use precomputed psd for wdm
+            f0 = pba->f0_ncdm_acc[n_ncdm][index_q]; // AG: use precomputed psd for accDM
 
             double H_ini = ppw->pvecback[pba->index_bg_H];
             double hp = ppw->pvecmetric[ppw->index_mt_h_prime];
             double delta_dcdm_ini = ppw->pv->y[ppw->pv->index_pt_delta_dcdm];
 
-            ppw->pv->y[idx] = f0*ppw->pv->y[ppw->pv->index_pt_delta_dcdm]; // GFA: with this we are imposing that delta_wdm = delta_dcdm,
-            // which is reasonable since delta_wdm and delta_dcdm are always coupled at initial times
-            // this also leads to an initial sound speed equal to the EoS at that time, cs2 = w_wdm
+            ppw->pv->y[idx] = f0*ppw->pv->y[ppw->pv->index_pt_delta_dcdm]; // /* Original DCDM->DR+WDM Implementation: with this we are imposing that delta_acc = delta_dcdm,
+            // which is reasonable since delta_acc and delta_dcdm are always coupled at initial times
+            // this also leads to an initial sound speed equal to the EoS at that time, cs2 = w_acc
             ppw->pv->y[idx+1] = ppw->pv->y[idx]*q*k*tau/epsilon/3.; //this initial condition could still be improved
             ppw->pv->y[idx+2] = 0; //not sure about initial conditions for the rest of multipoles, but it shouldn't be relevant
             for(l=3; l<ppw->pv->l_max_ncdm[n_ncdm]; l++){
@@ -6509,11 +6406,11 @@ int perturbations_approximations(
          gamma/H is tiny, and their finite product can hit
          3*(1+w_ncdm)/(1-eps_acc), zeroing the denominator. */
       short accDM_ready = _TRUE_;
-      if (pba->has_wdm == _TRUE_) {
-        double rho_dcdm_bg  = ppw->pvecback[pba->index_bg_rho_dcdm];
-        double rho_accDM_bg = ppw->pvecback[pba->index_bg_rho_ncdm1 + pba->N_ncdm - 1];
-        if (rho_dcdm_bg > 0. &&
-            rho_accDM_bg/rho_dcdm_bg < ppr->ncdm_fluid_trigger_rho_accDM_over_rho_dcdm) {
+      if (pba->has_acc == _TRUE_) {
+        double rho_acc_cdm_bg  = ppw->pvecback[pba->index_bg_rho_acc_cdm];
+        double rho_accDM_bg = ppw->pvecback[pba->index_bg_rho_ncdm1 + pba->N_ncdm-1];
+        if (rho_acc_cdm_bg > 0. &&
+            rho_accDM_bg/rho_acc_cdm_bg < ppr->ncdm_fluid_trigger_rho_accDM_over_rho_dcdm) {
           accDM_ready = _FALSE_;
         }
       }
@@ -7057,7 +6954,7 @@ int perturbations_total_stress_energy(
   /** Accelerating Dark Matter START */
   double aq; 
   double rho_ncdm_bg_m;
-  double ratio_rho, rho_cdm_bg, rho_dcdm_bg, H, eta, gamma, f_dr; 
+  double ratio_rho, rho_cdm_bg, rho_acc_cdm_bg, H, eta, gamma, f_dr; 
   double weight_0=0., weight_1=0., weight_2=0., weight_3 =0.;
   // double* kfs;
 
@@ -7263,26 +7160,23 @@ int perturbations_total_stress_energy(
         rho_plus_p_m += ppw->pvecback[pba->index_bg_rho_dcdm];
       }
     }
-    
-    /* Monopole (BRINGMANN 2018) modification */
-    /* monopoles contribution */
-    if (pba->has_mon == _TRUE_) {
-      ppw->delta_rho += ppw->pvecback[pba->index_bg_rho_mon]*y[ppw->pv->index_pt_delta_mon];
-      ppw->rho_plus_p_theta += ppw->pvecback[pba->index_bg_rho_mon]*y[ppw->pv->index_pt_theta_mon];
 
-      ppw->rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_mon];
+    /* acc_cdm contribution (accelerating-DM parent); shares the dcdm perturbation slot */
+    if (pba->has_acc == _TRUE_) {
+      ppw->delta_rho += ppw->pvecback[pba->index_bg_rho_acc_cdm]*y[ppw->pv->index_pt_delta_dcdm];
+      ppw->rho_plus_p_theta += ppw->pvecback[pba->index_bg_rho_acc_cdm]*y[ppw->pv->index_pt_theta_dcdm];
+
+      ppw->rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_acc_cdm];
 
       if (ppt->has_source_delta_m == _TRUE_) {
-        delta_rho_m += ppw->pvecback[pba->index_bg_rho_mon]*y[ppw->pv->index_pt_delta_mon]; // contribution to delta rho_matter
-        rho_m += ppw->pvecback[pba->index_bg_rho_mon];
+        delta_rho_m += ppw->pvecback[pba->index_bg_rho_acc_cdm]*y[ppw->pv->index_pt_delta_dcdm]; // contribution to delta rho_matter
+        rho_m += ppw->pvecback[pba->index_bg_rho_acc_cdm];
       }
       if ((ppt->has_source_delta_m == _TRUE_) || (ppt->has_source_theta_m == _TRUE_)) {
-        rho_plus_p_theta_m += ppw->pvecback[pba->index_bg_rho_mon]*y[ppw->pv->index_pt_theta_mon]; // contribution to [(rho+p)theta]_matter
-        rho_plus_p_m += ppw->pvecback[pba->index_bg_rho_mon];
+        rho_plus_p_theta_m += ppw->pvecback[pba->index_bg_rho_acc_cdm]*y[ppw->pv->index_pt_theta_dcdm]; // contribution to [(rho+p)theta]_matter
+        rho_plus_p_m += ppw->pvecback[pba->index_bg_rho_acc_cdm];
       }
     }
-    /* End Monopole (BRINGMANN 2018) modification */
-
 
     /* ultra-relativistic decay radiation */
 
@@ -7333,10 +7227,6 @@ int perturbations_total_stress_energy(
 
     /* non-cold dark matter contribution */
     if (pba->has_ncdm == _TRUE_) {
-      // for(n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++){ // AG: What's the point of this?
-      //   kfs[n_ncdm] = 0.776*pow((1+z),-2)*ppw->pvecback[pba->index_bg_H]/pba->H0*pba->m_ncdm_in_eV[n_ncdm]/pba->h/a;
-      // }
-
       idx = ppw->pv->index_pt_psi0_ncdm1;
       if (ppw->approx[ppw->index_ap_ncdmfa] == (int)ncdmfa_on){
         // The perturbations are evolved integrated:
@@ -7350,14 +7240,16 @@ int perturbations_total_stress_energy(
 
           H = ppw->pvecback[pba->index_bg_H];
 
-          if (n_ncdm == pba->N_ncdm-1){
+          if (n_ncdm == pba->N_ncdm-1 || pba->has_acc == _FALSE_){
             rho_ncdm_bg_m = rho_ncdm_bg*(1.0-3.0*w_ncdm); /* contribution to matter, it will be used below  */
-            rho_dcdm_bg = ppw->pvecback[pba->index_bg_rho_dcdm];
+          }
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
+            rho_acc_cdm_bg = ppw->pvecback[pba->index_bg_rho_acc_cdm];
             rho_cdm_bg = ppw->pvecback[pba->index_bg_rho_cdm];
             w_ncdm = p_ncdm_bg/rho_ncdm_bg;
-            ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
+            ratio_rho = rho_acc_cdm_bg/rho_ncdm_bg;
             gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
-            eta = pba->eta_wdm;
+            eta = pba->eta_acc;
             { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
               double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta + 2*eta) / (1. + eta); // AG:+2*eta somewhere?
               double cg2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
@@ -7379,12 +7271,11 @@ int perturbations_total_stress_energy(
             ppw->shear_ncdm[n_ncdm] = y[idx+2];
             //printf("DEBUG: n_ncdm = %d, delta_ncdm = %e, theta_ncdm = %e, shear_ncdm = %e\n", n_ncdm, ppw->delta_ncdm[n_ncdm], ppw->theta_ncdm[n_ncdm], ppw->shear_ncdm[n_ncdm]);
 
-            // AG: I don't understand the if statement below. What's the point of switch_on_eq_delta_p_wdm? 
-            if (ppt->switch_on_eq_delta_p_wdm == _TRUE_ && n_ncdm == pba->N_ncdm-1) {
+            if (ppt->switch_on_eq_delta_p_acc == _TRUE_ && n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
               ppw->delta_p_over_delta_rho_ncdm[n_ncdm] = y[idx+3]/y[idx]; // CS2DYN
             } 
             else {
-              if (n_ncdm == pba->N_ncdm-1) {
+              if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
                 ppw->delta_p_over_delta_rho_ncdm[n_ncdm] = cg2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(cg2_ncdm)/(a*H)));
               } 
               else {
@@ -7398,11 +7289,11 @@ int perturbations_total_stress_energy(
           ppw->rho_plus_p_shear += rho_plus_p_ncdm*y[idx+2];
           ppw->delta_p += cg2_ncdm*rho_ncdm_bg*y[idx];
 
-          if (ppt->switch_on_eq_delta_p_wdm == _TRUE_ && n_ncdm == pba->N_ncdm-1) {
+          if (ppt->switch_on_eq_delta_p_acc == _TRUE_ && n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
             ppw->delta_p += y[idx+3]*rho_ncdm_bg; //CS2DYN
           } 
           else {
-            if (n_ncdm == pba->N_ncdm-1) {
+            if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
               ppw->delta_p += cg2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(cg2_ncdm)/(a*H)))*rho_ncdm_bg*y[idx];
             } 
             else {
@@ -7430,9 +7321,8 @@ int perturbations_total_stress_energy(
             q2 = q*q;
             epsilon = sqrt(q2+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]*a2);
 
-            if(n_ncdm == pba->N_ncdm-1){
-              //aq = q*pba->T_acc_GeV/pba->P_acc_wdm;
-              aq = pba->aq_ncdm_wdm[n_ncdm][index_q];
+            if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
+              aq = pba->aq_ncdm_acc[n_ncdm][index_q];
 
               if(a>=aq){
                 if(y[idx]!=0) rho_delta_ncdm += q2*epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
@@ -7465,8 +7355,6 @@ int perturbations_total_stress_energy(
             ppw->delta_p_over_delta_rho_ncdm[n_ncdm] = delta_p_ncdm/rho_delta_ncdm;  
           }
 
-          //printf("DEBUG: delta_ncdm = %e, theta_ncdm = %e, shear_ncdm = %e\n", ppw->delta_ncdm[n_ncdm], ppw->theta_ncdm[n_ncdm], ppw->shear_ncdm[n_ncdm]);
-
           ppw->delta_rho += rho_delta_ncdm;
           ppw->rho_plus_p_theta += rho_plus_p_theta_ncdm;
           ppw->rho_plus_p_shear += rho_plus_p_shear_ncdm;
@@ -7474,14 +7362,14 @@ int perturbations_total_stress_energy(
 
           ppw->rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm];
         
-          if (n_ncdm == pba->N_ncdm-1) {
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
               rho_ncdm_bg_m = ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]*(1.0-3.0*(ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm])); /* contribution to matter, it will be used below  */
           }
         }
       }
       if (ppt->has_source_delta_m == _TRUE_) {
         for (n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++){
-          if (n_ncdm == pba->N_ncdm-1) {
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
             delta_rho_m += rho_ncdm_bg_m*ppw->delta_ncdm[n_ncdm]; // contribution to delta rho_matter
             rho_m += rho_ncdm_bg_m;
           }
@@ -7493,7 +7381,7 @@ int perturbations_total_stress_energy(
       }
       if ((ppt->has_source_delta_m == _TRUE_) || (ppt->has_source_theta_m == _TRUE_)) {
         for (n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++){
-          if (n_ncdm == pba->N_ncdm-1) {
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
             rho_plus_p_theta_m += rho_ncdm_bg_m*ppw->theta_ncdm[n_ncdm]; // contribution to [(rho+p)theta]_matter
             rho_plus_p_m += rho_ncdm_bg_m;
             // GFA: or should we choose this one as is done for neutrinos?
@@ -8227,7 +8115,7 @@ int perturbations_sources(
 
     /* delta_dcdm */
     if (ppt->has_source_delta_dcdm == _TRUE_) {
-      if (pba->has_wdm == _TRUE_)
+      if (pba->has_acc == _TRUE_)
         Gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
       else{
         Gamma = pba->Gamma_dcdm;
@@ -8235,15 +8123,6 @@ int perturbations_sources(
       _set_source_(ppt->index_tp_delta_dcdm) = y[ppw->pv->index_pt_delta_dcdm]
         + (3.*a_prime_over_a+a*Gamma)*theta_over_k2; // N-body gauge correction;
     }
-
-    /* Monopole (BRINGMANN 2018) modification */
-    /* delta_mon */
-    if (ppt->has_source_delta_mon == _TRUE_) {
-      pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
-      _set_source_(ppt->index_tp_delta_mon) = y[ppw->pv->index_pt_delta_mon]
-        + (3.*a_prime_over_a+a*pba->Gamma_mon)*theta_over_k2; // N-body gauge correction;
-    }
-    /* End Monopole (BRINGMANN 2018) modification */
 
     /* delta_fld */
     if (ppt->has_source_delta_fld == _TRUE_) {
@@ -8309,7 +8188,7 @@ int perturbations_sources(
                                /pvecback[index_tp - ppt->index_tp_delta_ncdm1 + pba->index_bg_rho_ncdm1])*theta_over_k2; // N-body gauge correction
       }
 
-      // GFA
+      // /* Original DCDM->DR+WDM Implementation */
       for (index_tp = ppt->index_tp_delta_p_over_delta_rho_ncdm1; index_tp < ppt->index_tp_delta_p_over_delta_rho_ncdm1+pba->N_ncdm; index_tp++) {
         _set_source_(index_tp) = ppw->delta_p_over_delta_rho_ncdm[index_tp - ppt->index_tp_delta_p_over_delta_rho_ncdm1];
       }
@@ -8370,14 +8249,6 @@ int perturbations_sources(
       _set_source_(ppt->index_tp_theta_dcdm) = y[ppw->pv->index_pt_theta_dcdm]
         + theta_shift; // N-body gauge correction
     }
-
-    /* Monopole (BRINGMANN 2018) modification */
-    /* theta_mon */
-    if (ppt->has_source_theta_mon == _TRUE_) {
-      _set_source_(ppt->index_tp_theta_mon) = y[ppw->pv->index_pt_theta_mon]
-        + theta_shift; // N-body gauge correction
-    }
-    /* End Monopole (BRINGMANN 2018) modification */
 
     /* theta_fld */
     if (ppt->has_source_theta_fld == _TRUE_) {
@@ -8533,9 +8404,6 @@ int perturbations_print_variables(double tau,
   double delta_cdm=0.,theta_cdm=0.;
   double delta_idm=0., theta_idm=0.;
   double delta_dcdm=0.,theta_dcdm=0.;
-  /* Monopole (BRINGMANN 2018) modification */
-  double delta_mon=0.,theta_mon=0.;
-  /* End Monopole (BRINGMANN 2018) modification */
   double delta_dr=0.,theta_dr=0.,shear_dr=0., f_dr=1.0;
   double delta_ur=0.,theta_ur=0.,shear_ur=0.,l4_ur=0.;
   double delta_idr=0., theta_idr=0., shear_idr=0.;
@@ -8558,18 +8426,18 @@ int perturbations_print_variables(double tau,
   double delta_temp=0., delta_chi=0.;
 
   /** accDM START */
-  double eta_prime=0., h_prime=0.; /* GFA */
-  double phi_prime=0.; /* GFA */
+  double eta_prime=0., h_prime=0.; /* Original DCDM->DR+WDM Implementation */
+  double phi_prime=0.; /* Original DCDM->DR+WDM Implementation */
   double *w_p = NULL, *w_theta =  NULL, *w_sigma = NULL; 
-  double*k_fss_wdm =NULL; // GFA //
-  double nu_ncdm,pseudo_n_ncdm, mass_nu; // GFA
-  double w_trial_1=0., w_trial_2=0.; // GFA //
-  double rho_plus_p_ttheta_ncdm = 0.0; // GFA //
-  double delta_pp_ncdm = 0.0; // GFA //
-  double ratio_rho, rho_cdm_bg, rho_dcdm_bg, eta, gamma; /* GFA */
-  double ca2_ncdm; /* GFA */
-  double rho_plus_p_sshear_ncdm = 0.0; /* GFA */
-  double Gamma; /* AG */
+  double*k_fss_acc =NULL; /* Original DCDM->DR+WDM Implementation */
+  double nu_ncdm,pseudo_n_ncdm, mass_nu; /* Original DCDM->DR+WDM Implementation */
+  double w_trial_1=0., w_trial_2=0.; /* Original DCDM->DR+WDM Implementation */
+  double rho_plus_p_ttheta_ncdm = 0.0; /* Original DCDM->DR+WDM Implementation */
+  double delta_pp_ncdm = 0.0; /* Original DCDM->DR+WDM Implementation */
+  double ratio_rho, rho_cdm_bg, rho_acc_cdm_bg, eta, gamma; /* Original DCDM->DR+WDM Implementation */
+  double ca2_ncdm; /* Original DCDM->DR+WDM Implementation */
+  double rho_plus_p_sshear_ncdm = 0.0; /* Original DCDM->DR+WDM Implementation */
+  double Gamma; /* Original DCDM->DR+WDM Implementation */
   /** accDM END */
 
   double a,a2,H;
@@ -8640,7 +8508,7 @@ int perturbations_print_variables(double tau,
     class_alloc(w_p, sizeof(double)*pba->N_ncdm,error_message);
     class_alloc(w_theta, sizeof(double)*pba->N_ncdm,error_message);
     class_alloc(w_sigma, sizeof(double)*pba->N_ncdm,error_message);
-    class_alloc(k_fss_wdm, sizeof(double)*pba->N_ncdm,error_message);
+    class_alloc(k_fss_acc, sizeof(double)*pba->N_ncdm,error_message);
     /* AccDM END */
   }
 
@@ -8786,27 +8654,31 @@ int perturbations_print_variables(double tau,
           w_theta[n_ncdm] = 0.0;
           w_sigma[n_ncdm] = 0.0;
 
-          if (n_ncdm == pba->N_ncdm-1){
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
               rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
-              rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
-              rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
+              rho_acc_cdm_bg = pvecback[pba->index_bg_rho_acc_cdm]; /* AG */
+              // rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
               p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
               pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
               w_ncdm = p_ncdm_bg/rho_ncdm_bg; /* AG: Overwrite for this species */
-              ratio_rho = rho_dcdm_bg/rho_ncdm_bg;
+              ratio_rho = rho_acc_cdm_bg/rho_ncdm_bg;
               gamma = pvecback[pba->index_bg_Gamma_acc];
-              eta = pba->eta_wdm;
+              eta = pba->eta_acc;
               { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
-                double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta+2.0*eta) / (1. + eta); // AG: +2* eta smewhere?
+                double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta + 2.0 * eta) / (1. + eta);
                 double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
-                double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
-                ca2_ncdm = ca2_num / ca2_den;
-                if (isnan(ca2_ncdm) || isinf(ca2_ncdm)){
-                    printf("DEBUG 2: term3 = %e, ca2_num = %e, ca2_den = %e\n", term3, ca2_num, ca2_den);
-                }
+                double ca2_den = 3.0*(1.0 + w_ncdm) - ratio_rho*(gamma/H)*(1. + eta);
+                double ca2_0 = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg)/(3.0*(1.0+w_ncdm));
+                /* fall back to source-free sound speed near the singularity */
+                if (fabs(ca2_den) < ppr->ncdm_ca2_den_tol*fabs(3.0*(1.0+w_ncdm)))
+                  ca2_ncdm = ca2_0;
+                else
+                  ca2_ncdm = ca2_num / ca2_den;
+                if (isnan(ca2_ncdm) || isinf(ca2_ncdm)) ca2_ncdm = ca2_0;
                 if (ca2_ncdm < 0.) ca2_ncdm = 0.; /* guard sqrt */
+                if (ca2_ncdm > 1.) ca2_ncdm = 1.; /* causality */
               }
-              k_fss_wdm[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
+              k_fss_acc[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
           }
           else{
               rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
@@ -8815,7 +8687,7 @@ int perturbations_print_variables(double tau,
               w_ncdm = p_ncdm_bg/rho_ncdm_bg;
               ca2_ncdm = w_ncdm*(5.0-(pseudo_p_ncdm/p_ncdm_bg))/(3.0*(1.0+w_ncdm));
               if (ca2_ncdm < 0.) ca2_ncdm = 0.;
-              k_fss_wdm[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
+              k_fss_acc[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
           }
 
           /* AccDM END */
@@ -8837,7 +8709,7 @@ int perturbations_print_variables(double tau,
           shear_ncdm[n_ncdm] = ppw->shear_ncdm[n_ncdm];
           delta_p_over_delta_rho_ncdm[n_ncdm] = ppw->delta_p_over_delta_rho_ncdm[n_ncdm];
 
-          // GFA //
+          /* Original DCDM->DR+WDM Implementation */
           rho_plus_p_theta_ncdm = 0.0;
           rho_plus_p_ttheta_ncdm = 0.0;
           delta_p_ncdm = 0.0;
@@ -8874,29 +8746,33 @@ int perturbations_print_variables(double tau,
           w_theta[n_ncdm] = rho_plus_p_ttheta_ncdm/rho_plus_p_theta_ncdm;
           w_sigma[n_ncdm] = rho_plus_p_sshear_ncdm/rho_plus_p_shear_ncdm;
 
-          if (n_ncdm == pba->N_ncdm-1) { /* GFA */
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) { /* Original DCDM->DR+WDM Implementation */
               rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
-              rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
-              rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
+              rho_acc_cdm_bg = pvecback[pba->index_bg_rho_acc_cdm]; /* AG */
+              // rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
               p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
               pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
               w_ncdm = p_ncdm_bg/rho_ncdm_bg;
-              ratio_rho = (rho_dcdm_bg) / rho_ncdm_bg;
+              ratio_rho = (rho_acc_cdm_bg) / rho_ncdm_bg;
               gamma = pvecback[pba->index_bg_Gamma_acc];
-              eta = pba->eta_wdm;
+              eta = pba->eta_acc;
               { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
-                double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta+2.0*eta) / (1. + eta); // AG: +2* eta smewhere?
+                double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta + 2.0 * eta) / (1. + eta);
                 double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
                 double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
-                ca2_ncdm = ca2_num / ca2_den;
-                if (isnan(ca2_ncdm) || isinf(ca2_ncdm)){
-                    printf("DEBUG 3: w_ncdm = %e, term3 = %e, ca2_num = %e, ca2_den = %e\n", w_ncdm, term3, ca2_num, ca2_den);
-                }
+                double ca2_0 = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg)/(3.0*(1.0+w_ncdm));
+                /* fall back to source-free sound speed near the singularity */
+                if (fabs(ca2_den) < ppr->ncdm_ca2_den_tol*fabs(3.0*(1.0+w_ncdm)))
+                  ca2_ncdm = ca2_0;
+                else
+                  ca2_ncdm = ca2_num / ca2_den;
+                if (isnan(ca2_ncdm) || isinf(ca2_ncdm)) ca2_ncdm = ca2_0;
                 if (ca2_ncdm < 0.) ca2_ncdm = 0.; /* guard sqrt */
+                if (ca2_ncdm > 1.) ca2_ncdm = 1.; /* causality */
               }
-              k_fss_wdm[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
+              k_fss_acc[n_ncdm] = (ca2_ncdm > 0.) ? sqrt(3./2.)*a*H/sqrt(ca2_ncdm) : 0.;
               w_trial_1 = ca2_ncdm;
-              w_trial_2 = (k_fss_wdm[n_ncdm] > 0.) ? ca2_ncdm*(1.0+ 0.25*pow(k/k_fss_wdm[n_ncdm],0.5)) : ca2_ncdm; //works better
+              w_trial_2 = (k_fss_acc[n_ncdm] > 0.) ? ca2_ncdm*(1.0+ 0.25*pow(k/k_fss_acc[n_ncdm],0.5)) : ca2_ncdm; //works better
           }  
           else {
               rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
@@ -8904,7 +8780,7 @@ int perturbations_print_variables(double tau,
               pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
               w_ncdm = p_ncdm_bg/rho_ncdm_bg;
               ca2_ncdm = w_ncdm*(5.0-(pseudo_p_ncdm/p_ncdm_bg))/(3.0*(1.0+w_ncdm));
-              k_fss_wdm[n_ncdm] = sqrt(3./2.)*a*H/sqrt(ca2_ncdm);
+              k_fss_acc[n_ncdm] = sqrt(3./2.)*a*H/sqrt(ca2_ncdm);
           }
 
           // rho_delta_ncdm *= factor;
@@ -8923,21 +8799,12 @@ int perturbations_print_variables(double tau,
       }
     }
 
-    if (pba->has_dcdm == _TRUE_) {
+    if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_) {
 
       delta_dcdm = y[ppw->pv->index_pt_delta_dcdm];
       theta_dcdm = y[ppw->pv->index_pt_theta_dcdm];
 
     }
-
-    /* Monopole (BRINGMANN 2018) modification */
-    if (pba->has_mon == _TRUE_) {
-
-      delta_mon = y[ppw->pv->index_pt_delta_mon];
-      theta_mon = y[ppw->pv->index_pt_theta_mon];
-
-    }
-    /* End Monopole (BRINGMANN 2018) modification */
 
     if (pba->has_dr == _TRUE_) {
       f_dr = pow(pvecback[pba->index_bg_a]*pvecback[pba->index_bg_a]/pba->H0, 2)*pvecback[pba->index_bg_rho_dr];
@@ -8996,15 +8863,7 @@ int perturbations_print_variables(double tau,
       }
 
       if (pba->has_dr == _TRUE_) {
-        /* Monopole (BRINGMANN 2018) modification */
-        if (pba->has_mon == _TRUE_){
-          pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
-          delta_dr += (-4.*a*H+a*pba->Gamma_mon*pvecback[pba->index_bg_rho_mon]/pvecback[pba->index_bg_rho_dr])*alpha;
-          /* End Monopole (BRINGMANN 2018) modification */
-        }
-        else
-          delta_dr += (-4.*a*H+a*pba->Gamma_dcdm*pvecback[pba->index_bg_rho_dcdm]/pvecback[pba->index_bg_rho_dr])*alpha;
-
+        delta_dr += (-4.*a*H+a*pba->Gamma_dcdm*pvecback[pba->index_bg_rho_dcdm]/pvecback[pba->index_bg_rho_dr])*alpha;
         theta_dr += k*k*alpha;
       }
 
@@ -9022,9 +8881,9 @@ int perturbations_print_variables(double tau,
         for (n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++){
           rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
           p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
-          if (n_ncdm == pba->N_ncdm-1 && pba->has_dcdm == _TRUE_){
-              rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
-              w_ncdm = p_ncdm_bg/rho_ncdm_bg; 
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
+              rho_acc_cdm_bg = pvecback[pba->index_bg_rho_acc_cdm]; /* AG */
+              w_ncdm = p_ncdm_bg/rho_ncdm_bg;
           }
           else{
               w_ncdm = p_ncdm_bg/rho_ncdm_bg;
@@ -9047,8 +8906,8 @@ int perturbations_print_variables(double tau,
         }
       }
 
-      if (pba->has_dcdm == _TRUE_) {
-        if (pba->has_wdm == _TRUE_){
+      if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_) {
+        if (pba->has_acc == _TRUE_){
           Gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
         }
         else{
@@ -9058,16 +8917,6 @@ int perturbations_print_variables(double tau,
         delta_dcdm += alpha*(-a*Gamma-3.*a*H);
         theta_dcdm += k*k*alpha;
       }
-
-      /* Monopole (BRINGMANN 2018) modification */
-      if (pba->has_mon == _TRUE_) {
-        /* DMDR modification: implement explicit time-dep. model here via Gamma */
-        pba->Gamma_mon = ppw->pvecback[pba->index_bg_Gamma_mon];
-
-        delta_mon += alpha*(-a*pba->Gamma_mon-3.*a*H);
-        theta_mon += k*k*alpha;
-      }
-      /* End Monopole (BRINGMANN 2018) modification */
 
       if (pba->has_scf == _TRUE_) {
         delta_scf += alpha*(-3.0*H*(1.0+pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf]));
@@ -9106,9 +8955,9 @@ int perturbations_print_variables(double tau,
     class_store_double(dataptr, theta_b, _TRUE_, storeidx);
     class_store_double(dataptr, psi, _TRUE_, storeidx);
     class_store_double(dataptr, phi, _TRUE_, storeidx);
-    class_store_double(dataptr, eta_prime, _TRUE_, storeidx); /* GFA */
-    class_store_double(dataptr, h_prime, _TRUE_, storeidx);  /* GFA */
-    class_store_double(dataptr, phi_prime, _TRUE_, storeidx);  /* GFA */
+    class_store_double(dataptr, eta_prime, _TRUE_, storeidx); /* Original DCDM->DR+WDM Implementation */
+    class_store_double(dataptr, h_prime, _TRUE_, storeidx);  /* Original DCDM->DR+WDM Implementation */
+    class_store_double(dataptr, phi_prime, _TRUE_, storeidx);  /* Original DCDM->DR+WDM Implementation */
     class_store_double(dataptr, ppw->rho_plus_p_theta, _TRUE_, storeidx); /* AG: For testing */
     class_store_double(dataptr, y[ppw->pv->index_pt_eta], ppt->gauge == synchronous, storeidx); /* AG: For testing */
     class_store_double(dataptr, ppw->delta_rho, _TRUE_, storeidx); /* AG: For testing, this is deltaT00*/
@@ -9138,22 +8987,18 @@ int perturbations_print_variables(double tau,
         class_store_double(dataptr, theta_ncdm[n_ncdm], _TRUE_, storeidx);
         class_store_double(dataptr, shear_ncdm[n_ncdm], _TRUE_, storeidx);
         class_store_double(dataptr, delta_p_over_delta_rho_ncdm[n_ncdm],  _TRUE_, storeidx);
-        class_store_double(dataptr, w_p[n_ncdm], _TRUE_, storeidx); //GFA//
-        class_store_double(dataptr, w_theta[n_ncdm], _TRUE_, storeidx); //GFA//
-        class_store_double(dataptr, w_sigma[n_ncdm], _TRUE_, storeidx); //GFA//
-        class_store_double(dataptr, k_fss_wdm[n_ncdm], _TRUE_, storeidx); //GFA//
+        /* AG: Additional variables for testing, probably unnecessary in the end */
+        class_store_double(dataptr, w_p[n_ncdm], _TRUE_, storeidx); /* Original DCDM->DR+WDM Implementation */
+        class_store_double(dataptr, w_theta[n_ncdm], _TRUE_, storeidx); /* Original DCDM->DR+WDM Implementation */
+        class_store_double(dataptr, w_sigma[n_ncdm], _TRUE_, storeidx); /* Original DCDM->DR+WDM Implementation */
+        class_store_double(dataptr, k_fss_acc[n_ncdm], _TRUE_, storeidx); /* Original DCDM->DR+WDM Implementation */
       }
     }
-    class_store_double(dataptr, w_trial_1, pba->has_ncdm, storeidx); //GFA//
-    class_store_double(dataptr, w_trial_2, pba->has_ncdm, storeidx); //GFA//
+    class_store_double(dataptr, w_trial_1, pba->has_ncdm, storeidx); /* Original DCDM->DR+WDM Implementation */
+    class_store_double(dataptr, w_trial_2, pba->has_ncdm, storeidx); /* Original DCDM->DR+WDM Implementation */
     /* Decaying cold dark matter */
-    class_store_double(dataptr, delta_dcdm, pba->has_dcdm, storeidx);
-    class_store_double(dataptr, theta_dcdm, pba->has_dcdm, storeidx);
-    /* Monopole (BRINGMANN 2018) modification */
-    /* Decaying Monopoles */
-    class_store_double(dataptr, delta_mon, pba->has_mon, storeidx);
-    class_store_double(dataptr, theta_mon, pba->has_mon, storeidx);
-    /* End Monopole (BRINGMANN 2018) modification */
+    class_store_double(dataptr, delta_dcdm, (pba->has_dcdm || pba->has_acc), storeidx);
+    class_store_double(dataptr, theta_dcdm, (pba->has_dcdm || pba->has_acc), storeidx);
     /* Decay radiation */
     class_store_double(dataptr, delta_dr, pba->has_dr, storeidx);
     class_store_double(dataptr, theta_dr, pba->has_dr, storeidx);
@@ -9295,10 +9140,10 @@ int perturbations_print_variables(double tau,
     free(theta_ncdm);
     free(shear_ncdm);
     free(delta_p_over_delta_rho_ncdm);
-    free(w_p); // GFA
-    free(w_theta); // GFA
-    free(w_sigma); // GFA 
-    free(k_fss_wdm); // GFA
+    free(w_p); /* Original DCDM->DR+WDM Implementation */
+    free(w_theta); /* Original DCDM->DR+WDM Implementation */
+    free(w_sigma); /* Original DCDM->DR+WDM Implementation */
+    free(k_fss_acc); /* Original DCDM->DR+WDM Implementation */
   }
 
   return _SUCCESS_;
@@ -9400,13 +9245,13 @@ int perturbations_derivs(double tau,
   double f_dr, fprime_dr;
 
   /* for use with accDM */
-  double aq, rho_dcdm, rho_cdm_bg, rho_dcdm_bg, n_dcdm; /* aq used in source terms below */
+  double aq, rho_dcdm, rho_cdm_bg, rho_acc_cdm_bg, n_dcdm; /* aq used in source terms below */
   double decay, ratio_rho, gamma, eta;
   double rho_plus_p_sshear_ncdm;
   double w_theta, w_delta_p;
   double t, H;
   double qcube, FD_ncdm;
-  double metric_eta_prime, timescale; /* GFA */     
+  double metric_eta_prime, timescale; /* Original DCDM->DR+WDM Implementation */    
   double Gamma;     
   //double weighted_delta;         
 
@@ -9603,7 +9448,7 @@ int perturbations_derivs(double tau,
       metric_shear = k2 * pvecmetric[ppw->index_mt_alpha];
       //metric_shear_prime = k2 * pvecmetric[ppw->index_mt_alpha_prime];
       metric_ufa_class = pvecmetric[ppw->index_mt_h_prime]/2.;
-      metric_eta_prime = pvecmetric[ppw->index_mt_eta_prime]; /* GFA */
+      metric_eta_prime = pvecmetric[ppw->index_mt_eta_prime]; /* Original DCDM->DR+WDM Implementation */
     }
 
     if (ppt->gauge == newtonian) {
@@ -9924,11 +9769,11 @@ int perturbations_derivs(double tau,
 
     /** - ---> dcdm and dr */
 
-    if (pba->has_dcdm == _TRUE_) {
+    if (pba->has_dcdm == _TRUE_ || pba->has_acc == _TRUE_) {
 
       /** - ----> dcdm */
 
-      if (pba->has_wdm == _TRUE_) {
+      if (pba->has_acc == _TRUE_) {
         Gamma = pvecback[pba->index_bg_Gamma_acc];
       }
       else {
@@ -9981,57 +9826,6 @@ int perturbations_derivs(double tau,
         k*(s_l[l]*y[pv->index_pt_F0_dr+l-1]-(1.+l)*cotKgen*y[pv->index_pt_F0_dr+l]);
 
     }
-
-    /* Monopole (BRINGMANN 2018) modification */
-    /** - ---> mon and dr */
-
-    if (pba->has_mon == _TRUE_) {
-      /** - ----> mon */      
-      pba->Gamma_mon = pvecback[pba->index_bg_Gamma_mon];
-
-      dy[pv->index_pt_delta_mon] = -(y[pv->index_pt_theta_mon]+metric_continuity)
-        - a * pba->Gamma_mon / k2 * metric_euler; /* monopoles density */
-
-      dy[pv->index_pt_theta_mon] = - a_prime_over_a*y[pv->index_pt_theta_mon] + metric_euler; /* monopoles velocity */
-    }
-
-    /** - ---> dr */
-
-    if ((pba->has_mon == _TRUE_)&&(pba->has_dr == _TRUE_)) {     
-      pba->Gamma_mon = pvecback[pba->index_bg_Gamma_mon];
-
-      f_dr = pow(pow(a,2)/pba->H0,2)*pvecback[pba->index_bg_rho_dr];
-      fprime_dr = pba->Gamma_mon*pvecback[pba->index_bg_rho_mon]*pow(a,5)/pow(pba->H0,2);
-
-      /** - ----> dr F0 */
-      dy[pv->index_pt_F0_dr] = -k*y[pv->index_pt_F0_dr+1]-4./3.*metric_continuity*f_dr+
-        fprime_dr*(y[pv->index_pt_delta_mon]+metric_euler/k2);
-
-      /** - ----> dr F1 */
-      dy[pv->index_pt_F0_dr+1] = k/3.*y[pv->index_pt_F0_dr]-2./3.*k*y[pv->index_pt_F0_dr+2]*s2_squared +
-        4*metric_euler/(3.*k)*f_dr + fprime_dr/k*y[pv->index_pt_theta_mon];
-
-      /** - ----> exact dr F2 */
-      dy[pv->index_pt_F0_dr+2] = 8./15.*(3./4.*k*y[pv->index_pt_F0_dr+1]+metric_shear*f_dr) -3./5.*k*s_l[3]/s_l[2]*y[pv->index_pt_F0_dr+3];
-
-      /** - ----> exact dr l=3 */
-      l = 3;
-      dy[pv->index_pt_F0_dr+3] = k/(2.*l+1.)*
-        (l*s_l[l]*s_l[2]*y[pv->index_pt_F0_dr+2]-(l+1.)*s_l[l+1]*y[pv->index_pt_F0_dr+4]);
-
-      /** - ----> exact dr l>3 */
-      for (l = 4; l < pv->l_max_dr; l++) {
-        dy[pv->index_pt_F0_dr+l] = k/(2.*l+1)*
-          (l*s_l[l]*y[pv->index_pt_F0_dr+l-1]-(l+1.)*s_l[l+1]*y[pv->index_pt_F0_dr+l+1]);
-      }
-
-      /** - ----> exact dr lmax_dr */
-      l = pv->l_max_dr;
-      dy[pv->index_pt_F0_dr+l] =
-        k*(s_l[l]*y[pv->index_pt_F0_dr+l-1]-(1.+l)*cotKgen*y[pv->index_pt_F0_dr+l]);
-
-    }
-    /* End Monopole (BRINGMANN 2018) modification */
 
     /** - ---> fluid (fld) */
 
@@ -10187,49 +9981,53 @@ int perturbations_derivs(double tau,
           rho_ncdm_bg = pvecback[pba->index_bg_rho_ncdm1+n_ncdm]; /* background density */
           p_ncdm_bg = pvecback[pba->index_bg_p_ncdm1+n_ncdm]; /* background pressure */ /* AG: Spline breaks this down probably*/
           pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm]; /* pseudo-pressure (see CLASS IV paper) */
-          //if (rho_ncdm_bg > 0.) { /* AG: Our WDM has 0 density at start so let's take that into account */
           w_ncdm = p_ncdm_bg/rho_ncdm_bg; /* equation of state parameter */
-          // } else {
-          //   w_ncdm = 0.; 
-          // }
-          //ca2_ncdm = w_ncdm/3.0/(1.0+w_ncdm)*(5.0-pseudo_p_ncdm/p_ncdm_bg); /* adiabatic sound speed */
 
-          if (n_ncdm == pba->N_ncdm-1) {
-            rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* GFA */
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
+            rho_acc_cdm_bg = pvecback[pba->index_bg_rho_acc_cdm]; /* Original DCDM->DR+WDM Implementation */
             rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
             w_ncdm = p_ncdm_bg/rho_ncdm_bg;
-            ratio_rho = (rho_dcdm_bg) / rho_ncdm_bg;
+            ratio_rho = (rho_acc_cdm_bg) / rho_ncdm_bg;
             gamma = pvecback[pba->index_bg_Gamma_acc];
             H = pvecback[pba->index_bg_H];
-            decay = a*gamma*ratio_rho; /* GFA*/
-            eta = pba->eta_wdm;
+            decay = a*gamma*ratio_rho; 
+            eta = pba->eta_acc;
           }
 
           /* adiabatic sound speed */
-          if (n_ncdm == pba->N_ncdm-1 ) { /* GFA */
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_ ) {
             /* AG: w_ncdm distributed analytically into numerator so 1/w_ncdm never appears */
             double term1_num = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg);
-            double term2_num = ratio_rho*(gamma/(3.0*H))*eta*(2+eta)/(1+eta); // AG: Eta version
+            double term2_num = ratio_rho*(gamma/(3.0*H))*eta*(2. + eta)/(1. + eta); // AG: Eta version
             double numerator = term1_num - term2_num;
 
-            double term1_den = 3.0*(1.0+w_ncdm);
-            double term2_den = ratio_rho*(gamma/H)*(1+eta); // AG: Eta version
+            double term1_den = 3.0*(1.0 + w_ncdm);
+            double term2_den = ratio_rho*(gamma/H)*(1. + eta); // AG: Eta version
             double denominator = term1_den - term2_den;
 
-            if (denominator == 0.) {
+            /* source-free adiabatic sound speed: always physical, used as a
+               continuous fallback when the sourced formula is singular */
+            double ca2_0 = w_ncdm/3.0/(1.0+w_ncdm)*(5.0-pseudo_p_ncdm/p_ncdm_bg);
+
+            /* detect a *near*-singular denominator (not just ==0): the formula
+               blows up as denominator -> 0 long before it reaches it exactly */
+            if (fabs(denominator) < ppr->ncdm_ca2_den_tol*fabs(term1_den)) {
               ppw->ca2_ncdm_bad = _TRUE_;
-              ca2_ncdm = 0.;
+              ca2_ncdm = ca2_0;
             }
             else {
               ca2_ncdm = numerator/denominator;
             }
 
-            if (ca2_ncdm < 0. || isnan(ca2_ncdm) || isinf(ca2_ncdm)) {
+            if (isnan(ca2_ncdm) || isinf(ca2_ncdm)) {
               ppw->ca2_ncdm_bad = _TRUE_;
-              ca2_ncdm = 0.; /* guard sqrt below */
+              ca2_ncdm = ca2_0;
             }
+            /* enforce physical bounds: 0 <= ca2 <= 1 (causality) */
+            if (ca2_ncdm < 0.) { ppw->ca2_ncdm_bad = _TRUE_; ca2_ncdm = 0.; }
+            if (ca2_ncdm > 1.) { ppw->ca2_ncdm_bad = _TRUE_; ca2_ncdm = 1.; }
             // CS2DYN
-            if (ppt->switch_on_eq_delta_p_wdm == _FALSE_) {
+            if (ppt->switch_on_eq_delta_p_acc == _FALSE_) {
               ceff2_ncdm = ca2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(ca2_ncdm)/(a*H)));
             }
             cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
@@ -10246,65 +10044,63 @@ int perturbations_derivs(double tau,
           /* c_vis is introduced in order to close the system */
 
           /* different ansatz for sound speed c_eff and viscosity speed c_vis */
-          if (ppr->ncdm_fluid_approximation == ncdmfa_mb && n_ncdm != pba->N_ncdm-1) { /* GFA */
+          if (ppr->ncdm_fluid_approximation == ncdmfa_mb && (n_ncdm != pba->N_ncdm-1 || pba->has_acc == _FALSE_)) { /* Original DCDM->DR+WDM Implementation */
             ceff2_ncdm = ca2_ncdm;
             cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
           }
-          if (ppr->ncdm_fluid_approximation == ncdmfa_hu && n_ncdm != pba->N_ncdm-1) { /* GFA */
+          if (ppr->ncdm_fluid_approximation == ncdmfa_hu && (n_ncdm != pba->N_ncdm-1 || pba->has_acc == _FALSE_)) { /* Original DCDM->DR+WDM Implementation */
             ceff2_ncdm = ca2_ncdm;
             cvis2_ncdm = w_ncdm;
           }
-          if (ppr->ncdm_fluid_approximation == ncdmfa_CLASS && n_ncdm != pba->N_ncdm-1) { /* GFA */
+          if (ppr->ncdm_fluid_approximation == ncdmfa_CLASS && (n_ncdm != pba->N_ncdm-1 || pba->has_acc == _FALSE_)) { /* Original DCDM->DR+WDM Implementation */
             ceff2_ncdm = ca2_ncdm;
             cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
           }
 
-          if (n_ncdm == pba->N_ncdm-1) { /* GFA */
+          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) { /* Original DCDM->DR+WDM Implementation */
              /** - -----> exact continuity equation */
-
-             //weighted_delta = (rho_dcdm_bg*y[pv->index_pt_delta_dcdm]+rho_cdm_bg*y[pv->index_pt_delta_cdm])/(rho_dcdm_bg+rho_cdm_bg); /* AG: weighted delta for the source term in the continuity and Euler equations */
               
-             if (ppt->switch_on_eq_delta_p_wdm == _TRUE_) {
+             if (ppt->switch_on_eq_delta_p_acc == _TRUE_) {
                dy[idx] = -(1.0+w_ncdm)*(y[idx+1]+metric_continuity)
                  -3.0*a_prime_over_a*y[idx+3]+3.0*a_prime_over_a*w_ncdm*y[idx]
-                 +a*gamma*(1.+pba->eta_wdm)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
+                 +a*gamma*(1.+pba->eta_acc)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
              } 
              else {
                dy[idx] = -(1.0+w_ncdm)*(y[idx+1]+metric_continuity)
                  -3.0*a_prime_over_a*(ceff2_ncdm-w_ncdm)*y[idx]
-                 +a*gamma*(1.+pba->eta_wdm)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
+                 +a*gamma*(1.+pba->eta_acc)*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
              }
 
             //this is the relativistic limit, for testing
             // dy[idx] = -(4./3.)*(y[idx+1]+metric_continuity)+(1./2.)*a*gamma*ratio_rho*(y[pv->index_pt_delta_dcdm]-y[idx]+metric_euler/k2);
 
              // /** - -----> exact euler equation */
-            if (ppt->switch_on_eq_delta_p_wdm == _TRUE_) {
+            if (ppt->switch_on_eq_delta_p_acc == _TRUE_) {
               dy[idx+1] = -a_prime_over_a*(1.0-3.0*ca2_ncdm)*y[idx+1]
                 + k2*y[idx+3]/(1.0+w_ncdm)-k2*y[idx+2]
-                + metric_euler-a*gamma*(1.+pba->eta_wdm)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
+                + metric_euler-a*gamma*(1.+pba->eta_acc)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
             } 
             else {
               dy[idx+1] = -a_prime_over_a*(1.0-3.0*ca2_ncdm)*y[idx+1]
                 +ceff2_ncdm/(1.0+w_ncdm)*k2*y[idx]-k2*y[idx+2]
-                + metric_euler-a*gamma*(1.+pba->eta_wdm)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
+                + metric_euler-a*gamma*(1.+pba->eta_acc)*((1.+ca2_ncdm)/(1.+w_ncdm))*ratio_rho*(y[idx+1]-3./4*y[pv->index_pt_theta_dcdm]);
             }
 
           /** - ----->  ansatz for approximate shear derivative */
 
           // just for testing
 
-            if (ppt->switch_off_shear_wdm == _TRUE_) {
+            if (ppt->switch_off_shear_acc == _TRUE_) {
               dy[idx+2] = 0.;
             } 
             else {
-              if (pba->kappa_mon <= 3.0) { /* AG: It seems that for kappa less than 3 setting shear to zero gives better approximation */
+              if (pba->kappa_acc <= 3.0) { /* AG: It seems that for kappa less than 3 setting shear to zero gives better approximation */
                 dy[idx+2] = 0.;
               }
               else {
-                dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+1./tau+a*gamma*(1.+pba->eta_wdm)*((1.+ca2_ncdm)/(3.+3.*w_ncdm))*ratio_rho)*y[idx+2]
+                dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+1./tau+a*gamma*(1.+pba->eta_acc)*((1.+ca2_ncdm)/(3.+3.*w_ncdm))*ratio_rho)*y[idx+2]
                           +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*s_l[2]*(y[idx+1]+metric_ufa_class)      
-                          -2.0/3.0*pba->eta_wdm*(pba->eta_wdm+2.)/(1.+pba->eta_wdm)*a*gamma*ratio_rho*y[pv->index_pt_delta_dcdm]/(1.+w_ncdm);
+                          -2.0/3.0*pba->eta_acc*(pba->eta_acc+2.)/(1.+pba->eta_acc)*a*gamma*ratio_rho*y[pv->index_pt_delta_dcdm]/(1.+w_ncdm);
               }
             }
 
@@ -10315,7 +10111,7 @@ int perturbations_derivs(double tau,
 
 
            // CS2DYN
-           if (ppt->switch_on_eq_delta_p_wdm == _TRUE_) {
+           if (ppt->switch_on_eq_delta_p_acc == _TRUE_) {
              // several prescriptions for approximating the higher-weight integrals appearing in equation for delta_p
              // for the moment, it doesnt give good results
              w_delta_p = pseudo_p_ncdm/(3.*p_ncdm_bg);
@@ -10323,7 +10119,7 @@ int perturbations_derivs(double tau,
              dy[idx+3] = -3.*a_prime_over_a*y[idx+3]*((2./3.)-w_ncdm-w_delta_p)
                        -w_theta*(1.+w_ncdm)*y[idx+1]
                        -(metric_ufa_class/3)*w_ncdm*(5.-(pseudo_p_ncdm/p_ncdm_bg))
-                       +a*gamma*ratio_rho*((pba->eta_wdm*(pba->eta_wdm+2.)/(1+pba->eta_wdm))*(y[pv->index_pt_delta_dcdm]/3.)-(1.+pba->eta_wdm)*y[idx+3]);
+                       +a*gamma*ratio_rho*((pba->eta_acc*(pba->eta_acc+2.)/(1+pba->eta_acc))*(y[pv->index_pt_delta_dcdm]/3.)-(1.+pba->eta_acc)*y[idx+3]);
            }
 
           } 
@@ -10386,33 +10182,48 @@ int perturbations_derivs(double tau,
             epsilon = sqrt(q*q+a2*pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
             qk_div_epsilon = k*q/epsilon;
 
-            /** - -----> wdm Boltzmann hierarchy (same equations as standard ncdm) */
-            if(n_ncdm == pba->N_ncdm-1 && pba->has_wdm == _TRUE_){
+            /** - -----> accDM Boltzmann hierarchy (same equations as standard ncdm) */
+            if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
+              aq = pba->aq_ncdm_acc[n_ncdm][index_q];
 
-              //aq = q/pba->P_acc_wdm*pba->T_acc_GeV;
-              aq = pba->aq_ncdm_wdm[n_ncdm][index_q];
+              // if(a<=aq){ // AG: Track the DCDM perturbs until production
+              //   //background_ncdm_distribution_perts(pba, q, n_ncdm, &FD_ncdm);
+              //   FD_ncdm = pba->f0_ncdm_acc[n_ncdm][index_q];
 
-              if(a<=aq){ // AG: Track the DCDM perturbs until production
-                //background_ncdm_distribution_perts(pba, q, n_ncdm, &FD_ncdm);
-                FD_ncdm = pba->f0_ncdm_wdm[n_ncdm][index_q];
+              //   rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
+              //   rho_acc_cdm_bg = pvecback[pba->index_bg_rho_acc_cdm]; /* AG */
 
-                rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
-                rho_dcdm_bg = pvecback[pba->index_bg_rho_dcdm]; /* AG */
+              //   y[idx] =(y[pv->index_pt_delta_dcdm]-metric_continuity/3/a/pvecback[pba->index_bg_H]) * FD_ncdm;
+              //   y[idx+1] = 0;
+              //   y[idx+2] = 2./15.*(metric_shear)/(a*pvecback[pba->index_bg_H])* FD_ncdm;
+              //   for(l=3; l<pv->l_max_ncdm[n_ncdm]; l++){
+              //     y[idx+l] = 0;
+              //   }
+              //   y[idx+l] = 0;
+              //   dy[idx] = 0;
+              //   dy[idx+1] = 0;
+              //   dy[idx+2] = 0;
+              //   for(l=3; l<pv->l_max_ncdm[n_ncdm]; l++){
+              //     dy[idx+l] = 0;
+              //   }
+              //   dy[idx+l] = 0;
+              // }
+              if(a<=aq){ // AG: Track the DCDM parent until production — smooth ODE, no y[] writes
+                /* The daughter monopole is slaved to the parent: y[idx] = FD_ncdm * delta_dcdm,
+                   with FD_ncdm = f0_ncdm_acc time-independent. Differentiating in tau, the RHS is
+                   just the parent's already-computed derivative (dy[delta_dcdm], set at line 9775),
+                   scaled by FD_ncdm. We do NOT overwrite y[] here: that is what corrupts numjac's
+                   finite-difference Jacobian and crashes ndf15. With this form the only Jacobian
+                   entry is the physical coupling d(dy[idx])/d(y[delta_dcdm]) = FD_ncdm. */
+                FD_ncdm = pba->f0_ncdm_acc[n_ncdm][index_q];
 
-                y[idx] =(y[pv->index_pt_delta_dcdm]-metric_continuity/3/a/pvecback[pba->index_bg_H]) * FD_ncdm;
-                y[idx+1] = 0;
-                y[idx+2] = 2./15.*(metric_shear)/(a*pvecback[pba->index_bg_H])* FD_ncdm;
+                dy[idx]   = FD_ncdm * dy[pv->index_pt_delta_dcdm];
+                dy[idx+1] = 0.;
+                dy[idx+2] = 0.;
                 for(l=3; l<pv->l_max_ncdm[n_ncdm]; l++){
-                  y[idx+l] = 0;
+                  dy[idx+l] = 0.;
                 }
-                y[idx+l] = 0;
-                dy[idx] = 0;
-                dy[idx+1] = 0;
-                dy[idx+2] = 0;
-                for(l=3; l<pv->l_max_ncdm[n_ncdm]; l++){
-                  dy[idx+l] = 0;
-                }
-                dy[idx+l] = 0;
+                dy[idx+l] = 0.;
               }
               else{
                 dy[idx] = -qk_div_epsilon*y[idx+1]+metric_continuity*dlnf0_dlnq/3.;
@@ -11369,11 +11180,11 @@ int background_ncdm_distribution_perts(
                                  
 
 
-  double aq, qcube, q_factor, rho_dcdm_comoving, n_dcdm_comoving, Gamma_q_over_H_q;
+  double aq, qcube, q_factor, rho_acc_cdm_comoving, n_dcdm_comoving, Gamma_q_over_H_q;
   double parent_mass_kg;
 
   /* Scale factor at which a particle with comoving momentum q was produced */
-  aq = q * pba->T_acc_GeV / pba->P_acc_wdm;
+  aq = q * pba->T_acc_GeV / pba->P_acc;
 
   *f0 = 0;
   if (aq <= 1e-14 || aq >= 1.0) {
@@ -11383,15 +11194,15 @@ int background_ncdm_distribution_perts(
   q_factor = pba->T_cmb * pba->T_ncdm[n_ncdm] / (_h_P_ * _c_ / _k_B_ / 2 / _PI_) * _Mpc_over_m_;
   qcube = pow(q * q_factor, 3);
 
-  rho_dcdm_comoving = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_wdm
-    * (1-pow(aq, pba->kappa_mon))/(1+pow(aq/pba->a_t_mon, pba->kappa_mon))
+  rho_acc_cdm_comoving = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_acc
+    * (1-pow(aq, pba->kappa_acc))/(1+pow(aq/pba->a_t_acc, pba->kappa_acc))
     * 3 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
   parent_mass_kg = pba->M_cdm_in_GeV * 1e9 * _eV_ / (_c_ * _c_);
-  n_dcdm_comoving = rho_dcdm_comoving / parent_mass_kg;
+  n_dcdm_comoving = rho_acc_cdm_comoving / parent_mass_kg;
 
-  Gamma_q_over_H_q = pba->kappa_mon
-    * (pow(aq, pba->kappa_mon) + pow(aq/pba->a_t_mon, pba->kappa_mon))
-    / (1-pow(aq, pba->kappa_mon)) / (1+pow(aq/pba->a_t_mon, pba->kappa_mon));
+  Gamma_q_over_H_q = pba->kappa_acc
+    * (pow(aq, pba->kappa_acc) + pow(aq/pba->a_t_acc, pba->kappa_acc))
+    / (1-pow(aq, pba->kappa_acc)) / (1+pow(aq/pba->a_t_acc, pba->kappa_acc));
   Gamma_q_over_H_q = MIN(Gamma_q_over_H_q, 100.0);
 
   *f0 = n_dcdm_comoving / (4.0 * _PI_ * qcube) * Gamma_q_over_H_q;
@@ -11407,11 +11218,11 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
     double f0m2= 0,f0m1= 0,f0= 0,f0p1= 0,f0p2= 0,dq= 0,q= 0,df0dq= 0,tmp1= 0,tmp2= 0,f0back= 0;
     double * pvecback;
     int first_index_back;
-    double a_D, H_D; /* GFA */
+    double a_D, H_D;
     double tau;
     double qmin_tmp;
-    double ca2_ncdm; /* GFA */
-    double rho_cdm_bg, rho_ncdm_bg, p_ncdm_bg, pseudo_p_ncdm, w_ncdm, rho_dcdm_bg, ratio_rho, gamma, eta; /* GFA*/
+    double ca2_ncdm;
+    double rho_cdm_bg, rho_ncdm_bg, p_ncdm_bg, pseudo_p_ncdm, w_ncdm, rho_acc_cdm_bg, ratio_rho, gamma, eta; 
     struct background_parameters_for_distributions pbadist;
 
     pbadist.pba = pba;
@@ -11421,8 +11232,8 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
 
     class_alloc(pvecback,pba->bg_size*sizeof(double),pba->error_message);
 
-    /** Evaluate background quantities at a_t_mon, the characteristic decay scale factor */
-    a_D = pba->a_t_mon;
+    /** Evaluate background quantities at a_t_acc, the characteristic acceleration scale factor */
+    a_D = pba->a_t_acc;
     class_call(background_tau_of_z(pba, 1./a_D - 1., &tau),
               pba->error_message, ppr->error_message);
     class_call(background_at_tau(pba, tau, long_info, inter_normal, &first_index_back, pvecback),
@@ -11430,46 +11241,34 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
 
     H_D = pvecback[pba->index_bg_H];
     rho_ncdm_bg   = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
-    rho_dcdm_bg   = pvecback[pba->index_bg_rho_dcdm];
+    rho_acc_cdm_bg   = pvecback[pba->index_bg_rho_acc_cdm];
     rho_cdm_bg    = pvecback[pba->index_bg_rho_cdm];
     p_ncdm_bg     = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
     pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
     w_ncdm        = p_ncdm_bg/(rho_ncdm_bg);
-    ratio_rho     = rho_dcdm_bg / rho_ncdm_bg;
+    ratio_rho     = rho_acc_cdm_bg / rho_ncdm_bg;
     gamma         = pvecback[pba->index_bg_Gamma_acc];
-    eta = pba->eta_wdm;
+    eta = pba->eta_acc;
     { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
       double term3 = ratio_rho * gamma / (3.0 * H_D) * (eta * eta + 2*eta) / (1. + eta); // AG: +2*eta somewhere?
       double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
       double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H_D)*(1.+eta);
-      ca2_ncdm = ca2_num / ca2_den;
-      if (isnan(ca2_ncdm) || isinf(ca2_ncdm)) {
-        printf("DEBUG 5: term3 = %e, ca2_num = %e, ca2_den = %e\n", term3, ca2_num, ca2_den);
-      }
+      double ca2_0 = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg)/(3.0*(1.0+w_ncdm));
+      /* fall back to source-free sound speed near the singularity */
+      if (fabs(ca2_den) < ppr->ncdm_ca2_den_tol*fabs(3.0*(1.0+w_ncdm)))
+        ca2_ncdm = ca2_0;
+      else
+        ca2_ncdm = ca2_num / ca2_den;
+      if (isnan(ca2_ncdm) || isinf(ca2_ncdm)) ca2_ncdm = ca2_0;
       if (ca2_ncdm < 0.) ca2_ncdm = 0.;
+      if (ca2_ncdm > 1.) ca2_ncdm = 1.; /* causality */
     }
 
     /* GFA: compute free-streaming length of the warm dark daughter,
     evaluated at the time of decay a_D (equal to present time if lifetime >age universe) */
-    pba->k_fss_wdm = (ca2_ncdm > 0.) ? sqrt(3./2.)*a_D*H_D/sqrt(ca2_ncdm) : 0.;
+    pba->k_fss_acc = (ca2_ncdm > 0.) ? sqrt(3./2.)*a_D*H_D/sqrt(ca2_ncdm) : 0.;
     //Note: works well for lifetime > age_universe, but not on the contrary, maybe I should evaluate it before a_D
     // for lifetimes smaller than age of universe, maybe I should evaluate at a_nr, smaller than a_D by some velocity factors (see page 13 in Aoyama paper)
-
-    /** Manual q-sampling for this species. Same sampling used for both perturbation and background sampling, since this will usually be a high precision setting anyway */
-    //pba->ncdm_qmax[n_ncdm] = 5*pba->a_t_mon*pba->P_acc_wdm/pba->T_acc_GeV;
-
-    // class_call(get_qsampling_manual(pba->q_ncdm[n_ncdm],
-    //                                 pba->w_ncdm[n_ncdm],
-    //                                 pba->q_size_ncdm[n_ncdm],
-    //                                 pba->ncdm_qmax[n_ncdm],
-    //                                 pba->ncdm_quadrature_strategy[n_ncdm],
-    //                                 pbadist.q,
-    //                                 pbadist.tablesize,
-    //                                 background_ncdm_distribution,
-    //                                 &pbadist,
-    //                                 pba->error_message),
-    //                                 pba->error_message,
-    //                                 pba->error_message);
 
   /* Use the same q-grid as the background (set in input.c via ncdm_qmax).
      Resampling here would break delta_ncdm = delta_dcdm at IC time because
@@ -11477,12 +11276,8 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
      (computed with the original weights) while the numerator would use a
      different grid. */
 
-
   for (index_q=0; index_q<pba->q_size_ncdm[n_ncdm]; index_q++) {
     q = pba->q_ncdm[n_ncdm][index_q];
-
-    /* Precompute per-bin constants (used repeatedly in perturbations hot path) */
-    //pba->aq_ncdm_wdm[n_ncdm][index_q] = q * pba->T_acc_GeV / pba->P_acc_wdm;
 
     //we need to correct w_ncdm because we use a slightly different definition for the description of dcdm perturbations
     class_call(background_ncdm_distribution(&pbadist,q,&f0back),
@@ -11493,7 +11288,7 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
     // Loop to find appropriate dq:
     class_call(background_ncdm_distribution_perts(pba,q,n_ncdm,&f0),
                pba->error_message,ppr->error_message);
-    pba->f0_ncdm_wdm[n_ncdm][index_q] = f0;   /* save */
+    pba->f0_ncdm_acc[n_ncdm][index_q] = f0;   /* save */
 
     for(tolexp=_PSD_DERIVATIVE_EXP_MIN_; tolexp<_PSD_DERIVATIVE_EXP_MAX_; tolexp++){
 
@@ -11528,9 +11323,9 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
     }
     //Avoid underflow in extreme tail:
     if (fabs(f0)==0.)
-      pba->dlnf0_dlnq_ncdm[n_ncdm][index_q] = 0; /* GFA valid for whatever f0 with exponential tail in exp(-q) */
+      pba->dlnf0_dlnq_ncdm[n_ncdm][index_q] = 0; /* valid for whatever f0 with exponential tail in exp(-q) */
     else{
-      pba->dlnf0_dlnq_ncdm[n_ncdm][index_q] = q*df0dq; // GFA Instead of evolving psi, we directly evolve f0*psi. Hence, the f0 at the denominator cancels out.
+      pba->dlnf0_dlnq_ncdm[n_ncdm][index_q] = q*df0dq; // Instead of evolving psi, we directly evolve f0*psi. Hence, the f0 at the denominator cancels out.
     }
 
   }

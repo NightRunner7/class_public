@@ -77,36 +77,27 @@ struct background
   double Gamma_dcdm;      /**< \f$ \Gamma_{dcdm} \f$: decay constant for decaying cold dark matter */
   double tau_dcdm;
 
-  /* Monopole (BRINGMANN 2018) modification */
-  double f_mon; /**< \f$ f_{mon} \f$: fraction of the initial CDM density comprised of decaying cold dark matter */
-  double kappa_mon; /**< \f$ \zeta_{mon} \f$: rate parameter for decaying cold dark matter */
-  double a_t_mon; /**< \f$ \Gamma_{mon} \f$: transition scale factor for decaying cold dark matter */
-  double Omega_ini_mon;  /**< \f$ \Omega_{ini,mon} \f$: rescaled initial value for mon density (see 1407.2418 for definitions) */
-  double Omega0_mondr;   /**< \f$ \Omega_{0 mon}+\Omega_{0 dr} \f$: decaying cold dark matter (mon) decaying to dark radiation (dr) */
-  double Gamma_mon;      /**< \f$ \Gamma_{mon} \f$: decay constant for decaying monopoles */
-  /* End Monopole (BRINGMANN 2018) modification */
 
   /* Accelerating Dark Matter */
 
-  // double Gamma_wdm;      /**< \f$ \Gamma_{wdm} \f$: decay constant for accelerating dark matter Gamma = f/tau */
-  double f_wdm;          /**< \f$ f_{wdm} \f$: fraction of the initial CDM density comprised of accelerating dark matter */
-  // double tau_wdm;        /**< \f$ \tau_{wdm} \f$: time scale for acceleration*/
+  double f_acc;          /**< \f$ f_{wdm} \f$: fraction of the initial CDM density comprised of accelerating dark matter */
+  double kappa_acc;      /**< \f$ \zeta_{mon} \f$: rate parameter for accelerating dark matter */
+  double a_t_acc;        /**< \f$ \Gamma_{mon} \f$: transition scale factor for the accelerating dark matter */
 
-  double eta_wdm;        /**< \f$ \eta_{wdm} \f$: fraction of energy gained by the WDM component after acceleration E=(1+\eta)m_wdm */
-  double m_wdm_in_GeV;   /**< \f$ m_{wdm} \f$: mass of the accelerating dark matter particle in GeV */
-  double E_wdm_in_GeV;   /**< \f$ E_{wdm} \f$: energy of the accelerating dark matter particle in GeV */
+  double eta_acc;        /**< \f$ \eta_{wdm} \f$: fraction of energy gained by the accelerating WDM component after acceleration E=(1+\eta)m_wdm */
+  double m_acc_in_GeV;   /**< \f$ m_{wdm} \f$: mass of the accelerating dark matter particle in GeV */
+  double E_acc_in_GeV;   /**< \f$ E_{wdm} \f$: energy gain of the accelerating dark matter particle in GeV */
 
   double M_cdm_in_GeV;   /**< \f$ m_{cdm} \f$: mass of Cold Dark Matter particle in GeV, necessary to compute number density, should be large. */
-  double P_acc_wdm;      /**< \f$ P_{acc} \f$: momentum kick imparted to WDM daughter in parent rest frame [GeV], precomputed as M_cdm*sqrt(eta*(eta+2)) */
+  double P_acc;          /**< \f$ P_{acc} \f$: momentum kick imparted to WDM daughter in parent rest frame [GeV], precomputed as M_cdm*sqrt(eta*(eta+2)) */
   double T_acc_GeV;   
   double eps_acc;
-  double k_fss_wdm;
+  double k_fss_acc;
 
   int acc_ncdm_index; /** Index for the accelerating ncdm species, UNUSED RIGHT NOW */
 
-  // double Omega_ini_accdm;  /**< \f$ \Omega_{ini,adm} \f$: rescaled initial value for accelerating dark matter density */
-  double Omega0_dcdmwdm;           /**< \f$ \Omega_{0 wdm}+\Omega_{0 cdm} \f$: Cold Dark Matter (cdm) accelerating to WDM (wdm) */
-  // double Omega_ini_acc;  /**< \f$ \Omega_{ini,acc} \f$: rescaled initial value for non-accelerating (cdm) dark matter density */
+  double Omega0_acc_cdm;    /**< \f$ \Omega_{0 acc\_cdm}+\Omega_{0 acc\_wdm} \f$: combined input density of the accelerating-DM sector (cdm parent accelerating into the wdm daughter) */
+  double Omega_ini_acc_cdm; /**< rescaled initial value for the acc_cdm parent density (shooting unknown) */
 
   // /* AG: Variables for testing ca2_ncdm */
   // short ca2_ncdm_bad;
@@ -183,15 +174,6 @@ struct background
   double z_eq;      /**< redshift at radiation/matter equality */
   double tau_eq;    /**< conformal time at radiation/matter equality [Mpc] */
 
-  /* Monopole (BRINGMANN 2018) modification */
-  double Omega0_mon; /**< \f$ \Omega_{0 mon} \f$: decaying monopoles */
-  /* End Monopole (BRINGMANN 2018) modification */
-
-  /* START Accelerating DM  */
-  // double Omega0_wdm; /**< \f$ \Omega_{0 wdm} \f$: accelerating DM */
-  // double Omega0_nonwdm; /**< \f$ \Omega_{0 nonwdm} \f$: non-accelerating DM = CDM */ /* Just use DCDM for this... */
-  /* END Accelerating DM */
-
   //@}
 
 
@@ -219,14 +201,9 @@ struct background
   int index_bg_rho_dcdm;      /**< dcdm density */
   int index_bg_rho_dr;        /**< dr density */
 
-  /* Monopole (BRINGMANN 2018) modification */
-  int index_bg_rho_mon;      /**< mon density */
-  int index_bg_Gamma_mon;      /**< mon density */
-  /* End Monopole (BRINGMANN 2018) modification */
-
   /* Accelerating DM */
-  int index_bg_Gamma_acc;      /**< acc DM density */
-  // int index_bg_rho_nonwdm;   /**< nonwdm (cdm) density */
+  int index_bg_Gamma_acc;      /**< acc DM decay rate */
+  int index_bg_rho_acc_cdm;    /**< acc_cdm (accelerating-DM parent) density */
   /* END Accelerating DM */
 
   int index_bg_phi_scf;       /**< scalar field value */
@@ -315,7 +292,7 @@ struct background
   int index_bi_phi_prime_scf; /**< {B} scalar field derivative wrt conformal time */
 
   /* Accelerating DM */
-  // int index_bi_rho_wdm;      /**< {B} accelerating dark matter density */
+  /* acc_cdm has no {B} integration slot: its density is analytic (see background_functions). */
   // int index_bi_rho_nonwdm;   /**< {B} non-accelerating (cdm) dark matter density */
   /* END accelerating DM */
 
@@ -353,12 +330,8 @@ struct background
   short has_curvature; /**< presence of global spatial curvature? */
   short has_varconst;  /**< presence of varying fundamental constants? */
 
-  /* Monopole (BRINGMANN 2018) modification */
-  short has_mon;      /**< presence of decaying monopoles? */
-  /* End Monopole (BRINGMANN 2018) modification */
-
   /* Accelerating DM */
-  short has_wdm;      /**< presence of accelerating dark matter? */
+  short has_acc;      /**< presence of accelerating dark matter? */
   short has_varGamma_dcdm; /**< presence of time-varying decay rate for decaying cold dark matter? */
   /* END Accelerating DM */
 
@@ -377,8 +350,8 @@ struct background
   double ** q_ncdm;     /**< Pointers to vectors of perturbation sampling in q */
   double ** w_ncdm;     /**< Pointers to vectors of corresponding quadrature weights w */
   double ** dlnf0_dlnq_ncdm; /**< Pointers to vectors of logarithmic derivatives of p-s-d */
-  double ** f0_ncdm_wdm;   /**< Precomputed f0(q) for WDM perturbation species */
-  double ** aq_ncdm_wdm;   /**< Precomputed a_q = q*T_acc/P_acc per q-bin */
+  double ** f0_ncdm_acc;   /**< Precomputed f0(q) for WDM perturbation species */
+  double ** aq_ncdm_acc;   /**< Precomputed a_q = q*T_acc/P_acc per q-bin */
   int * q_size_ncdm_bg; /**< Size of the q_ncdm_bg arrays */
   int * q_size_ncdm;    /**< Size of the q_ncdm arrays */
   double * factor_ncdm; /**< List of normalization factors for calculating energy density etc.*/

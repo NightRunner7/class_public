@@ -397,6 +397,14 @@ class_precision_parameter(ncdm_fluid_trigger_tau_over_tau_k,double,31.0)
  */
 class_precision_parameter(ncdm_fluid_trigger_rho_accDM_over_rho_dcdm,double,1.0e-6)
 /**
+ * relative tolerance for detecting a near-singular accDM adiabatic
+ * sound-speed denominator. The analytical ca2 = numerator/denominator
+ * blows up when denominator -> 0; we treat |denominator| < this tolerance
+ * times |3(1+w)| as "bad" and fall back to the source-free ncdm sound
+ * speed instead of dividing through. Has no effect when has_acc is false.
+ */
+class_precision_parameter(ncdm_ca2_den_tol,double,1.0e-3)
+/**
  * whether CMB source functions can be approximated as zero when
  * visibility function g(tau) is tiny
  */

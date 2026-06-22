@@ -114,11 +114,6 @@
 
 #include "background.h"
 
-/* Monopole (BRINGMANN 2018) modification */
-#include "gsl/gsl_sf_hyperg.h"
-#include "gsl/gsl_sf_gamma.h"
-/* End Monopole (BRINGMANN 2018) modification*/ 
-
 /**
  * Background quantities at given redshift z.
  *
@@ -425,8 +420,8 @@ int background_functions(
   pvecback[pba->index_bg_a] = a;
 
   /** Precompute some quantities for AccDM */
-  double a_k = pow(a, pba->kappa_mon);
-  double at_k = pow(a/pba->a_t_mon, pba->kappa_mon);
+  double a_k = pow(a, pba->kappa_acc);
+  double at_k = pow(a/pba->a_t_acc, pba->kappa_acc);
   double ratio_k = a_k/at_k;
 
   /** - compute each component's density and pressure */
@@ -463,40 +458,26 @@ int background_functions(
   /* dcdm */
   if (pba->has_dcdm == _TRUE_) {
     /* Pass value of rho_dcdm to output */
-    if (pba->has_varGamma_dcdm == _TRUE_){
-      pvecback[pba->index_bg_rho_dcdm] = pba->f_wdm * pba->Omega0_cdm * pow(pba->H0,2) / pow(a, 3) * (1-a_k)/(1+at_k);
-    }
-    else{
-      pvecback[pba->index_bg_rho_dcdm] = pvecback_B[pba->index_bi_rho_dcdm];
-    }
+    pvecback[pba->index_bg_rho_dcdm] = pvecback_B[pba->index_bi_rho_dcdm];
     rho_tot += pvecback[pba->index_bg_rho_dcdm];
     p_tot += 0.;
     rho_m += pvecback[pba->index_bg_rho_dcdm];
   }
 
-  /* Monopoles */
-  if (pba->has_mon == _TRUE_) {
-    /* Pass value of rho_mon to output */
-    pvecback[pba->index_bg_rho_mon] = pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * pba->f_mon * (1-a_k)/(1+at_k);
-    rho_tot += pvecback[pba->index_bg_rho_mon];
+  /* acc_cdm: accelerating-DM parent. Its density is known in closed form (the
+     expression below is exactly consistent with Gamma_acc computed later in this
+     function), so it needs no ODE or initial condition. The fraction f_acc is
+     added on top of the full cdm, preserving the original accDM normalization. */
+  if (pba->has_acc == _TRUE_) {
+    pvecback[pba->index_bg_rho_acc_cdm] = pba->f_acc * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.-a_k)/(1.+at_k);
+    rho_tot += pvecback[pba->index_bg_rho_acc_cdm];
     p_tot += 0.;
-    rho_m += pvecback[pba->index_bg_rho_mon];
+    rho_m += pvecback[pba->index_bg_rho_acc_cdm];
   }
 
   /* dr */
   if (pba->has_dr == _TRUE_) {
-    /* Pass value of rho_dr to output */
-    if (pba->has_mon == _TRUE_){
-      if (fabs(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)) < 1.)
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(a_k+pow(pba->a_t_mon,pba->kappa_mon)) * ((a_k+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.*pow(a/pba->a_t_mon,pba->kappa_mon)) - pow(pba->a_t_mon,pba->kappa_mon));
-      else if ((fabs(-1.*at_k) >= 1.) && (fabs(-1.*at_k) < 100.))
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(a_k+pow(pba->a_t_mon,pba->kappa_mon)) * ((a_k+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(a/pba->a_t_mon,pba->kappa_mon))/(-1.*pow(a/pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
-      else
-        pvecback[pba->index_bg_rho_dr] = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2) / pow(a,3) * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(a_k+pow(pba->a_t_mon,pba->kappa_mon)) * ((a_k+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(a/pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(a/pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
-    }
-    else {
-      pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
-    }
+    pvecback[pba->index_bg_rho_dr] = pvecback_B[pba->index_bi_rho_dr];
     rho_tot += pvecback[pba->index_bg_rho_dr];
     p_tot += (1./3.)*pvecback[pba->index_bg_rho_dr];
     dp_dloga += -(4./3.) * pvecback[pba->index_bg_rho_dr];
@@ -632,31 +613,13 @@ int background_functions(
     pvecback[pba->index_bg_p_tot_prime] += pvecback[pba->index_bg_p_prime_scf];
   }
 
-  /* Monopole (BRINGMANN 2018) modification */
-  /* Gamma_mon, the time-dependent inverse lifetime of DM */
-  if (pba->has_mon == _TRUE_) {
-    pvecback[pba->index_bg_Gamma_mon] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
-            ((1.-a_k)*(1.+at_k));
-    // Regulate divergence:
-    if (pvecback[pba->index_bg_Gamma_mon] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
-            pvecback[pba->index_bg_Gamma_mon]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
-    }
-  }
-  /* End Monopole (BRINGMANN 2018) modification */
-
-  /* AG: Gamma_acc, the decay rate for the wdm species. Must be computed
+  /* AG: Gamma_acc, the decay rate for the accDM species. Must be computed
      after pvecback[index_bg_H] is set above. */
-  if (pba->has_wdm == _TRUE_) {
-    // if (a_k == 1.) {
-    //   pvecback[pba->index_bg_Gamma_acc] = 0.;
-    // }
-    // else {
-      pvecback[pba->index_bg_Gamma_acc] = pvecback[pba->index_bg_H]*pba->kappa_mon*(a_k+at_k)/
+  if (pba->has_acc == _TRUE_) {
+    pvecback[pba->index_bg_Gamma_acc] = pvecback[pba->index_bg_H]*pba->kappa_acc*(a_k+at_k)/
           ((1.-a_k)*(1.+at_k));
-    // }
-    // Regulate divergence:
-    if (pvecback[pba->index_bg_Gamma_acc] / (pvecback[pba->index_bg_H]*pba->kappa_mon) >= 100.){
-        pvecback[pba->index_bg_Gamma_acc]  = pvecback[pba->index_bg_H]*pba->kappa_mon * 100.;
+    if (pvecback[pba->index_bg_Gamma_acc] / (pvecback[pba->index_bg_H]*pba->kappa_acc) >= 100.){
+        pvecback[pba->index_bg_Gamma_acc]  = pvecback[pba->index_bg_H]*pba->kappa_acc * 100.;
     }
     pvecback[pba->index_bg_Gamma_acc] = MAX(0., pvecback[pba->index_bg_Gamma_acc]); // AG: Set to zero if negative, but this should be investigated further
   }
@@ -762,8 +725,6 @@ int background_w_fld(
     if (pba->has_idm == _TRUE_) Omega_m += pba->Omega0_idm;
     if (pba->has_dcdm == _TRUE_)
       class_stop(pba->error_message,"Early Dark Energy not compatible with decaying Dark Matter because we omitted to code the calculation of a_eq in that case, but it would not be difficult to add it if necessary, should be a matter of 5 minutes");
-    if (pba->has_mon == _TRUE_)
-      class_stop(pba->error_message,"Early Dark Energy not compatible with decaying Monopoles because we omitted to code the calculation of a_eq in that case, but it would not be difficult to add it if necessary, should be a matter of 5 minutes");
     a_eq = Omega_r/Omega_m; // assumes a flat universe with a=1 today
 
     // w_ede(a) taken from eq. (11) in 1706.00730
@@ -993,8 +954,8 @@ int background_free_input(
       free(pba->q_ncdm_bg[k]);
       free(pba->w_ncdm_bg[k]);
       free(pba->dlnf0_dlnq_ncdm[k]);
-      free(pba->f0_ncdm_wdm[k]);
-      free(pba->aq_ncdm_wdm[k]);
+      free(pba->f0_ncdm_acc[k]);
+      free(pba->aq_ncdm_acc[k]);
     }
     free(pba->ncdm_quadrature_strategy);
     free(pba->ncdm_input_q_size);
@@ -1004,8 +965,8 @@ int background_free_input(
     free(pba->q_ncdm_bg);
     free(pba->w_ncdm_bg);
     free(pba->dlnf0_dlnq_ncdm);
-    free(pba->f0_ncdm_wdm);
-    free(pba->aq_ncdm_wdm);
+    free(pba->f0_ncdm_acc);
+    free(pba->aq_ncdm_acc);
     free(pba->q_size_ncdm);
     free(pba->q_size_ncdm_bg);
     free(pba->M_ncdm);
@@ -1056,12 +1017,6 @@ int background_indices(
   pba->has_idm = _FALSE_;
   pba->has_ncdm = _FALSE_;
   pba->has_dcdm = _FALSE_;
-  /* Monopole (BRINGMANN 2018) modification */
-  pba->has_mon = _FALSE_;
-  /* End Monopole (BRINGMANN 2018) modification */
-  /* Accelerating Dark Matter */
-  pba->has_wdm = _FALSE_;
-  /* End Accelerating Dark Matter */
   pba->has_dr = _FALSE_;
   pba->has_scf = _FALSE_;
   pba->has_lambda = _FALSE_;
@@ -1070,6 +1025,9 @@ int background_indices(
   pba->has_idr = _FALSE_;
   pba->has_curvature = _FALSE_;
   pba->has_varconst  = _FALSE_;
+  /* Accelerating Dark Matter */
+  pba->has_acc = _FALSE_;
+  /* End Accelerating Dark Matter */
 
   if (pba->Omega0_cdm != 0.)
     pba->has_cdm = _TRUE_;
@@ -1080,25 +1038,18 @@ int background_indices(
   if (pba->Omega0_ncdm_tot != 0.)
     pba->has_ncdm = _TRUE_;
 
-  if (pba->Omega0_dcdmdr != 0. || (pba->Omega_ini_dcdm != 0. && pba->m_wdm_in_GeV == 0.)) {
+  if (pba->Omega0_dcdmdr != 0. || (pba->Omega_ini_dcdm != 0. && pba->m_acc_in_GeV == 0.)) {
     pba->has_dcdm = _TRUE_;
     if (pba->Gamma_dcdm != 0.)
       pba->has_dr = _TRUE_;
   }
 
-  if (pba->Omega0_dcdmwdm != 0. || (pba->Omega_ini_dcdm != 0. && pba->m_wdm_in_GeV != 0.)) {
-    pba->has_dcdm = _TRUE_;
-    if (pba->Gamma_dcdm != 0.)
-      pba->has_wdm = _TRUE_;
+  /* accDM: the parent (acc_cdm) is its own component, gated on has_acc only.
+     It no longer piggybacks on has_dcdm (that flag is now reserved for genuine
+     decaying cold dark matter). */
+  if (pba->Omega0_acc_cdm != 0. || (pba->Omega_ini_dcdm != 0. && pba->m_acc_in_GeV != 0.) || (pba->f_acc != 0. && pba->m_acc_in_GeV != 0.)) {
+      pba->has_acc = _TRUE_;
   }
-
-  /* Monopole (BRINGMANN 2018) modification */
-  if (pba->Omega0_mondr != 0.) {
-    pba->has_mon = _TRUE_;
-  if (pba->a_t_mon != 0.)
-    pba->has_dr = _TRUE_;
-  }
-  /* End Monopole (BRINGMANN 2018) modification */
 
   if (pba->Omega0_scf != 0.)
     pba->has_scf = _TRUE_;
@@ -1157,16 +1108,9 @@ int background_indices(
   /* - index for dcdm */
   class_define_index(pba->index_bg_rho_dcdm,pba->has_dcdm,index_bg,1);
 
-  /* Monopole (BRINGMANN 2018) modification */
-  /* - index for mon */
-  class_define_index(pba->index_bg_rho_mon,pba->has_mon,index_bg,1);
-
-  /* - index for gamma_mon */
-  class_define_index(pba->index_bg_Gamma_mon,pba->has_mon,index_bg,1);
-  /* End Monopole (BRINGMANN 2018) modification */
-
   /* START accDM */
-  class_define_index(pba->index_bg_Gamma_acc,pba->has_wdm,index_bg,1);;
+  class_define_index(pba->index_bg_Gamma_acc,pba->has_acc,index_bg,1);
+  class_define_index(pba->index_bg_rho_acc_cdm,pba->has_acc,index_bg,1);
   /* END accDM */
 
   /* - index for dr */
@@ -1392,7 +1336,7 @@ int background_ncdm_distribution(
     /*    ACCELERATING DARK MATTER PHASE-SPACE APPROACH   */
     /******************************************************/
 
-    if (n_ncdm==pba->N_ncdm-1 && pba->has_wdm == _TRUE_) {
+    if (n_ncdm==pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
 
       /* Convert T_cmb to eV and GeV for later use */
       double T_cmb_in_eV = pba->T_cmb * _k_B_ / _eV_;
@@ -1402,7 +1346,6 @@ int background_ncdm_distribution(
 
       /* Extract masses in GeV */
       double M_cdm = pba->M_cdm_in_GeV; 
-      // double m_wdm = pba->m_wdm_in_GeV; 
 
       double q_factor = (pba->T_cmb*pba->T_ncdm[n_ncdm] / (_h_P_ * _c_ / _k_B_ / 2 / _PI_ ) * _Mpc_over_m_);
       double qcube = pow(q * q_factor, 3);
@@ -1410,7 +1353,7 @@ int background_ncdm_distribution(
       /*** Hubble rate and time at for considered momentum q value ***/
 
       /* Momentum transfer from acceleration (precomputed in input) */
-      double P_acc = pba->P_acc_wdm; /* In GeV! */
+      double P_acc = pba->P_acc; /* In GeV! */
 
       /* Scale factor corresponding to the considered comoving momentum q */
       double a_q = q*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
@@ -1421,12 +1364,12 @@ int background_ncdm_distribution(
       }
       else {
         /*** qcube and number density computation -- rho_dcdm has different functional form so it WON'T evolve as exp(-Gamma*q) ***/
-        double rho_dcdm_comoving = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_wdm *(1-pow(a_q, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon)) * 3 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
+        double rho_acc_cdm_comoving = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_acc *(1-pow(a_q, pba->kappa_acc))/(1+pow(a_q/pba->a_t_acc, pba->kappa_acc)) * 3 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
         double parent_mass_kg = M_cdm * 1e9 * _eV_ / (_c_ * _c_);
-        double n_dcdm_comoving = rho_dcdm_comoving / parent_mass_kg; // In 1/Mpc^3
+        double n_dcdm_comoving = rho_acc_cdm_comoving / parent_mass_kg; // In 1/Mpc^3
 
         /*** General Gamma ***/
-        double Gamma_q_over_H_q = pba->kappa_mon * (pow(a_q, pba->kappa_mon)+pow(a_q/pba->a_t_mon, pba->kappa_mon))/(1-pow(a_q, pba->kappa_mon))/(1+pow(a_q/pba->a_t_mon, pba->kappa_mon));
+        double Gamma_q_over_H_q = pba->kappa_acc * (pow(a_q, pba->kappa_acc)+pow(a_q/pba->a_t_acc, pba->kappa_acc))/(1-pow(a_q, pba->kappa_acc))/(1+pow(a_q/pba->a_t_acc, pba->kappa_acc));
         // Ensure that Gamma_q_over_H_q does not exceed 100 to avoid numerical issues
         Gamma_q_over_H_q = MIN(Gamma_q_over_H_q, 100.0);
 
@@ -1542,8 +1485,8 @@ int background_ncdm_init(
   class_alloc(pba->q_ncdm_bg, sizeof(double*)*pba->N_ncdm,pba->error_message);
   class_alloc(pba->w_ncdm_bg, sizeof(double*)*pba->N_ncdm,pba->error_message);
   class_alloc(pba->dlnf0_dlnq_ncdm, sizeof(double*)*pba->N_ncdm,pba->error_message);
-  class_alloc(pba->f0_ncdm_wdm,  sizeof(double*)*pba->N_ncdm, pba->error_message);
-  class_alloc(pba->aq_ncdm_wdm,  sizeof(double*)*pba->N_ncdm, pba->error_message);
+  class_alloc(pba->f0_ncdm_acc,  sizeof(double*)*pba->N_ncdm, pba->error_message);
+  class_alloc(pba->aq_ncdm_acc,  sizeof(double*)*pba->N_ncdm, pba->error_message);
 
   /* Allocate pointers: */
   class_alloc(pba->q_size_ncdm,sizeof(int)*pba->N_ncdm,pba->error_message);
@@ -1682,8 +1625,8 @@ int background_ncdm_init(
     class_alloc(pba->dlnf0_dlnq_ncdm[k],
                 pba->q_size_ncdm[k]*sizeof(double),
                 pba->error_message);
-    class_alloc(pba->f0_ncdm_wdm[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
-    class_alloc(pba->aq_ncdm_wdm[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
+    class_alloc(pba->f0_ncdm_acc[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
+    class_alloc(pba->aq_ncdm_acc[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
 
 
     for (index_q=0; index_q<pba->q_size_ncdm[k]; index_q++) {
@@ -1691,8 +1634,8 @@ int background_ncdm_init(
       class_call(background_ncdm_distribution(&pbadist,q,&f0),
                  pba->error_message,pba->error_message);
 
-      if (k == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
-        pba->aq_ncdm_wdm[k][index_q] = q * pba->T_acc_GeV / pba->P_acc_wdm;
+      if (k == pba->N_ncdm - 1 && pba->has_acc == _TRUE_) {
+        pba->aq_ncdm_acc[k][index_q] = q * pba->T_acc_GeV / pba->P_acc;
       }
 
       //Loop to find appropriate dq:
@@ -1728,7 +1671,7 @@ int background_ncdm_init(
         pba->dlnf0_dlnq_ncdm[k][index_q] = -q; /* valid for whatever f0 with exponential tail in exp(-q) */
       }
       else{
-        if (k == pba->N_ncdm - 1) {
+        if (k == pba->N_ncdm - 1 && pba->has_acc == _TRUE_) {
           // AG: Do nothing? This is recomputed later on anyway. 
           // pba->dlnf0_dlnq_ncdm[k][index_q] = q*df0dq; // GFA Instead of evolving psi, we directly evolve f0*psi. Hence, the f0 at the denominator cancels out.
         }
@@ -1800,7 +1743,7 @@ int background_ncdm_momenta(
   double P_acc = 1.;  
   double T_cmb_in_GeV = 1.0;
   double T_ncdm_today_GeV = 1.0; 
-  int is_wdm = 0;                         
+  int is_acc = 0;                         
 
   /** Summary: */
 
@@ -1814,12 +1757,12 @@ int background_ncdm_momenta(
   if (drho_dM!=NULL) *drho_dM = 0.;
   if (pseudo_p!=NULL) *pseudo_p = 0.;
 
-  if (pba->has_wdm == _TRUE_ && n_ncdm == pba->N_ncdm - 1) {
-    is_wdm = 1;
+  if (pba->has_acc == _TRUE_ && n_ncdm == pba->N_ncdm - 1) {
+    is_acc = 1;
     // T_cmb_in_GeV = pba->T_cmb * _k_B_ / _eV_ / 1.e9;
     // T_ncdm_today_GeV = T_cmb_in_GeV * pba->T_ncdm[n_ncdm]; 
 
-    // P_acc = pba->P_acc_wdm; /* In GeV, precomputed in input */
+    // P_acc = pba->P_acc; /* In GeV, precomputed in input */
   }      
 
   /** - loop over momenta */
@@ -1827,9 +1770,9 @@ int background_ncdm_momenta(
 
     z_q = 1e100; // some large value, so that it'll always compute for non-WDM species
 
-    if (is_wdm) {
+    if (is_acc) {
       //double a_q = qvec[index_q]*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
-      z_q = 1.0/pba->aq_ncdm_wdm[n_ncdm][index_q] - 1.0; // Redshift corresponding to a_q */
+      z_q = 1.0/pba->aq_ncdm_acc[n_ncdm][index_q] - 1.0; // Redshift corresponding to a_q */
     }
 
     if (z < z_q){ // Neglect contribution of WDM particles that have not yet been produced at redshift z.
@@ -2209,38 +2152,10 @@ int background_solve(
       pba->Omega0_dcdm = pvecback_integration[pba->index_bi_rho_dcdm]/pba->H0/pba->H0;
     }
   }
-  /* Monopole (BRINGMANN 2018) modification */
-  if (pba->has_mon == _TRUE_) {
-   // Note that in our conventions, omega0dcdm is identicaly 0 (it is proportional to 1-a)
-    pba->Omega0_mon = 0.0;
-  }
+
   if (pba->has_dr == _TRUE_) {
-    if (pba->has_mon == _TRUE_){
-      int rhodr_0;
-
-      /** GNU function only converges for |z|<1 */
-      /** so use identity from http://functions.wolfram.com/HypergeometricFunctions/Hypergeometric2F1/17/ShowAll.html */
-      /** specifically the second identity in "Generic general cases" */
-      /** NEED TO USE ASYMPTOTIC FORMULA FOR z>1 */
-      /** based on tests in Mathematica: */
-      /** - use the GNU routine when argument |z|<1 */
-      /** - use the identity approach when 1<=|z|<100 */
-      /** - use the asymptotic approach when |z|>=100 */
-
-      if (fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) < 1.)
-        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * gsl_sf_hyperg_2F1(1., 1./pba->kappa_mon, 1.+1./pba->kappa_mon, -1.) - pow(pba->a_t_mon,pba->kappa_mon));
-      else if ((fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) >= 1.) && (fabs(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)) < 100.))
-        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (1./(1.-(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)))) * gsl_sf_hyperg_2F1(1., 1., 1.+1./pba->kappa_mon, (-1.*pow(1./pba->a_t_mon,pba->kappa_mon))/(-1.*pow(1./pba->a_t_mon,pba->kappa_mon)-1.)) - pow(pba->a_t_mon,pba->kappa_mon));
-      else
-        rhodr_0 = pba->f_mon * pba->Omega0_cdm * pow(pba->H0,2)  * (1.+pow(pba->a_t_mon,pba->kappa_mon))/(1.+pow(pba->a_t_mon,pba->kappa_mon)) * ((1.+pow(pba->a_t_mon,pba->kappa_mon)) * (pow(1./pow(1./pba->a_t_mon,pba->kappa_mon),1./pba->kappa_mon) * gsl_sf_gamma(1.-1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) + (-1. * gsl_sf_gamma(-1.+1./pba->kappa_mon) * gsl_sf_gamma(1.+1./pba->kappa_mon) / (gsl_sf_gamma(1./pba->kappa_mon)*gsl_sf_gamma(1./pba->kappa_mon)*(-1.*pow(1./pba->a_t_mon,pba->kappa_mon))))) - pow(pba->a_t_mon,pba->kappa_mon));
-
-      pba->Omega0_dr = rhodr_0/pba->H0/pba->H0;  
-
-    }
-    else
       pba->Omega0_dr = pvecback_integration[pba->index_bi_rho_dr]/pba->H0/pba->H0;
   }
-  /* End Monopole (BRINGMANN 2018) modification */
 
   /* -> scale-invariant growth rate today */
   D_today = pvecback_integration[pba->index_bi_D];
@@ -2323,24 +2238,14 @@ int background_solve(
              pba->Omega0_dr+pba->Omega0_dcdm,pba->Omega0_dcdmdr);
       printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
     }
-    /* Monopole (BRINGMANN 2018) modification */
-    if ((pba->has_mon == _TRUE_)&&(pba->has_dr == _TRUE_)) {
-      printf("    Decaying Monopoles details: (MON --> DR)\n");
-      printf("     -> Omega0_mon = %f\n",pba->Omega0_mon);
-      printf("     -> Omega0_dr = %f\n",pba->Omega0_dr);
-      printf("     -> Omega0_dr+Omega0_mon = %f, input value = %f\n",
-             pba->Omega0_dr+pba->Omega0_mon,pba->Omega0_mondr);
-      printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
-    }
-    if ((pba->has_dcdm == _TRUE_)&&(pba->has_wdm == _TRUE_)) {
-      printf("    Decaying Cold Dark Matter details: (DCDM --> WDM)\n");
+    if (pba->has_acc == _TRUE_) {
+      printf("    Accelerating Dark Matter details: \n");
       printf("     -> Omega0_dcdm = %f\n",pba->Omega0_dcdm);
-      printf("     -> Omega0_wdm = %f\n",pba->Omega0_ncdm[pba->N_ncdm-1]);
-      printf("     -> Omega0_wdm+Omega0_dcdm = %f, input value = %f\n",
-             pba->Omega0_ncdm[pba->N_ncdm-1]+pba->Omega0_dcdm,pba->Omega0_dcdmwdm);
+      printf("     -> Omega0_acc = %f\n",pba->Omega0_ncdm[pba->N_ncdm-1]);
+      printf("     -> Omega0_acc+Omega0_dcdm = %f, input value = %f\n",
+             pba->Omega0_ncdm[pba->N_ncdm-1]+pba->Omega0_dcdm,pba->Omega0_acc_cdm);
       printf("     -> Omega_ini_dcdm/Omega_b = %f\n",pba->Omega_ini_dcdm/pba->Omega0_b);
     }
-    /* End Monopole (BRINGMANN 2018) modification */
     if (pba->has_scf == _TRUE_) {
       printf("    Scalar field details:\n");
       printf("     -> Omega_scf = %g, wished %g\n",
@@ -2371,10 +2276,6 @@ int background_solve(
     pba->Omega0_nfsm += pba->Omega0_idm;
   if (pba->has_dcdm == _TRUE_)
     pba->Omega0_nfsm += pba->Omega0_dcdm;
-  /* Monopole (BRINGMANN 2018) modification */
-  if (pba->has_mon == _TRUE_)
-    pba->Omega0_nfsm += pba->Omega0_mon;
-  /* End Monopole (BRINGMANN 2018) modification */
   for (n_ncdm=0;n_ncdm<pba->N_ncdm; n_ncdm++) {
     /* here we define non-free-streaming matter as: any non-relatistic species with a dimensionless ratio m/T bigger than a threshold ppr->M_nfsm_threshold; if this threshold is of the order of 10^4, this corresponds to the condition "becoming non-relativistic during radiation domination". Beware: this definition won't work in the case in which the user passes a customised p.s.d. for ncdm, such that M_ncdm is not defined.  */
     if (pba->M_ncdm[n_ncdm] > ppr->M_nfsm_threshold) {
@@ -2456,8 +2357,8 @@ int background_initial_conditions(
                    pba->error_message,
                    pba->error_message);
         rho_ncdm_rel_tot += 3.*p_ncdm;
-        /* Skip WDM species */
-        if (pba->has_wdm && n_ncdm == pba->N_ncdm - 1) { 
+        /* Skip AccDM species */
+        if (pba->has_acc && n_ncdm == pba->N_ncdm - 1) { 
             continue;
         }
         if (fabs(p_ncdm/rho_ncdm-1./3.)>ppr->tol_ncdm_initial_w) {
@@ -2510,9 +2411,9 @@ int background_initial_conditions(
       f = 1./3.*pow(a,6)*pvecback_integration[pba->index_bi_rho_dcdm]*pba->Gamma_dcdm/pow(pba->H0,3)/sqrt(Omega_rad);
       pvecback_integration[pba->index_bi_rho_dr] = f*pba->H0*pba->H0/pow(a,4);
     }
-    else if (pba->has_mon == _TRUE_){
-      /* DO NOTHING */
-    }
+    // else if (pba->has_mon == _TRUE_){
+    //   /* DO NOTHING */
+    // }
     else{
       /** There is also a space reserved for a future case where dr is not sourced by dcdm */
       pvecback_integration[pba->index_bi_rho_dr] = 0.0;
@@ -2731,8 +2632,8 @@ int background_output_titles(
       class_store_columntitle(titles,tmp,_TRUE_);
       class_sprintf(tmp,"(.)pseudo_p_ncdm[%d]",n);
       class_store_columntitle(titles,tmp,_TRUE_);
-      if (n == pba->N_ncdm - 1 && pba->has_wdm == _TRUE_) {
-        class_store_columntitle(titles,"Gamma_acc",pba->has_wdm);
+      if (n == pba->N_ncdm - 1 && pba->has_acc == _TRUE_) {
+        class_store_columntitle(titles,"Gamma_acc",pba->has_acc);
       }
     }
   }
@@ -2743,9 +2644,7 @@ int background_output_titles(
   class_store_columntitle(titles,"(.)rho_idr",pba->has_idr);
   class_store_columntitle(titles,"(.)rho_crit",_TRUE_);
   class_store_columntitle(titles,"(.)rho_dcdm",pba->has_dcdm);
-  /* Monopole (BRINGMANN 2018) modification */
-  class_store_columntitle(titles,"(.)rho_mon",pba->has_mon);
-  /* End Monopole (BRINGMANN 2018) modification */
+  class_store_columntitle(titles,"(.)rho_acc_cdm",pba->has_acc);
   class_store_columntitle(titles,"(.)rho_dr",pba->has_dr);
 
   class_store_columntitle(titles,"(.)rho_scf",pba->has_scf);
@@ -2811,8 +2710,8 @@ int background_output_data(
         class_store_double(dataptr,pvecback[pba->index_bg_rho_ncdm1+n],_TRUE_,storeidx);
         class_store_double(dataptr,pvecback[pba->index_bg_p_ncdm1+n],_TRUE_,storeidx);
         class_store_double(dataptr,pvecback[pba->index_bg_pseudo_p_ncdm1+n],_TRUE_,storeidx);
-        if (n == pba->N_ncdm - 1 && pba->has_wdm) {
-          class_store_double(dataptr,pvecback[pba->index_bg_Gamma_acc],pba->has_wdm,storeidx);
+        if (n == pba->N_ncdm - 1 && pba->has_acc) {
+          class_store_double(dataptr,pvecback[pba->index_bg_Gamma_acc],pba->has_acc,storeidx);
         }
       }
     }
@@ -2823,15 +2722,8 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_rho_idr],pba->has_idr,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_crit],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dcdm],pba->has_dcdm,storeidx);
-    /* Monopole (BRINGMANN 2018) modification */
-    class_store_double(dataptr,pvecback[pba->index_bg_rho_mon],pba->has_mon,storeidx);
-    /* End Monopole (BRINGMANN 2018) modification */
+    class_store_double(dataptr,pvecback[pba->index_bg_rho_acc_cdm],pba->has_acc,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dr],pba->has_dr,storeidx);
-
-    /* Monopole (BRINGMANN 2018) modification */
-    class_store_double(dataptr,pvecback[pba->index_bg_Gamma_mon],pba->has_mon,storeidx);
-    /* End Monopole (BRINGMANN 2018) modification */
-
     class_store_double(dataptr,pvecback[pba->index_bg_rho_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_p_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_p_prime_scf],pba->has_scf,storeidx);
@@ -3078,7 +2970,7 @@ int background_timescale(
  * perturbations_derivs (see perturbations.c around the ncdmfa branch). The
  * formula here mirrors the one used in derivs and depends only on
  * background quantities (rho_ncdm, p_ncdm, pseudo_p_ncdm, rho_dcdm, H,
- * Gamma_acc) plus the constant eps_acc.
+ * Gamma_acc) plus the constant eta_acc.
  *
  * Records pba->ca2_ncdm_bad, ca2_ncdm_min, ca2_ncdm_min_tau, ca2_ncdm_min_a.
  * Does not abort.
@@ -3090,8 +2982,8 @@ int background_check_ca2_ncdm(
 
   int index_loga;
   double *pvecback;
-  double a, tau, H, gamma, rho_cdm, rho_dcdm, rho_ncdm, p_ncdm, pseudo_p_ncdm;
-  double w_ncdm, ratio_rho, eps;
+  double a, tau, H, gamma, rho_cdm, rho_acc_cdm, rho_acc_wdm, p_acc_wdm, pseudo_p_acc_wdm;
+  double w_ncdm, ratio_rho;
   double num, den, ca2;
   int idx_last_ncdm;
 
@@ -3100,11 +2992,10 @@ int background_check_ca2_ncdm(
   pba->ca2_ncdm_min_tau = 0.;
   pba->ca2_ncdm_min_a = 0.;
 
-  if (pba->has_dcdm == _FALSE_ || pba->has_ncdm == _FALSE_) return _SUCCESS_;
+  if (pba->has_acc == _FALSE_ || pba->has_ncdm == _FALSE_) return _SUCCESS_;
   if (pba->N_ncdm <= 0) return _SUCCESS_;
 
   idx_last_ncdm = pba->N_ncdm - 1;
-  eps = pba->eps_acc;
 
   for (index_loga = 0; index_loga < pba->bt_size; index_loga++) {
 
@@ -3113,20 +3004,20 @@ int background_check_ca2_ncdm(
     tau = pba->tau_table[index_loga];
     H = pvecback[pba->index_bg_H];
     gamma = pvecback[pba->index_bg_Gamma_acc];
-    rho_cdm = pvecback[pba->index_bg_rho_cdm];
-    rho_dcdm = pvecback[pba->index_bg_rho_dcdm];
-    rho_ncdm = pvecback[pba->index_bg_rho_ncdm1 + idx_last_ncdm];
-    p_ncdm = pvecback[pba->index_bg_p_ncdm1 + idx_last_ncdm];
-    pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1 + idx_last_ncdm];
+    //rho_cdm = pvecback[pba->index_bg_rho_cdm];
+    rho_acc_cdm = pvecback[pba->index_bg_rho_acc_cdm];
+    rho_acc_wdm = pvecback[pba->index_bg_rho_ncdm1 + idx_last_ncdm];
+    p_acc_wdm = pvecback[pba->index_bg_p_ncdm1 + idx_last_ncdm];
+    pseudo_p_acc_wdm = pvecback[pba->index_bg_pseudo_p_ncdm1 + idx_last_ncdm];
 
-    if (rho_ncdm <= 0. || H <= 0. || p_ncdm <= 0.) continue;
+    if (rho_acc_wdm <= 0. || H <= 0. || p_acc_wdm <= 0.) continue;
 
-    w_ncdm = p_ncdm / rho_ncdm;
-    ratio_rho = (rho_dcdm + rho_cdm) / rho_ncdm;
+    w_ncdm = p_acc_wdm / rho_acc_wdm;
+    ratio_rho = rho_acc_cdm / rho_acc_wdm;
 
-    num = w_ncdm * (5.0 - pseudo_p_ncdm / p_ncdm)
-          - ratio_rho * (gamma / (3.0 * H)) * eps * eps / (1.0 - eps);
-    den = 3.0 * (1.0 + w_ncdm) - ratio_rho * (gamma / H) * (1.0 - eps);
+    num = w_ncdm * (5.0 - pseudo_p_acc_wdm / p_acc_wdm)
+          - ratio_rho * (gamma / (3.0 * H)) * (pba->eta_acc * pba->eta_acc + 2*pba->eta_acc) / (1.0 + pba->eta_acc);
+    den = 3.0 * (1.0 + w_ncdm) - ratio_rho * (gamma / H) * (1.0 + pba->eta_acc);
 
     if (den == 0.) {
       pba->ca2_ncdm_bad = _TRUE_;
@@ -3203,12 +3094,6 @@ int background_output_budget(
       class_print_species("Decaying Cold Dark Matter",dcdm);
       budget_matter+=pba->Omega0_dcdm;
     }
-    /* Monopole (BRINGMANN 2018) modification */
-    if (pba->has_mon == _TRUE_) {
-      class_print_species("Decaying Monopoles",mon);
-      budget_matter+=pba->Omega0_mon;
-    }
-    /* End Monopole (BRINGMANN 2018) modification */
 
     if (pba->N_ncdm > 0) {
       printf(" ---> Non-Cold Dark Matter Species (incl. massive neutrinos)\n");

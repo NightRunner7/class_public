@@ -1,0 +1,51 @@
+{
+  "param_hash": "541067ceeec2",
+  "params": {
+    "omega_b": "0.022383",
+    "omega_cdm": "0.10919090909108206",
+    "H0": "67.32",
+    "A_s": "2.1005829616811546e-09",
+    "n_s": "0.96605",
+    "tau_reio": "0.0543",
+    "output": "tCl,pCl,lCl,mPk",
+    "lensing": "yes",
+    "l_max_scalars": "2500",
+    "P_k_max_1/Mpc": "10.0",
+    "z_max_pk": "0.0",
+    "vary_Gamma_acc": "yes",
+    "kappa_acc": "5.0",
+    "a_t_acc": "0.13",
+    "f_acc": "0.1",
+    "eta_acc": "0.1",
+    "m_acc_in_GeV": "1e+16",
+    "m_cdm_in_GeV": "1e+16",
+    "N_ncdm": "2",
+    "deg_ncdm": "1, 1",
+    "m_ncdm": "0.02, 1e+16*1e9",
+    "T_ncdm": "0.711, 1",
+    "N_ur": "0.0046",
+    "ncdm_quadrature_strategy": "0, 4",
+    "ncdm_N_momentum_bins": "15, 501",
+    "reionization_z_start_max": "80",
+    "evolver": "0",
+    "tau_acc": "0.0",
+    "background_Nloga": "5000",
+    "ncdm_fluid_approximation": "3, 3"
+  },
+  "scalars": {
+    "sigma8": 0.8473234913344224,
+    "Omega_m": 0.3148242500301743,
+    "h": 0.6731999999999999,
+    "100*theta_s": 1.1244292049019733,
+    "z_reio": 7.5358123779296875,
+    "age": 13.805648355819068,
+    "A_s": 2.1005829616811546e-09,
+    "Omega_acc": 0.02414982757231056
+  },
+  "tol": {
+    "scalar": 0.0001,
+    "bg": 0.0001,
+    "cl": 0.001,
+    "pk": 0.001
+  }
+}
