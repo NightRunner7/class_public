@@ -3821,6 +3821,52 @@ int perturbations_find_approximation_switches(
 }
 
 /**
+ * AccDM: daughter fluid stiffness ratio  Lambda / max(aH, k*sqrt(ca2))  at the
+ * current background time. ppw->pvecback must already be filled for the desired
+ * tau by the caller. Lambda = a*Gamma*(1+eta)*((1+ca2)/(1+w))*ratio_rho is the
+ * decay relaxation rate of the daughter Euler/continuity source; the daughter
+ * fluid is stable for the explicit rk evolver only when this ratio is < O(1).
+ * Returns a huge value ("still stiff") when has_acc is false, the daughter is
+ * unborn, or any quantity is degenerate, so callers keep the exact hierarchy.
+ */
+static double perturbations_acc_stiff_ratio(struct background * pba,
+                                            struct perturbations_workspace * ppw,
+                                            double k) {
+
+  int n_acc;
+  double rho_ncdm_bg, p_ncdm_bg, w_ncdm, rho_acc_cdm_bg, pseudo_p_ncdm;
+  double Gamma, H, a_bg, eta, ratio_rho, ca2_0, Lambda, rate, k_rate;
+
+  if (pba->has_acc == _FALSE_) return 1.e300;
+
+  n_acc       = pba->N_ncdm-1;
+  rho_ncdm_bg = ppw->pvecback[pba->index_bg_rho_ncdm1 + n_acc];
+  p_ncdm_bg   = ppw->pvecback[pba->index_bg_p_ncdm1 + n_acc];
+  /* daughter unborn or degenerate pressure -> treat as still stiff */
+  if (rho_ncdm_bg <= 0. || p_ncdm_bg <= 0.) return 1.e300;
+  w_ncdm = p_ncdm_bg/rho_ncdm_bg;
+  if (1.0 + w_ncdm <= 0.) return 1.e300;       /* guard 1/(1+w) below */
+
+  rho_acc_cdm_bg = ppw->pvecback[pba->index_bg_rho_acc_cdm];
+  pseudo_p_ncdm  = ppw->pvecback[pba->index_bg_pseudo_p_ncdm1 + n_acc];
+  Gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
+  H     = ppw->pvecback[pba->index_bg_H];
+  a_bg  = ppw->pvecback[pba->index_bg_a];
+  eta   = pba->eta_acc;
+
+  ratio_rho = rho_acc_cdm_bg/rho_ncdm_bg;
+  ca2_0     = w_ncdm*(5.0 - pseudo_p_ncdm/p_ncdm_bg)/(3.0*(1.0+w_ncdm));
+  if (ca2_0 < 0.) ca2_0 = 0.;
+
+  Lambda = a_bg*Gamma*(1.0+eta)*((1.0+ca2_0)/(1.0+w_ncdm))*ratio_rho;
+  rate   = a_bg*H;
+  k_rate = k*sqrt(ca2_0);   /* 0 when ca2_0==0 -> gate falls back to aH only */
+  if (k_rate > rate) rate = k_rate;
+
+  return (rate > 0.) ? Lambda/rate : 1.e300;
+}
+
+/**
  * Initialize the field '-->pv' of a perturbations_workspace structure, which
  * is a perturbations_vector structure. This structure contains indices and
  * values of all quantities which need to be integrated with respect
@@ -4973,10 +5019,18 @@ int perturbations_vector_init(
 
         if ((pa_old[ppw->index_ap_ncdmfa] == (int)ncdmfa_off) && (ppw->approx[ppw->index_ap_ncdmfa] == (int)ncdmfa_on)) {
 
-          if (ppt->perturbations_verbose>2)
-            fprintf(stdout,"Mode k=%e: switch on ncdm fluid approximation at tau=%e"
-                           " (acc stiffness ratio Lambda/max(aH,k*c_s)=%e)\n",
-                           k,tau,ppw->acc_stiff_ratio);
+          if (ppt->perturbations_verbose>2) {
+            /* ppw->pvecback is at ~tau here (left by the previous interval's
+               integration, same basis the moment conversion below relies on),
+               so recompute the ratio now rather than reading a value left over
+               from an unrelated perturbations_approximations() call. */
+            if (pba->has_acc == _TRUE_)
+              fprintf(stdout,"Mode k=%e: switch on ncdm fluid approximation at tau=%e"
+                             " (acc stiffness ratio Lambda/max(aH,k*c_s)=%e)\n",
+                             k,tau,perturbations_acc_stiff_ratio(pba,ppw,k));
+            else
+              fprintf(stdout,"Mode k=%e: switch on ncdm fluid approximation at tau=%e\n",k,tau);
+          }
 
           if (ppw->approx[ppw->index_ap_rsa] == (int)rsa_off) {
 
@@ -6408,29 +6462,9 @@ int perturbations_approximations(
          modes tolerate the fluid earlier). Replaces the k-independent
          density-ratio gate. See docs/superpowers/specs/2026-06-22-*. */
       short accDM_ready = _TRUE_;
-      ppw->acc_stiff_ratio = 1.e300; /* "infinitely stiff" until computable */
-      if (pba->has_acc == _TRUE_) {
-        int    n_acc          = pba->N_ncdm-1;
-        double rho_ncdm_bg    = ppw->pvecback[pba->index_bg_rho_ncdm1 + n_acc];
-        if (rho_ncdm_bg > 0.) {
-          double rho_acc_cdm_bg = ppw->pvecback[pba->index_bg_rho_acc_cdm];
-          double p_ncdm_bg      = ppw->pvecback[pba->index_bg_p_ncdm1 + n_acc];
-          double pseudo_p_ncdm  = ppw->pvecback[pba->index_bg_pseudo_p_ncdm1 + n_acc];
-          double Gamma          = ppw->pvecback[pba->index_bg_Gamma_acc];
-          double H              = ppw->pvecback[pba->index_bg_H];
-          double a_bg           = ppw->pvecback[pba->index_bg_a];
-          double eta            = pba->eta_acc;
-          double w_ncdm         = p_ncdm_bg/rho_ncdm_bg;
-          double ratio_rho      = rho_acc_cdm_bg/rho_ncdm_bg;
-          double ca2_0          = w_ncdm*(5.0 - pseudo_p_ncdm/p_ncdm_bg)/(3.0*(1.0+w_ncdm));
-          if (ca2_0 < 0.) ca2_0 = 0.;
-          double Lambda = a_bg*Gamma*(1.0+eta)*((1.0+ca2_0)/(1.0+w_ncdm))*ratio_rho;
-          double rate   = a_bg*H;
-          double k_rate = k*sqrt(ca2_0);
-          if (k_rate > rate) rate = k_rate;
-          ppw->acc_stiff_ratio = (rate > 0.) ? Lambda/rate : 1.e300;
-        }
-        if (ppw->acc_stiff_ratio > ppr->kappa_stiff) accDM_ready = _FALSE_;
+      if (pba->has_acc == _TRUE_ &&
+          perturbations_acc_stiff_ratio(pba,ppw,k) > ppr->kappa_stiff) {
+        accDM_ready = _FALSE_;
       }
 
       if ((tau/tau_k > ppr->ncdm_fluid_trigger_tau_over_tau_k) &&
