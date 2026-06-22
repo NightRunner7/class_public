@@ -4974,7 +4974,9 @@ int perturbations_vector_init(
         if ((pa_old[ppw->index_ap_ncdmfa] == (int)ncdmfa_off) && (ppw->approx[ppw->index_ap_ncdmfa] == (int)ncdmfa_on)) {
 
           if (ppt->perturbations_verbose>2)
-            fprintf(stdout,"Mode k=%e: switch on ncdm fluid approximation at tau=%e\n",k,tau);
+            fprintf(stdout,"Mode k=%e: switch on ncdm fluid approximation at tau=%e"
+                           " (acc stiffness ratio Lambda/max(aH,k*c_s)=%e)\n",
+                           k,tau,ppw->acc_stiff_ratio);
 
           if (ppw->approx[ppw->index_ap_rsa] == (int)rsa_off) {
 
