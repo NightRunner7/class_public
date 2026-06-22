@@ -6400,19 +6400,35 @@ int perturbations_approximations(
 
     if (pba->has_ncdm == _TRUE_) {
 
-      /* AG: for accDM models, hold ncdmfa off until accDM has been produced
-         from dcdm decay. The analytical sound-speed at perturbations.c:~10171
-         goes singular when rho_ncdm is essentially zero: ratio_rho is huge,
-         gamma/H is tiny, and their finite product can hit
-         3*(1+w_ncdm)/(1-eps_acc), zeroing the denominator. */
+      /* AG: for accDM models, switch the daughter exact->fluid only when the
+         decay relaxation is no longer stiff for the explicit rk evolver, i.e.
+         when Lambda/max(aH,k*sqrt(ca2)) < kappa_stiff. This is per-k (small-k
+         modes tolerate the fluid earlier). Replaces the k-independent
+         density-ratio gate. See docs/superpowers/specs/2026-06-22-*. */
       short accDM_ready = _TRUE_;
+      ppw->acc_stiff_ratio = 1.e300; /* "infinitely stiff" until computable */
       if (pba->has_acc == _TRUE_) {
-        double rho_acc_cdm_bg  = ppw->pvecback[pba->index_bg_rho_acc_cdm];
-        double rho_accDM_bg = ppw->pvecback[pba->index_bg_rho_ncdm1 + pba->N_ncdm-1];
-        if (rho_acc_cdm_bg > 0. &&
-            rho_accDM_bg/rho_acc_cdm_bg < ppr->ncdm_fluid_trigger_rho_accDM_over_rho_dcdm) {
-          accDM_ready = _FALSE_;
+        int    n_acc          = pba->N_ncdm-1;
+        double rho_ncdm_bg    = ppw->pvecback[pba->index_bg_rho_ncdm1 + n_acc];
+        if (rho_ncdm_bg > 0.) {
+          double rho_acc_cdm_bg = ppw->pvecback[pba->index_bg_rho_acc_cdm];
+          double p_ncdm_bg      = ppw->pvecback[pba->index_bg_p_ncdm1 + n_acc];
+          double pseudo_p_ncdm  = ppw->pvecback[pba->index_bg_pseudo_p_ncdm1 + n_acc];
+          double Gamma          = ppw->pvecback[pba->index_bg_Gamma_acc];
+          double H              = ppw->pvecback[pba->index_bg_H];
+          double a_bg           = ppw->pvecback[pba->index_bg_a];
+          double eta            = pba->eta_acc;
+          double w_ncdm         = p_ncdm_bg/rho_ncdm_bg;
+          double ratio_rho      = rho_acc_cdm_bg/rho_ncdm_bg;
+          double ca2_0          = w_ncdm*(5.0 - pseudo_p_ncdm/p_ncdm_bg)/(3.0*(1.0+w_ncdm));
+          if (ca2_0 < 0.) ca2_0 = 0.;
+          double Lambda = a_bg*Gamma*(1.0+eta)*((1.0+ca2_0)/(1.0+w_ncdm))*ratio_rho;
+          double rate   = a_bg*H;
+          double k_rate = k*sqrt(ca2_0);
+          if (k_rate > rate) rate = k_rate;
+          ppw->acc_stiff_ratio = (rate > 0.) ? Lambda/rate : 1.e300;
         }
+        if (ppw->acc_stiff_ratio > ppr->kappa_stiff) accDM_ready = _FALSE_;
       }
 
       if ((tau/tau_k > ppr->ncdm_fluid_trigger_tau_over_tau_k) &&
