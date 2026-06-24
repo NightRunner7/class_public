@@ -3821,6 +3821,34 @@ int perturbations_find_approximation_switches(
 }
 
 /**
+ * accDM daughter effective sound speed ceff2 (= delta_p/delta_rho) from the
+ * base adiabatic sound speed cs2_base (cg2 or ca2). Mode 0 (ncdm_ceff2_mode)
+ * is the published Eq-38 fit; mode 1 is the same fit hard-capped at the causal
+ * ceiling 1/3. The cap is a pure safety net: mode 1 is IDENTICAL to mode 0
+ * below 1/3 and only engages when the fit would go superluminal (large base
+ * cs2_base, i.e. a relativistic daughter, times a large k/k_fs). The kink at
+ * the crossing is harmless: ceff2 enters the perturbation equations
+ * algebraically, never differentiated. cs2_base <= 0 returns 0
+ * (degenerate/unborn daughter). Callers invoke it only for n_acc with has_acc.
+ */
+static double perturbations_ceff2_ncdm(struct precision * ppr,
+                                       struct background * pba,
+                                       double cs2_base,
+                                       double k, double a, double H) {
+
+  if (cs2_base <= 0.) return 0.;
+
+  double W   = 1.0 - 2.0*pba->eps_acc;                     /* in (0,1] for physical eta>=0 */
+  double xr  = sqrt(k*sqrt(2./3.)*sqrt(cs2_base)/(a*H));   /* sqrt(k/k_fs) */
+  double fit = cs2_base*(1.0 + ppr->ncdm_ceff2_fs_amp*W*xr);
+
+  /* mode 0: published Eq-38 fit (bit-identical to the pre-helper code).
+     mode 1: same fit, hard-capped at 1/3. */
+  if (ppr->ncdm_ceff2_mode == 0) return fit;
+  return (fit < 1./3.) ? fit : (1./3.);
+}
+
+/**
  * AccDM: daughter fluid stiffness ratio  Lambda / max(aH, k*sqrt(ca2))  at the
  * current background time. ppw->pvecback must already be filled for the desired
  * tau by the caller. Lambda = a*Gamma*(1+eta)*((1+ca2)/(1+w))*ratio_rho is the
@@ -7338,7 +7366,7 @@ int perturbations_total_stress_energy(
             } 
             else {
               if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
-                ppw->delta_p_over_delta_rho_ncdm[n_ncdm] = cg2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(cg2_ncdm)/(a*H)));
+                ppw->delta_p_over_delta_rho_ncdm[n_ncdm] = perturbations_ceff2_ncdm(ppr,pba,cg2_ncdm,k,a,H);
               } 
               else {
                 ppw->delta_p_over_delta_rho_ncdm[n_ncdm] = cg2_ncdm;
@@ -7356,7 +7384,7 @@ int perturbations_total_stress_energy(
           } 
           else {
             if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
-              ppw->delta_p += cg2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(cg2_ncdm)/(a*H)))*rho_ncdm_bg*y[idx];
+              ppw->delta_p += perturbations_ceff2_ncdm(ppr,pba,cg2_ncdm,k,a,H)*rho_ncdm_bg*y[idx];
             } 
             else {
               ppw->delta_p += cg2_ncdm*rho_ncdm_bg*y[idx];
@@ -10090,7 +10118,7 @@ int perturbations_derivs(double tau,
             if (ca2_ncdm > 1.) { ppw->ca2_ncdm_bad = _TRUE_; ca2_ncdm = 1.; }
             // CS2DYN
             if (ppt->switch_on_eq_delta_p_acc == _FALSE_) {
-              ceff2_ncdm = ca2_ncdm*(1.0+0.2*(1.0-2.0*pba->eps_acc)*sqrt(k*sqrt(2./3.)*sqrt(ca2_ncdm)/(a*H)));
+              ceff2_ncdm = perturbations_ceff2_ncdm(ppr,pba,ca2_ncdm,k,a,H);
             }
             cvis2_ncdm = 3.*w_ncdm*ca2_ncdm;
 
@@ -10248,38 +10276,31 @@ int perturbations_derivs(double tau,
             if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
               aq = pba->aq_ncdm_acc[n_ncdm][index_q];
 
-              // if(a<=aq){ // AG: Track the DCDM perturbs until production
-              //   //background_ncdm_distribution_perts(pba, q, n_ncdm, &FD_ncdm);
-              //   FD_ncdm = pba->f0_ncdm_acc[n_ncdm][index_q];
-
-              //   rho_cdm_bg = pvecback[pba->index_bg_rho_cdm]; /* AG */
-              //   rho_acc_cdm_bg = pvecback[pba->index_bg_rho_acc_cdm]; /* AG */
-
-              //   y[idx] =(y[pv->index_pt_delta_dcdm]-metric_continuity/3/a/pvecback[pba->index_bg_H]) * FD_ncdm;
-              //   y[idx+1] = 0;
-              //   y[idx+2] = 2./15.*(metric_shear)/(a*pvecback[pba->index_bg_H])* FD_ncdm;
-              //   for(l=3; l<pv->l_max_ncdm[n_ncdm]; l++){
-              //     y[idx+l] = 0;
-              //   }
-              //   y[idx+l] = 0;
-              //   dy[idx] = 0;
-              //   dy[idx+1] = 0;
-              //   dy[idx+2] = 0;
-              //   for(l=3; l<pv->l_max_ncdm[n_ncdm]; l++){
-              //     dy[idx+l] = 0;
-              //   }
-              //   dy[idx+l] = 0;
-              // }
-              if(a<=aq){ // AG: Track the DCDM parent until production — smooth ODE, no y[] writes
-                /* The daughter monopole is slaved to the parent: y[idx] = FD_ncdm * delta_dcdm,
-                   with FD_ncdm = f0_ncdm_acc time-independent. Differentiating in tau, the RHS is
-                   just the parent's already-computed derivative (dy[delta_dcdm], set at line 9775),
-                   scaled by FD_ncdm. We do NOT overwrite y[] here: that is what corrupts numjac's
-                   finite-difference Jacobian and crashes ndf15. With this form the only Jacobian
-                   entry is the physical coupling d(dy[idx])/d(y[delta_dcdm]) = FD_ncdm. */
+              if(a<=aq){ // AG: Track the acc_cdm parent until production — algebraic slaving
+                /* Before production (a <= aq) the daughter is slaved algebraically to
+                   the parent every derivs call:
+                     monopole  y[idx]   = FD_ncdm * (delta_dcdm - metric_continuity/(3 a H))
+                     shear     y[idx+2] = FD_ncdm * (2/15) metric_shear/(a H)
+                   with FD_ncdm = f0_ncdm_acc time-independent, dipole and higher l zeroed,
+                   and dy = 0 so the pinned state is held until switch-on at a = aq.
+                   NOTE: a previous version replaced this with the smooth ODE
+                   dy[idx] = FD_ncdm * dy[delta_dcdm] to keep numjac's finite-difference
+                   Jacobian clean for ndf15. But ndf15 is unusable here (dense O(neq^2)
+                   Jacobian OOMs at our q_size), so rkck is always the evolver and the
+                   Jacobian-cleanliness motivation does not apply. The smooth form drops the
+                   gauge term -FD*metric_continuity/(3aH), freezes shear, and can carry a
+                   constant offset; the algebraic pinning below reproduces accDM_w_Q exactly
+                   and is the more faithful pre-production slaving on rkck. */
                 FD_ncdm = pba->f0_ncdm_acc[n_ncdm][index_q];
 
-                dy[idx]   = FD_ncdm * dy[pv->index_pt_delta_dcdm];
+                y[idx]   = (y[pv->index_pt_delta_dcdm] - metric_continuity/3./a/pvecback[pba->index_bg_H]) * FD_ncdm;
+                y[idx+1] = 0.;
+                y[idx+2] = 2./15.*(metric_shear)/(a*pvecback[pba->index_bg_H]) * FD_ncdm;
+                for(l=3; l<pv->l_max_ncdm[n_ncdm]; l++){
+                  y[idx+l] = 0.;
+                }
+                y[idx+l] = 0.;
+                dy[idx]   = 0.;
                 dy[idx+1] = 0.;
                 dy[idx+2] = 0.;
                 for(l=3; l<pv->l_max_ncdm[n_ncdm]; l++){

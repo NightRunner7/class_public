@@ -419,6 +419,24 @@ class_precision_parameter(kappa_stiff,double,1.0)
  */
 class_precision_parameter(ncdm_ca2_den_tol,double,1.0e-3)
 /**
+ * accDM daughter free-streaming (effective sound speed) correction mode.
+ *   0 = fit:     ceff2 = ca2*(1 + ncdm_ceff2_fs_amp*(1-2*eps_acc)*sqrt(k/k_fs))
+ *                (the published Eq-38 form; default, reproduces prior behaviour)
+ *   1 = bounded: the same fit, hard-capped at the causal ceiling 1/3. Identical
+ *                to mode 0 below 1/3; a pure safety cap that engages only when
+ *                the fit would go superluminal (large base ca2 x large k/k_fs).
+ * Has no effect when has_acc is false.
+ */
+class_precision_parameter(ncdm_ceff2_mode,int,0)
+/**
+ * Amplitude of the accDM daughter free-streaming sound-speed correction (the
+ * coefficient multiplying (1-2*eps_acc)*sqrt(k/k_fs)). Default 0.2 reproduces
+ * the published fit. Recalibrated against the exact hierarchy for the boosted
+ * PSD (see notebooks_test/7_test_ceff2_calibration.ipynb). Has no effect when
+ * has_acc is false.
+ */
+class_precision_parameter(ncdm_ceff2_fs_amp,double,0.2)
+/**
  * whether CMB source functions can be approximated as zero when
  * visibility function g(tau) is tiny
  */
