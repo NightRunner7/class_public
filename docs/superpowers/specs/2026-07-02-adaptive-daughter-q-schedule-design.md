@@ -92,13 +92,16 @@ ColorBrewer (`memory: notebook-plot-style`).
   the late/cold trigger regime and adds a stability caveat the MCMC doesn't need.
 - **q-tail truncation and unborn-bin skipping**: second-order savings, invasive in the
   state-vector layout.
-- **Integral-equation solver along characteristics (Ali-Haïmoud & Bird 2012 style).**
-  The only approach that removes the phase-mixing cost (analytic free-streaming kernels;
-  ~20–40 q-nodes, no l-hierarchy; potential 20–100× on the daughter, valid warm or cold).
-  The daughter is the textbook case: each q-shell is born at a known aq(q) with a
-  parent-slaved IC, collisionless afterwards. Research-grade rewrite (per-k metric
-  history, global iteration loop) — gets its own spec only if this schedule proves
-  insufficient for MCMC-scale cost.
+- **Integral-equation solver along characteristics (Ali-Haïmoud & Bird 2012 style) —
+  UNVERIFIED claim, needs the user's own check before being relied on.** Candidate
+  approach that would remove the phase-mixing cost at its root (analytic free-streaming
+  kernels; ~20–40 q-nodes, no l-hierarchy; potential 20–100× on the daughter, valid warm
+  or cold). The daughter *appears* to be the textbook case — each q-shell born at a known
+  aq(q) with a parent-slaved IC, collisionless afterwards — but neither the method's
+  applicability to the decay-sourced daughter nor the quoted gains have been verified
+  here. Research-grade rewrite (per-k metric history, global iteration loop) — gets its
+  own spec, starting with that verification, only if this schedule proves insufficient
+  for MCMC-scale cost.
 - **MontePython gotcha, documented not coded**: per-species list parameters truncate
   silently in MP wrappers (`memory: ncdm-fluid-approx-is-scalar-not-per-species`). The
   schedule lives inside `input.c`, so it works identically from Python/MCMC with no
