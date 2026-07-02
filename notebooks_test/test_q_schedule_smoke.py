@@ -1,6 +1,7 @@
 """Smoke tests for the accDM daughter q(f) schedule (input.c).
 Run after building classy:  python notebooks_test/test_q_schedule_smoke.py
 """
+import ctypes
 import os
 import sys
 import tempfile
@@ -10,10 +11,22 @@ import numpy as np
 from classy import Class
 
 
+def _flush_c_level_stdout():
+    """Flush the C library's stdout buffer (classy's printf output), not just Python's."""
+    try:
+        ctypes.CDLL(None).fflush(None)
+    except Exception:
+        try:
+            ctypes.CDLL("msvcrt").fflush(None)
+        except Exception:
+            pass
+
+
 @contextmanager
 def capture_class_stdout():
     """Capture C-level stdout (printf from CLASS) by redirecting fd 1 to a temp file."""
     sys.stdout.flush()
+    _flush_c_level_stdout()
     saved_stdout_fd = os.dup(1)
     with tempfile.TemporaryFile(mode="w+b") as capture_file:
         os.dup2(capture_file.fileno(), 1)
@@ -22,6 +35,7 @@ def capture_class_stdout():
             yield captured
         finally:
             sys.stdout.flush()
+            _flush_c_level_stdout()
             os.dup2(saved_stdout_fd, 1)
             os.close(saved_stdout_fd)
             capture_file.seek(0)
