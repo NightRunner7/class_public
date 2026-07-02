@@ -408,7 +408,7 @@ Validates the input-time q(f) schedule (spec: docs/superpowers/specs/2026-07-02-
 For each (m, eta, f) grid point: run the **scheduled** configuration (no explicit bins;
 input.c picks q_size) against a fine-grid **reference** (5001 bins) and require
 - max|ΔP/P| ≤ 1e-3 over the full PyBird k-range, reported separately in the EFT window k = 0.1–0.3 h/Mpc,
-- max|ΔC_l/C_l| ≤ 1e-3 for **lensed** TT/EE and D�D� (CMB is in the likelihood),
+- max|ΔC_l/C_l| ≤ 1e-3 for **lensed** TT/EE and φφ (CMB is in the likelihood),
 - wall-times per regime.
 
 The schedule table (edges 0.1/0.3 → sizes 250/1000/2000) is PROVISIONAL; the final cell
