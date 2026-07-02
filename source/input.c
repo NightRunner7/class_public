@@ -3463,10 +3463,6 @@ int input_read_parameters_species(struct file_content * pfc,
   Omega_tot += pba->Omega0_dcdmdr;
   Omega_tot += pba->Omega0_acc_cdm;
   Omega_tot += pba->Omega0_idr;
-  // if (pba->has_mon == _TRUE_){
-  //   Omega_tot += pba->Omega0_dr;
-  // }
-
   Omega_tot += pba->Omega0_ncdm_tot;
 
   /* Step 1 */
