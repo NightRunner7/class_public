@@ -2864,13 +2864,119 @@ int input_read_parameters_species(struct file_content * pfc,
     /* ========================================================= */
 
     /** 5.h.2) Number of momentum bins */
+    int momentum_bins_provided_explicitly = _FALSE_;
     class_call(parser_read_list_of_integers(pfc, "Number of momentum bins", &entries_read, &(pba->ncdm_input_q_size), &flag1, errmsg),
                errmsg, errmsg); //Deprecated parameter, still read to keep compatibility
     if (flag1 == _TRUE_) {
       class_test(entries_read != N_ncdm, errmsg, "Number of entries in Number of momentum bins, %d, is different from the number of N_cdm species, %d", entries_read, N_ncdm);
+      momentum_bins_provided_explicitly = _TRUE_;
     }
     else {
-      class_read_list_of_integers_or_default("ncdm_N_momentum_bins", pba->ncdm_input_q_size, 150, N_ncdm);
+      int flag_momentum_bins, entries_momentum_bins;
+      class_call(parser_read_list_of_integers(pfc, "ncdm_N_momentum_bins", &entries_momentum_bins, &(pba->ncdm_input_q_size), &flag_momentum_bins, errmsg),
+                 errmsg, errmsg);
+      if (flag_momentum_bins == _TRUE_) {
+        class_test(entries_momentum_bins != N_ncdm, errmsg,
+                   "Number of entries of 'ncdm_N_momentum_bins' (%d) does not match expected number (%d).",
+                   entries_momentum_bins, N_ncdm);
+        momentum_bins_provided_explicitly = _TRUE_;
+      }
+      else {
+        class_alloc(pba->ncdm_input_q_size, N_ncdm*sizeof(int), errmsg);
+        for (n=0; n < N_ncdm; n++) pba->ncdm_input_q_size[n] = 150;
+      }
+    }
+
+    /* accDM daughter q(f) schedule: pick the daughter's momentum-bin count from
+       the daughter fraction f, so MCMC chains run coarse grids where the
+       posterior lives (f < ~0.1) and fine grids at rare high-f excursions.
+       Explicit user-provided momentum bins always win. Table values are
+       PROVISIONAL pending calibration
+       (docs/superpowers/specs/2026-07-02-adaptive-daughter-q-schedule-design.md). */
+    if (pba->has_acc == _TRUE_) {
+
+      int accdm_q_schedule = _TRUE_;
+      class_read_flag("accdm_q_schedule", accdm_q_schedule);
+
+      if (momentum_bins_provided_explicitly == _TRUE_) {
+        if ((accdm_q_schedule == _TRUE_) && (input_verbose > 0))
+          printf("accDM q(f) schedule bypassed: momentum bins supplied explicitly (daughter q_size = %d).\n",
+                 pba->ncdm_input_q_size[N_ncdm-1]);
+      }
+      else if (accdm_q_schedule == _TRUE_) {
+
+        /* PROVISIONAL defaults: f < 0.1 -> 250 bins (coarse regime validated in
+           notebooks 10/12), 0.1 <= f < 0.3 -> 1000 (current production),
+           f >= 0.3 -> 2000 (fixes measured >1% under-resolution at 1001 bins).
+           Override without rebuilding via the two input lists below. */
+        double schedule_f_edges_default[2] = {0.1, 0.3};
+        int schedule_q_sizes_default[3] = {250, 1000, 2000};
+
+        double * schedule_f_edges = NULL;
+        int * schedule_q_sizes = NULL;
+        int number_of_edges = 2, number_of_sizes = 3;
+        int flag_edges, flag_sizes, index_edge;
+
+        class_call(parser_read_list_of_doubles(pfc, "accdm_q_schedule_f_edges",
+                                               &number_of_edges, &schedule_f_edges, &flag_edges, errmsg),
+                   errmsg, errmsg);
+        class_call(parser_read_list_of_integers(pfc, "accdm_q_schedule_q_sizes",
+                                                &number_of_sizes, &schedule_q_sizes, &flag_sizes, errmsg),
+                   errmsg, errmsg);
+        class_test(flag_edges != flag_sizes, errmsg,
+                   "Provide both 'accdm_q_schedule_f_edges' and 'accdm_q_schedule_q_sizes', or neither.");
+        if (flag_edges == _FALSE_) {
+          number_of_edges = 2;
+          number_of_sizes = 3;
+          class_alloc(schedule_f_edges, number_of_edges*sizeof(double), errmsg);
+          class_alloc(schedule_q_sizes, number_of_sizes*sizeof(int), errmsg);
+          for (index_edge=0; index_edge < number_of_edges; index_edge++)
+            schedule_f_edges[index_edge] = schedule_f_edges_default[index_edge];
+          for (index_edge=0; index_edge < number_of_sizes; index_edge++)
+            schedule_q_sizes[index_edge] = schedule_q_sizes_default[index_edge];
+        }
+        class_test(number_of_sizes != number_of_edges+1, errmsg,
+                   "'accdm_q_schedule_q_sizes' must have exactly one more entry (has %d) than 'accdm_q_schedule_f_edges' (has %d).",
+                   number_of_sizes, number_of_edges);
+        for (index_edge=0; index_edge < number_of_edges; index_edge++) {
+          class_test((schedule_f_edges[index_edge] <= 0.) || (schedule_f_edges[index_edge] >= 1.),
+                     errmsg, "'accdm_q_schedule_f_edges' entries must lie strictly inside (0,1).");
+          if (index_edge > 0)
+            class_test(schedule_f_edges[index_edge] <= schedule_f_edges[index_edge-1],
+                       errmsg, "'accdm_q_schedule_f_edges' must be strictly increasing.");
+        }
+        for (index_edge=0; index_edge < number_of_sizes; index_edge++)
+          class_test(schedule_q_sizes[index_edge] < 2, errmsg,
+                     "'accdm_q_schedule_q_sizes' entries must be >= 2.");
+
+        /* daughter fraction driving the schedule; -1 means undeterminable */
+        double daughter_fraction_for_schedule = -1.;
+        if (pba->f_acc > 0.)
+          daughter_fraction_for_schedule = pba->f_acc;
+        else if ((pba->Omega_ini_dcdm > 0.) && (pba->Omega0_cdm > 0.))
+          daughter_fraction_for_schedule = pba->Omega_ini_dcdm / pba->Omega0_cdm;
+        else if (pba->Omega0_acc_cdm > 0.)
+          daughter_fraction_for_schedule = pba->Omega0_acc_cdm / (pba->Omega0_cdm + pba->Omega0_acc_cdm);
+
+        /* undeterminable fraction -> most conservative (finest) grid, never fast-wrong */
+        int daughter_q_size_scheduled = schedule_q_sizes[number_of_sizes-1];
+        if (daughter_fraction_for_schedule >= 0.) {
+          for (index_edge=0; index_edge < number_of_edges; index_edge++) {
+            if (daughter_fraction_for_schedule < schedule_f_edges[index_edge]) {
+              daughter_q_size_scheduled = schedule_q_sizes[index_edge];
+              break;
+            }
+          }
+        }
+        pba->ncdm_input_q_size[N_ncdm-1] = daughter_q_size_scheduled;
+
+        if (input_verbose > 0)
+          printf("accDM q(f) schedule: daughter fraction f = %g -> q_size = %d for ncdm species %d.\n",
+                 daughter_fraction_for_schedule, daughter_q_size_scheduled, N_ncdm-1);
+
+        free(schedule_f_edges);
+        free(schedule_q_sizes);
+      }
     }
 
     /** Last step of 5) (i.e. NCDM) -- Calculate the masses and momenta */
