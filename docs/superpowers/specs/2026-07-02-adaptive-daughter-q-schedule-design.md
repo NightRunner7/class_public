@@ -65,8 +65,10 @@ Behavior and constraints:
 - The manual quadrature strategy ties background and perturbation grids together
   (`background.c:1594`), so the validation scan re-checks background w_ncdm(a) at each
   scheduled q_size (already clean in nb10 down to ~120 bins).
-- At high-f regimes the schedule may force/require `evolver = rkck`; error out (or warn
-  loudly) if the user pins ndf15 with a large scheduled grid.
+- High-f regimes assume `evolver = rkck` (the working production evolver). A guard
+  refusing ndf15 with large scheduled grids was considered and **DEFERRED** (user
+  decision 2026-07-02): ndf15 has known problems here and is not part of the working
+  configuration; document rkck as required rather than adding code for the broken path.
 
 ## Component 2 — validation & calibration notebook
 

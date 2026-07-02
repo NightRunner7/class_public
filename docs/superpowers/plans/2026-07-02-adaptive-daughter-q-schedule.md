@@ -4,7 +4,7 @@
 
 **Goal:** Choose the accDM daughter's momentum-bin count automatically at input time from the daughter fraction f, so MCMC chains run coarse (fast) grids at low f and fine (accurate) grids at high f, with explicit user input always winning.
 
-**Architecture:** A schedule block in `input.c` (species section) that overwrites the daughter's entry of `pba->ncdm_input_q_size` from a piecewise-in-f table, configurable via two new input lists; a guard in `perturbations_init` refusing ndf15 with large daughter grids; a Python smoke-test script and a calibration/regression notebook that validate against the built `classy`.
+**Architecture:** A schedule block in `input.c` (species section) that overwrites the daughter's entry of `pba->ncdm_input_q_size` from a piecewise-in-f table, configurable via two new input lists; a Python smoke-test script and a calibration/regression notebook that validate against the built `classy`. (An ndf15 guard was DEFERRED per user decision 2026-07-02 — rkck is the working production evolver; ndf15 is not part of the supported configuration.)
 
 **Tech Stack:** C (CLASS fork `class_accDM`), Python/`classy` + numpy for tests, Jupyter notebook for calibration.
 
@@ -15,29 +15,29 @@
 - Edit `class_accDM` only — never the pristine `axion_project/class_public` reference.
 - **No compiler in the agent shell.** All C code is verified by the USER building (`make classy` or equivalent on their side) and then running the Python tests. Tasks below mark these steps `USER-BUILD`.
 - The daughter is always the **last** ncdm species; every accDM special case must be `has_acc`-gated (a plain-ncdm run must be bit-for-bit unaffected).
-- Schedule table values (breakpoints 0.1/0.3, bin counts 250/1000/2000) are **PROVISIONAL** — the user's convergence tests and the Task 5 calibration notebook set the final values. Keep them in exactly one place in the C code and mark them `PROVISIONAL` in comments.
+- Schedule table values (breakpoints 0.1/0.3, bin counts 250/1000/2000) are **PROVISIONAL** — the user's convergence tests and the Task 4 calibration notebook set the final values. Keep them in exactly one place in the C code and mark them `PROVISIONAL` in comments.
 - Explicit `ncdm_N_momentum_bins` (or deprecated `Number of momentum bins`) input must reproduce today's behavior exactly.
 - Descriptive variable names (spell things out; no `hi`/`lo`-style abbreviations).
 - Commit messages end with `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
 
 ---
 
-### Task 1: Smoke-test script (written first; runnable only after the Task 4 build)
+### Task 1: Smoke-test script (written first; runnable only after the Task 3 build)
 
 **Files:**
 - Create: `notebooks_test/test_q_schedule_smoke.py`
 
 **Interfaces:**
-- Produces: `capture_class_stdout()` context manager and `base_params(f_acc)` dict builder, reused verbatim by the Task 5 notebook.
-- Consumes (from Tasks 2–3, once built): the stdout lines `accDM q(f) schedule: ... q_size = N ...` and `accDM q(f) schedule bypassed ...` printed at `input_verbose >= 1`, the input parameters `accdm_q_schedule` (flag), `accdm_q_schedule_f_edges` (double list), `accdm_q_schedule_q_sizes` (int list), and a `CosmoSevereError` mentioning `ndf15` from the perturbations guard.
+- Produces: `capture_class_stdout()` context manager and `base_params(f_acc)` dict builder, reused verbatim by the Task 4 notebook.
+- Consumes (from Task 2, once built): the stdout lines `accDM q(f) schedule: ... q_size = N ...` and `accDM q(f) schedule bypassed ...` printed at `input_verbose >= 1`, and the input parameters `accdm_q_schedule` (flag), `accdm_q_schedule_f_edges` (double list), `accdm_q_schedule_q_sizes` (int list).
 
 - [ ] **Step 1: Write the script**
 
 The base model is the notebook-10 fiducial (m = 1e16 GeV, eta = 0.1, kappa = 4.0). The script talks to `classy` and captures the C-level stdout via fd redirection (works on Windows; `wurlitzer` is POSIX-only).
 
 ```python
-"""Smoke tests for the accDM daughter q(f) schedule (input.c) and the ndf15 guard
-(perturbations.c). Run after building classy:  python notebooks_test/test_q_schedule_smoke.py
+"""Smoke tests for the accDM daughter q(f) schedule (input.c).
+Run after building classy:  python notebooks_test/test_q_schedule_smoke.py
 """
 import os
 import sys
@@ -45,7 +45,7 @@ import tempfile
 from contextlib import contextmanager
 
 import numpy as np
-from classy import Class, CosmoSevereError
+from classy import Class
 
 
 @contextmanager
@@ -146,23 +146,6 @@ def test_schedule_can_be_disabled():
         "schedule-off: no schedule line expected, got:\n" + text
 
 
-def test_ndf15_guard_refuses_large_daughter_grid():
-    params = base_params(f_acc=0.5, output="mPk")
-    params["P_k_max_1/Mpc"] = 1.0
-    params["evolver"] = 1  # ndf15
-    cosmo = Class()
-    cosmo.set(params)
-    try:
-        cosmo.compute()
-    except CosmoSevereError as error:
-        assert "ndf15" in str(error), "guard error should mention ndf15: " + str(error)
-    else:
-        raise AssertionError("ndf15 + scheduled q_size=2000 should refuse to run")
-    finally:
-        cosmo.struct_cleanup()
-        cosmo.empty()
-
-
 if __name__ == "__main__":
     tests = [value for name, value in sorted(globals().items()) if name.startswith("test_")]
     failed = 0
@@ -204,7 +187,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 
 **Interfaces:**
 - Consumes: `pba->f_acc`, `pba->Omega_ini_dcdm`, `pba->Omega0_cdm`, `pba->Omega0_acc_cdm`, `pba->has_acc` (all already set earlier in this function, `source/input.c:2576-2729`), `pba->ncdm_input_q_size` (allocated by the reads below), local `N_ncdm`, `input_verbose`, `pfc`, `errmsg`.
-- Produces: new input parameters `accdm_q_schedule` (yes/no, default yes), `accdm_q_schedule_f_edges` (double list), `accdm_q_schedule_q_sizes` (int list); stdout lines `accDM q(f) schedule: daughter fraction f = <f> -> q_size = <N> ...` and `accDM q(f) schedule bypassed: momentum bins supplied explicitly ...` at `input_verbose >= 1`. Task 1's tests and Task 5's notebook match on these exact substrings.
+- Produces: new input parameters `accdm_q_schedule` (yes/no, default yes), `accdm_q_schedule_f_edges` (double list), `accdm_q_schedule_q_sizes` (int list); stdout lines `accDM q(f) schedule: daughter fraction f = <f> -> q_size = <N> ...` and `accDM q(f) schedule bypassed: momentum bins supplied explicitly ...` at `input_verbose >= 1`. Task 1's tests and Task 4's notebook match on these exact substrings.
 
 - [ ] **Step 1: Replace the momentum-bins read so an explicit user list is detectable**
 
@@ -374,73 +357,28 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 
 ---
 
-### Task 3: ndf15 guard in `perturbations_init`
+### Task 3: USER-BUILD + green smoke tests
 
 **Files:**
-- Modify: `source/perturbations.c` — insert after the synchronous-gauge `class_test` at `source/perturbations.c:727-729`.
+- Modify (only if fixes needed): `source/input.c`, `notebooks_test/test_q_schedule_smoke.py`
 
 **Interfaces:**
-- Consumes: `pba->has_acc`, `pba->N_ncdm`, `pba->q_size_ncdm` (filled by `background_ncdm_init`, which input.c calls long before `perturbations_init`), `ppr->evolver`, enum values `rk`/`ndf15` (`include/common.h:376`).
-- Produces: a hard input-stage error (surfaces as `CosmoSevereError` in classy) whose message contains the word `ndf15`; Task 1's `test_ndf15_guard_refuses_large_daughter_grid` matches on it.
-
-- [ ] **Step 1: Insert the guard**
-
-```c
-  /* accDM: ndf15 builds a dense O(neq^2) Jacobian; with the daughter's
-     momentum grid in the perturbation vector this overflows int / exhausts
-     memory long before the solve finishes (see notebook 10). Refuse the
-     combination up front instead of crashing mid-run. */
-  if ((pba->has_acc == _TRUE_) && (pba->N_ncdm > 0)) {
-    int ndf15_daughter_q_size_limit = 600;
-    class_test((ppr->evolver == ndf15) &&
-               (pba->q_size_ncdm[pba->N_ncdm-1] > ndf15_daughter_q_size_limit),
-               ppt->error_message,
-               "accDM daughter momentum grid has q_size = %d and 'evolver' = ndf15: the dense O(neq^2) Jacobian will exhaust memory. Set 'evolver = 0' (Runge-Kutta rkck) or reduce the daughter momentum grid to <= %d bins.",
-               pba->q_size_ncdm[pba->N_ncdm-1], ndf15_daughter_q_size_limit);
-  }
-```
-
-- [ ] **Step 2: Visually re-read the diff (`git diff source/perturbations.c`) — guard is `has_acc`-gated, indexes only `N_ncdm-1`, touches nothing else**
-
-- [ ] **Step 3: Commit**
-
-```powershell
-git add source/perturbations.c
-git commit -m @'
-feat: refuse ndf15 with large accDM daughter momentum grid
-
-Dense O(neq^2) ndf15 Jacobian OOMs at large daughter q_size; error out
-in perturbations_init with a fix-it message instead of crashing
-mid-chain. Limit 600 bins, has_acc-gated.
-
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
-'@
-```
-
----
-
-### Task 4: USER-BUILD + green smoke tests
-
-**Files:**
-- Modify (only if fixes needed): `source/input.c`, `source/perturbations.c`, `notebooks_test/test_q_schedule_smoke.py`
-
-**Interfaces:**
-- Consumes: Tasks 1–3 outputs.
-- Produces: a built `classy` with the schedule active and all 7 smoke tests passing — the gate for Task 5.
+- Consumes: Tasks 1–2 outputs.
+- Produces: a built `classy` with the schedule active and all 6 smoke tests passing — the gate for Task 4.
 
 - [ ] **Step 1 (USER-BUILD): user rebuilds CLASS/classy from the branch** (no compiler in the agent shell; report any compile errors back verbatim)
 
 - [ ] **Step 2: Run the smoke tests**
 
 Run: `python notebooks_test/test_q_schedule_smoke.py`
-Expected: `PASS` for all 7 tests, exit code 0.
+Expected: `PASS` for all 6 tests, exit code 0.
 
 - [ ] **Step 3: If any test fails, fix the C code (or a wrong test expectation), re-run Steps 1-2 until green**
 
 - [ ] **Step 4: Commit any fixes**
 
 ```powershell
-git add source/input.c source/perturbations.c notebooks_test/test_q_schedule_smoke.py
+git add source/input.c notebooks_test/test_q_schedule_smoke.py
 git commit -m @'
 fix: green q(f) schedule smoke tests after first build
 
@@ -450,7 +388,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 
 ---
 
-### Task 5: Calibration & regression notebook (`14_test_q_schedule_calibration.ipynb`)
+### Task 4: Calibration & regression notebook (`14_test_q_schedule_calibration.ipynb`)
 
 **Files:**
 - Create: `notebooks_test/14_test_q_schedule_calibration.ipynb`
@@ -470,7 +408,7 @@ Validates the input-time q(f) schedule (spec: docs/superpowers/specs/2026-07-02-
 For each (m, eta, f) grid point: run the **scheduled** configuration (no explicit bins;
 input.c picks q_size) against a fine-grid **reference** (5001 bins) and require
 - max|ΔP/P| ≤ 1e-3 over the full PyBird k-range, reported separately in the EFT window k = 0.1–0.3 h/Mpc,
-- max|ΔC_l/C_l| ≤ 1e-3 for **lensed** TT/EE and φφ (CMB is in the likelihood),
+- max|ΔC_l/C_l| ≤ 1e-3 for **lensed** TT/EE and D�D� (CMB is in the likelihood),
 - wall-times per regime.
 
 The schedule table (edges 0.1/0.3 → sizes 250/1000/2000) is PROVISIONAL; the final cell
