@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from fluid_closure_helpers import (
     ca2_from_kfs, sound_speed_response, shear_response,
-    log_upper_envelope, collapse_band,
+    log_upper_envelope, collapse_band, mask_small_denom,
 )
 
 def test_ca2_from_kfs_inverts_convention():
@@ -30,6 +30,19 @@ def test_log_upper_envelope_takes_abs_max_per_bin():
     xc, env = log_upper_envelope(x, y, n_bins=2)
     assert env[0] == 5.0 and env[-1] == 1.0
     assert np.all(np.diff(xc) > 0)
+
+def test_mask_small_denom_nans_smallest_denominator_samples():
+    y = np.array([1., 2., 3., 4., 5.])
+    denom = np.array([0.01, 1.0, 2.0, 3.0, 4.0])   # smallest 20% -> index 0
+    out = mask_small_denom(y, denom, drop_frac=0.2)
+    assert np.isnan(out[0]) and np.allclose(out[1:], y[1:])
+
+def test_mask_small_denom_masks_nonfinite_denominator():
+    y = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    denom = np.array([np.nan, 5.0, 6.0, 7.0, 8.0])    # nan + smallest (5.0) drop out
+    out = mask_small_denom(y, denom, drop_frac=0.01)
+    assert np.isnan(out[0])                            # non-finite denom masked
+    assert np.allclose(out[2:], y[2:])                 # large-|denom| samples survive
 
 def test_collapse_band_zero_for_identical_curves():
     x = np.logspace(0, 2, 20)

@@ -37,6 +37,22 @@ def shear_response(k, shear, theta, eps=1e-30):
     return k * shear / denom
 
 
+def mask_small_denom(y, denom, drop_frac=0.2):
+    """Return y with NaN wherever |denom| is in the smallest drop_frac fraction
+    of its finite magnitudes -- removes ratio poles at denom zero-crossings
+    (delta_p/delta_rho, sigma/delta, k*sigma/theta all blow up when the
+    denominator crosses zero in the free-streaming regime)."""
+    y = np.asarray(y, float).astype(float, copy=True)
+    denom = np.asarray(denom, float)
+    a = np.abs(denom)
+    finite = np.isfinite(a)
+    if finite.sum() == 0:
+        return np.full(y.shape, np.nan)
+    thr = np.quantile(a[finite], drop_frac)
+    y[~(a > thr)] = np.nan          # masks small |denom| and non-finite denom
+    return y
+
+
 def log_upper_envelope(x, y, n_bins=40):
     """Upper envelope of |y| over log-spaced x bins. Returns (x_centers, env)
     for non-empty bins only. x must be positive."""
