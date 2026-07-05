@@ -482,3 +482,13 @@ git commit -m "feat: nb15 w_trial cross-check + feasibility-gate verdict (pendin
 **Type consistency:** `extract_daughter_series` returns per-k dicts with keys `delta/theta/shear/dpr/k_fs/aH`, consumed unchanged in Tasks 3 and 5. `log_upper_envelope` returns `(x, env)` tuples, stored as `RESPONSES[key]['Rc'|'Rv']` and unpacked consistently. `collapse_band` returns `(band_array, max_float)`, and callers use `[1]` for the scalar. `ca2_from_kfs(k_fs, aH)` signature matches all call sites. Consistent.
 
 **Note on `aH` recovery:** deriving `aH = k_fs·√cs2/√(3/2)` is exact by the `k_fss_acc` definition but degenerate when `cs2≤0` (oscillation troughs) — those samples are dropped by the `good`/`g` masks before use, which is correct (we envelope over the survivors).
+
+## Execution notes (corrections applied while writing the notebook)
+
+Two corrections were made during inline execution; the shipped notebook reflects them (this section supersedes the affected snippets above):
+
+1. **`aH` recovery bug — fixed.** The draft recovered `aH = k_fs·√cs2/√(3/2)`, but `k_fss_acc` uses the *background* `ca2` (`perturbations.c:8771`) while `cs2_ncdm[1]` is `δp/δρ` — different quantities, so that conflated them. The notebook instead interpolates `aH = a·H` from `get_background()` (`conf. time [Mpc]`, `z`, `H [1/Mpc]`) onto each perturbation `tau`, then `ca2 = (3/2)(aH/k_fs)²`. The structure-check cell asserts `ca2 ≤ 1`.
+
+2. **`w_sigma`/`w_theta` already exposed — used directly.** `perturbations.c:3383-3390` titles and stores `w_p[n]`, `w_theta[n]`, `w_sigma[n]` per ncdm species (the grep in the spec missed them). `w_sigma[1]` is CLASS's momentum-weighted effective sound speed for the *shear* moment — a direct `cvis2` probe. So the primary cvis2-sector response is `R_s = w_sigma/ca2` (no C change, no rebuild), with `R_v = kσ/θ` demoted to a kinematic cross-check. Task 5's `w_sigma` expose is therefore already done; the decision cell verdicts both `R_c` and `R_s`.
+
+**Verification status:** all code authored; `pytest` (Task 1) and the CLASS cells (Tasks 2-5) run on the user's machine (`memory: agent-shell-no-python`). The `[FILL]` verdict fields are completed after the notebook runs.
