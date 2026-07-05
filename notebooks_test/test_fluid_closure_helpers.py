@@ -3,6 +3,7 @@ import pytest
 from fluid_closure_helpers import (
     ca2_from_kfs, sound_speed_response, shear_response,
     log_upper_envelope, collapse_band, mask_small_denom,
+    smooth_step, two_regime_ceff2,
 )
 
 def test_ca2_from_kfs_inverts_convention():
@@ -43,6 +44,18 @@ def test_mask_small_denom_masks_nonfinite_denominator():
     out = mask_small_denom(y, denom, drop_frac=0.01)
     assert np.isnan(out[0])                            # non-finite denom masked
     assert np.allclose(out[2:], y[2:])                 # large-|denom| samples survive
+
+def test_smooth_step_half_at_transition_and_limits():
+    assert np.isclose(smooth_step(5.0, 5.0, 2.0), 0.5)
+    assert smooth_step(1e-3, 5.0, 2.0) < 1e-4          # x << x_t -> 0
+    assert smooth_step(1e4, 5.0, 2.0) > 0.999          # x >> x_t -> 1
+
+def test_two_regime_ceff2_limits_to_ca2_and_cfs():
+    ca2, c_fs, x_t, p = 0.05, 0.4, 5.0, 2.0
+    lo = two_regime_ceff2(1e-3, ca2, c_fs, x_t, p)
+    hi = two_regime_ceff2(1e4, ca2, c_fs, x_t, p)
+    assert np.isclose(lo, ca2, atol=1e-3)              # below x_t -> adiabatic ca2
+    assert np.isclose(hi, c_fs, atol=1e-3)             # above x_t -> free-streaming plateau
 
 def test_collapse_band_zero_for_identical_curves():
     x = np.logspace(0, 2, 20)

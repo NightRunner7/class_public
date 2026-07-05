@@ -74,6 +74,20 @@ def log_upper_envelope(x, y, n_bins=40):
     return np.asarray(xc), np.asarray(env)
 
 
+def smooth_step(x, x_t, p):
+    """Smooth 0->1 step S(x) = x^p / (x_t^p + x^p); S(x_t) = 1/2."""
+    x = np.asarray(x, float)
+    xp = np.power(x, p)
+    return xp / (np.power(x_t, p) + xp)
+
+
+def two_regime_ceff2(x, ca2, c_fs, x_t, p):
+    """Two-regime effective sound speed: adiabatic ca2 below the transition x_t,
+    free-streaming plateau c_fs above, joined by the smooth step S(x)."""
+    S = smooth_step(x, x_t, p)
+    return np.asarray(ca2, float) * (1.0 - S) + c_fs * S
+
+
 def collapse_band(x_grid, curves, eps=1e-30):
     """Quantify collapse of several (x_i, y_i) curves onto x_grid (log-interp).
     At each x covered by >=2 curves, band = (max-min)/|median|. Returns
