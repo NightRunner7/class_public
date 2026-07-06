@@ -3,7 +3,7 @@ import pytest
 from fluid_closure_helpers import (
     ca2_from_kfs, sound_speed_response, shear_response,
     log_upper_envelope, collapse_band, mask_small_denom,
-    smooth_step, two_regime_ceff2,
+    smooth_step, two_regime_ceff2, saturating_cfs,
 )
 
 def test_ca2_from_kfs_inverts_convention():
@@ -56,6 +56,24 @@ def test_two_regime_ceff2_limits_to_ca2_and_cfs():
     hi = two_regime_ceff2(1e4, ca2, c_fs, x_t, p)
     assert np.isclose(lo, ca2, atol=1e-3)              # below x_t -> adiabatic ca2
     assert np.isclose(hi, c_fs, atol=1e-3)             # above x_t -> free-streaming plateau
+
+def test_saturating_cfs_small_argument_is_linear():
+    # small A*ca2: c_fs ~ A*ca2 (unsaturated regime)
+    assert np.isclose(saturating_cfs(1e-5, A=13.0), 13.0e-5, rtol=1e-3)
+
+def test_saturating_cfs_saturates_below_one_third():
+    # large A*ca2: c_fs -> 1/3 from below (relativistic free-gas ceiling)
+    c = saturating_cfs(1.0, A=13.0)
+    assert c < 1./3. and np.isclose(c, 1./3., atol=1e-6)
+
+def test_saturating_cfs_matches_nb15_eta1_break():
+    # nb15: eta=1 measured c_fs=0.2277 at ca2_today=3.053e-2; the map with
+    # A~12.5 should land near it (within ~15%)
+    assert abs(saturating_cfs(3.053e-2, A=12.5)/0.2277 - 1.0) < 0.15
+
+def test_saturating_cfs_zero_and_negative_ca2_give_zero():
+    out = saturating_cfs(np.array([0.0, -1e-3]), A=13.0)
+    assert np.allclose(out, 0.0)
 
 def test_collapse_band_zero_for_identical_curves():
     x = np.logspace(0, 2, 20)

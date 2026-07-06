@@ -88,6 +88,16 @@ def two_regime_ceff2(x, ca2, c_fs, x_t, p):
     return np.asarray(ca2, float) * (1.0 - S) + c_fs * S
 
 
+def saturating_cfs(ca2_today, A=13.0):
+    """Mode-2 plateau: c_fs = (1/3)(1 - exp(-3*A*ca2_today)).
+
+    Saturates at the relativistic free-gas ceiling 1/3 (radiation sound
+    speed c/sqrt(3)); linear ~A*ca2 when unsaturated. Mirrors the C
+    computation of pba->cfs_acc in background_init - keep in sync."""
+    ca2 = np.clip(np.asarray(ca2_today, float), 0.0, None)
+    return (1.0/3.0)*(1.0 - np.exp(-3.0*A*ca2))
+
+
 def collapse_band(x_grid, curves, eps=1e-30):
     """Quantify collapse of several (x_i, y_i) curves onto x_grid (log-interp).
     At each x covered by >=2 curves, band = (max-min)/|median|. Returns
