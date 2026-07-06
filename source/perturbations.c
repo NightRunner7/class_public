@@ -3823,13 +3823,14 @@ int perturbations_find_approximation_switches(
 /**
  * accDM daughter effective sound speed ceff2 (= delta_p/delta_rho) from the
  * base adiabatic sound speed cs2_base (cg2 or ca2). Mode 0 (ncdm_ceff2_mode)
- * is the published Eq-38 fit; mode 1 is the same fit hard-capped at the causal
- * ceiling 1/3. The cap is a pure safety net: mode 1 is IDENTICAL to mode 0
- * below 1/3 and only engages when the fit would go superluminal (large base
- * cs2_base, i.e. a relativistic daughter, times a large k/k_fs). The kink at
- * the crossing is harmless: ceff2 enters the perturbation equations
- * algebraically, never differentiated. cs2_base <= 0 returns 0
- * (degenerate/unborn daughter). Callers invoke it only for n_acc with has_acc.
+ * is the published Eq-38 fit; mode 1 is the same fit hard-capped at 1/3;
+ * mode 2 is the measured plateau closure min(max(cs2_base, cfs_acc), 1/3)
+ * (notebook 15): k-independent, adiabatic below the plateau, free-streaming
+ * plateau above. The 1/3 cap is the relativistic free-gas ceiling (radiation
+ * sound speed c/sqrt(3)), not a strict causality bound. Kinks are harmless:
+ * ceff2 enters the perturbation equations algebraically, never
+ * differentiated. cs2_base <= 0 returns 0 (degenerate/unborn daughter).
+ * Callers invoke it only for n_acc with has_acc.
  */
 static double perturbations_ceff2_ncdm(struct precision * ppr,
                                        struct background * pba,
@@ -3837,6 +3838,13 @@ static double perturbations_ceff2_ncdm(struct precision * ppr,
                                        double k, double a, double H) {
 
   if (cs2_base <= 0.) return 0.;
+
+  /* mode 2: measured plateau closure; returns before the fit so modes 0/1
+     stay bit-identical. */
+  if (ppr->ncdm_ceff2_mode == 2) {
+    double ceff2 = (cs2_base > pba->cfs_acc) ? cs2_base : pba->cfs_acc;
+    return (ceff2 < 1./3.) ? ceff2 : (1./3.);
+  }
 
   double W   = 1.0 - 2.0*pba->eps_acc;                     /* in (0,1] for physical eta>=0 */
   double xr  = sqrt(k*sqrt(2./3.)*sqrt(cs2_base)/(a*H));   /* sqrt(k/k_fs) */
@@ -7345,9 +7353,9 @@ int perturbations_total_stress_energy(
               double cg2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
               double cg2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
               cg2_ncdm = cg2_num / cg2_den;
-              if (isnan(cg2_ncdm) || isinf(cg2_ncdm)) {
-                printf("DEBUG 1: ratio=%e gamma=%e term3=%e numerator=%e denominator=%e\n", ratio_rho, gamma, term3, cg2_num, cg2_den);
-              }
+              // if (isnan(cg2_ncdm) || isinf(cg2_ncdm)) {
+              //   printf("DEBUG 1: ratio=%e gamma=%e term3=%e numerator=%e denominator=%e\n", ratio_rho, gamma, term3, cg2_num, cg2_den);
+              // }
               if (cg2_ncdm < 0.) cg2_ncdm = 0.; /* guard sqrt */
             }
           }
@@ -7377,7 +7385,7 @@ int perturbations_total_stress_energy(
           ppw->delta_rho += rho_ncdm_bg*y[idx];
           ppw->rho_plus_p_theta += rho_plus_p_ncdm*y[idx+1];
           ppw->rho_plus_p_shear += rho_plus_p_ncdm*y[idx+2];
-          ppw->delta_p += cg2_ncdm*rho_ncdm_bg*y[idx];
+          // ppw->delta_p += cg2_ncdm*rho_ncdm_bg*y[idx];
 
           if (ppt->switch_on_eq_delta_p_acc == _TRUE_ && n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_) {
             ppw->delta_p += y[idx+3]*rho_ncdm_bg; //CS2DYN
