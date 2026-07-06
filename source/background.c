@@ -875,6 +875,27 @@ int background_init(
              pba->error_message,
              pba->error_message);
 
+  /* AccDM: mode-2 plateau ceff2 (spec 2026-07-06). c_fs = (1/3)(1 -
+     exp(-3*A*ca2_bg(a=1))) with ca2_bg today from the last background-table
+     row (source-free form: production is complete at a=1 in the covered
+     regime). Saturates at the relativistic free-gas ceiling 1/3. Mirrored by
+     saturating_cfs in notebooks_test/fluid_closure_helpers.py - keep in sync. */
+  pba->cfs_acc = 0.;
+  if ((pba->has_acc == _TRUE_) && (pba->N_ncdm > 0)) {
+    int n_acc = pba->N_ncdm-1;
+    double * last_row = pba->background_table + (pba->bt_size-1)*pba->bg_size;
+    double rho_d = last_row[pba->index_bg_rho_ncdm1 + n_acc];
+    double p_d   = last_row[pba->index_bg_p_ncdm1 + n_acc];
+    double pp_d  = last_row[pba->index_bg_pseudo_p_ncdm1 + n_acc];
+    if ((rho_d > 0.) && (p_d > 0.)) {
+      double w_d = p_d/rho_d;
+      double ca2_today = w_d*(5.0 - pp_d/p_d)/(3.0*(1.0+w_d));
+      if (ca2_today < 0.) ca2_today = 0.;
+      if (ca2_today > 1.) ca2_today = 1.;
+      pba->cfs_acc = (1./3.)*(1.0 - exp(-3.0*ppr->ncdm_ceff2_fs_A*ca2_today));
+    }
+  }
+
   /* - write a summary of the budget of the universe */
   class_call(background_output_budget(pba),
              pba->error_message,

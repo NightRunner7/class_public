@@ -93,6 +93,9 @@ struct background
   double T_acc_GeV;   
   double eps_acc;
   double k_fss_acc;
+  double cfs_acc; /**< mode-2 plateau ceff2 of the acc daughter,
+                       (1/3)(1-exp(-3*A*ca2_bg(a=1))); set in background_init
+                       from the last background-table row; 0 unless has_acc */
 
   int acc_ncdm_index; /** Index for the accelerating ncdm species, UNUSED RIGHT NOW */
 
