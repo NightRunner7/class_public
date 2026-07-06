@@ -23,7 +23,9 @@ def test_sound_speed_response_is_ratio():
 def test_shear_response_scales_with_k_and_guards_zero_theta():
     r = shear_response(2.0, np.array([0.3, 0.3]), np.array([0.6, 0.0]))
     assert np.isclose(r[0], 2.0 * 0.3 / 0.6)       # = 1.0
-    assert np.isfinite(r[1])                        # theta=0 guarded, no inf
+    # theta=0 is guarded with a NaN sentinel (NOT inf): downstream consumers
+    # (log_upper_envelope, mask_small_denom, collapse_band) all drop NaN.
+    assert np.isnan(r[1]) and not np.isinf(r[1])
 
 def test_log_upper_envelope_takes_abs_max_per_bin():
     x = np.array([1.0, 1.1, 10.0, 11.0])
@@ -61,10 +63,15 @@ def test_saturating_cfs_small_argument_is_linear():
     # small A*ca2: c_fs ~ A*ca2 (unsaturated regime)
     assert np.isclose(saturating_cfs(1e-5, A=13.0), 13.0e-5, rtol=1e-3)
 
-def test_saturating_cfs_saturates_below_one_third():
-    # large A*ca2: c_fs -> 1/3 from below (relativistic free-gas ceiling)
+def test_saturating_cfs_saturates_at_one_third():
+    # large A*ca2: c_fs -> 1/3 (relativistic free-gas ceiling). At A*ca2=13
+    # exp(-39) is below float64 eps, so the result equals 1/3 to machine
+    # precision - never above it.
     c = saturating_cfs(1.0, A=13.0)
-    assert c < 1./3. and np.isclose(c, 1./3., atol=1e-6)
+    assert c <= 1./3. + 1e-15 and np.isclose(c, 1./3., atol=1e-6)
+    # strictly below the ceiling while still resolvable:
+    c_mid = saturating_cfs(0.05, A=13.0)   # exp(-1.95) ~ 0.14
+    assert 0.0 < c_mid < 1./3.
 
 def test_saturating_cfs_matches_nb15_eta1_break():
     # nb15: eta=1 measured c_fs=0.2277 at ca2_today=3.053e-2; the map with
