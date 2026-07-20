@@ -6229,7 +6229,7 @@ int input_default_params(struct background *pba,
   ppt->switch_off_shear_acc = _TRUE_;
   ppt->switch_on_eq_delta_p_acc = _FALSE_;
 
-  pba->acc_ncdm_index = NULL; 
+  // pba->acc_ncdm_index = NULL; 
 
   /* END Accelerating DM */
 

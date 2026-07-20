@@ -3824,9 +3824,12 @@ int perturbations_find_approximation_switches(
  * accDM daughter effective sound speed ceff2 (= delta_p/delta_rho) from the
  * base adiabatic sound speed cs2_base (cg2 or ca2). Mode 0 (ncdm_ceff2_mode)
  * is the published Eq-38 fit; mode 1 is the same fit hard-capped at 1/3;
- * mode 2 is the measured plateau closure min(max(cs2_base, cfs_acc), 1/3)
- * (notebook 15): k-independent, adiabatic below the plateau, free-streaming
- * plateau above. The 1/3 cap is the relativistic free-gas ceiling (radiation
+ * modes 2 and 3 are the measured plateau closure min(max(cs2_base, cfs_acc),
+ * 1/3): k-independent, adiabatic below the plateau, free-streaming plateau
+ * above. They differ only in how background_init fills pba->cfs_acc: mode 2
+ * from ca2_bg(a=1) (notebook 15), mode 3 directly from the injection kick
+ * eta_acc. Mode 4 is the mode-3 plateau with NO adiabatic floor (pure
+ * constant). The 1/3 cap is the relativistic free-gas ceiling (radiation
  * sound speed c/sqrt(3)), not a strict causality bound. Kinks are harmless:
  * ceff2 enters the perturbation equations algebraically, never
  * differentiated. cs2_base <= 0 returns 0 (degenerate/unborn daughter).
@@ -3839,9 +3842,22 @@ static double perturbations_ceff2_ncdm(struct precision * ppr,
 
   if (cs2_base <= 0.) return 0.;
 
-  /* mode 2: measured plateau closure; returns before the fit so modes 0/1
-     stay bit-identical. */
-  if (ppr->ncdm_ceff2_mode == 2) {
+  /* mode 4: pure constant plateau, no adiabatic floor. The eta-law cfs_acc is
+     < 1/3 by construction, so the cap is a safety no-op. Rationale (nb15,
+     2026-07-15): the measured ceff2 is flat down to x ~ 0.05 and the fluid
+     never runs below that (k_fs today ~ 1e-2/Mpc, ktau trigger), while the
+     max(ca2, .) floor binds only in the warm post-trigger transient where the
+     measured ceff2 sits AT/BELOW the plateau, never up at ca2 -- the floor
+     overestimates pressure support exactly where the fluid transient errors
+     live. */
+  if (ppr->ncdm_ceff2_mode == 4) {
+    return (pba->cfs_acc < 1./3.) ? pba->cfs_acc : (1./3.);
+  }
+
+  /* modes 2/3: measured plateau closure; returns before the fit so modes 0/1
+     stay bit-identical. The two modes share this branch - only the
+     background_init computation of pba->cfs_acc differs. */
+  if ((ppr->ncdm_ceff2_mode == 2) || (ppr->ncdm_ceff2_mode == 3)) {
     double ceff2 = (cs2_base > pba->cfs_acc) ? cs2_base : pba->cfs_acc;
     return (ceff2 < 1./3.) ? ceff2 : (1./3.);
   }
@@ -7349,14 +7365,20 @@ int perturbations_total_stress_energy(
             gamma = ppw->pvecback[pba->index_bg_Gamma_acc];
             eta = pba->eta_acc;
             { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
-              double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta + 2*eta) / (1. + eta); // AG:+2*eta somewhere?
+              double term3 = ratio_rho * gamma / (3.0 * H) * (eta * eta + 2*eta) / (1. + eta);
               double cg2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
               double cg2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H)*(1.+eta);
-              cg2_ncdm = cg2_num / cg2_den;
-              // if (isnan(cg2_ncdm) || isinf(cg2_ncdm)) {
-              //   printf("DEBUG 1: ratio=%e gamma=%e term3=%e numerator=%e denominator=%e\n", ratio_rho, gamma, term3, cg2_num, cg2_den);
-              // }
+              double cg2_0 = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg)/(3.0*(1.0+w_ncdm));
+              /* near-singular denominator: fall back to the source-free sound
+                 speed, keeping this evaluation consistent with the derivs and
+                 exact-branch guards (ncdm_ca2_den_tol) */
+              if (fabs(cg2_den) < ppr->ncdm_ca2_den_tol*fabs(3.0*(1.0+w_ncdm)))
+                cg2_ncdm = cg2_0;
+              else
+                cg2_ncdm = cg2_num / cg2_den;
+              if (isnan(cg2_ncdm) || isinf(cg2_ncdm)) cg2_ncdm = cg2_0;
               if (cg2_ncdm < 0.) cg2_ncdm = 0.; /* guard sqrt */
+              if (cg2_ncdm > 1.) cg2_ncdm = 1.; /* causality */
             }
           }
           else{
@@ -10192,14 +10214,24 @@ int perturbations_derivs(double tau,
               dy[idx+2] = 0.;
             } 
             else {
-              if (pba->kappa_acc <= 3.0) { /* AG: It seems that for kappa less than 3 setting shear to zero gives better approximation */
-                dy[idx+2] = 0.;
-              }
-              else {
+              // if (pba->kappa_acc <= 3.0) { /* AG: It seems that for kappa less than 3 setting shear to zero gives better approximation */
+              //                              /* NOTE: heuristic predates the removal of the spurious delta_dcdm
+              //                                 source below; its empirical basis is stale -- retest. */
+              //   dy[idx+2] = 0.;
+              // }
+              // else {
+                /* l=2 moment of the daughter hierarchy: isotropic injection from a
+                   comoving parent sources no quadrupole, and the production-front
+                   deltas inside dbar_f/dq cancel by parts in integrated moments, so
+                   injection enters ONLY as the dilution damping below -- there is no
+                   delta_dcdm source here, unlike the l=0 delta_p equation. With the
+                   sourced ca2 the damping is identical to the physical form
+                   -(1+2eta)(3+2eta)/(3(1+eta)) * a*gamma*ratio_rho/(1+w) * sigma
+                   built on the source-free ca2_0. Closures as stock CLASS ncdmfa:
+                   pseudo-shear ratio -> pseudo_p/p, l=3 -> 1/tau, l=1 -> cvis2 term. */
                 dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+1./tau+a*gamma*(1.+pba->eta_acc)*((1.+ca2_ncdm)/(3.+3.*w_ncdm))*ratio_rho)*y[idx+2]
-                          +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*s_l[2]*(y[idx+1]+metric_ufa_class)      
-                          -2.0/3.0*pba->eta_acc*(pba->eta_acc+2.)/(1.+pba->eta_acc)*a*gamma*ratio_rho*y[pv->index_pt_delta_dcdm]/(1.+w_ncdm);
-              }
+                          +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*s_l[2]*(y[idx+1]+metric_ufa_class);
+              // }
             }
 
             //   (corrected)formula (A.8) of 1505.05511v2

@@ -429,6 +429,18 @@ class_precision_parameter(ncdm_ca2_den_tol,double,1.0e-3)
  *                free-streaming plateau cfs_acc = (1/3)(1-exp(-3*A*ca2_bg(a=1)))
  *                measured from the exact hierarchy (notebook 15). Valid for
  *                fixed (kappa_acc, a_t_acc) with production completed early.
+ *   3 = eta-plateau: same closure shape as mode 2 but the plateau is driven
+ *                directly by the injection kick, cfs_acc =
+ *                (1/3)(1-exp(-3*A_eta*eta_acc)). The exact-hierarchy plateau
+ *                is linear in eta (pinned to the kick of the freshly injected
+ *                daughters, not to the redshifted bath's ca2), so no
+ *                background quantity enters at all.
+ *   4 = constant eta-plateau: ceff2 = cfs_acc with the mode-3 eta-law plateau
+ *                but NO adiabatic floor -- pure constant. The max(ca2, .)
+ *                floor of modes 2/3 binds only in the warm post-trigger
+ *                transient, where the measured ceff2 sits at/below the
+ *                plateau (nb15); mode 4 removes that overestimate. Uses
+ *                ncdm_ceff2_eta_A like mode 3.
  * The 1/3 cap is the relativistic free-gas ceiling (radiation sound speed
  * c/sqrt(3)), not a strict causality bound. Has no effect when has_acc is false.
  */
@@ -440,7 +452,7 @@ class_precision_parameter(ncdm_ceff2_mode,int,0)
  * PSD (see notebooks_test/7_test_ceff2_calibration.ipynb). Has no effect when
  * has_acc is false.
  */
-class_precision_parameter(ncdm_ceff2_fs_amp,double,0.2)
+class_precision_parameter(ncdm_ceff2_fs_amp,double,0.0)
 /**
  * Mode-2 family constant A in c_fs = (1/3)(1 - exp(-3*A*ca2_bg(a=1))).
  * Measured by notebooks_test/15_test_fluid_closure_diagnostic.ipynb for the
@@ -448,6 +460,14 @@ class_precision_parameter(ncdm_ceff2_fs_amp,double,0.2)
  * different (kappa, a_t) family. Has no effect unless ncdm_ceff2_mode = 2.
  */
 class_precision_parameter(ncdm_ceff2_fs_A,double,13.0)
+/**
+ * Mode-3 kick constant A_eta in cfs_acc = (1/3)(1 - exp(-3*A_eta*eta_acc)).
+ * Fit to the exact-hierarchy ceff2 plateaus over eta = 0.01..0.5 at kappa=6,
+ * a_t=0.13 (sub-few-percent there); universality in (kappa, a_t) is NOT yet
+ * established - re-measure when fixing a different family. Has no effect
+ * unless ncdm_ceff2_mode = 3 or 4.
+ */
+class_precision_parameter(ncdm_ceff2_eta_A,double,0.55)
 /**
  * whether CMB source functions can be approximated as zero when
  * visibility function g(tau) is tiny
