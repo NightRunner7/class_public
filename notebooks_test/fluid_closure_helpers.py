@@ -98,6 +98,66 @@ def saturating_cfs(ca2_today, A=13.0):
     return (1.0/3.0)*(1.0 - np.exp(-3.0*A*ca2))
 
 
+def eta_plateau_cfs(eta_acc, A=0.55):
+    """Mode-3 plateau: c_eff^2 = (1/3)(1 - exp(-3*A*eta_acc)).
+
+    Same saturating form as mode 2 but driven directly by the injection
+    kick eta_acc (an input parameter) instead of the background ca2_bg(a=1):
+    the exact-hierarchy plateau is linear in eta (~0.55*eta at small eta),
+    i.e. pinned to the kick of the freshly injected daughters, not to the
+    redshifted bath temperature. Mirrors the C computation of pba->cfs_acc
+    for ncdm_ceff2_mode=3 in background_init - keep in sync."""
+    return saturating_cfs(eta_acc, A=A)
+
+
+def desaturate_cfs(cfs):
+    """Invert the saturating map: return y such that cfs = (1/3)(1 - exp(-3y)).
+
+    Linearizes the plateau for fitting (y = A*eta when the eta-law holds).
+    cfs <= 0 (no pressure) -> 0; cfs at/above the 1/3 ceiling -> inf, so
+    saturated points drop out of finite-only fits instead of biasing them."""
+    c = np.clip(np.asarray(cfs, float), 0.0, None)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        y = -np.log(1.0 - 3.0*c)/3.0
+    return np.where(c >= 1.0/3.0, np.inf, y)
+
+
+def fit_eta_slope(etas, plateaus):
+    """Least-squares slope A through the origin of desaturated plateau vs eta:
+    desaturate_cfs(plateau) = A*eta. Saturated (inf) and non-finite points are
+    dropped; returns NaN if nothing usable remains."""
+    etas = np.asarray(etas, float)
+    y = desaturate_cfs(plateaus)
+    good = np.isfinite(y) & np.isfinite(etas) & (etas > 0)
+    if not np.any(good):
+        return float('nan')
+    return float(np.sum(y[good]*etas[good]) / np.sum(etas[good]**2))
+
+
+def fit_A_of_f(f_values, A_values):
+    """Fit the amplitude law A(f) = A0*(1 + B*f) by ordinary least squares on
+    A = a + b*f. Returns (A0, B) = (a, b/a)."""
+    f = np.asarray(f_values, float)
+    A = np.asarray(A_values, float)
+    good = np.isfinite(f) & np.isfinite(A)
+    slope, intercept = np.polyfit(f[good], A[good], 1)
+    return float(intercept), float(slope/intercept)
+
+
+def A_eff_of_f(f, A0, B):
+    """Effective eta-law amplitude A(f) = A0*(1 + B*f) -- the value passed to
+    CLASS as ncdm_ceff2_eta_A so mode 3 realizes ceff2_f_eta without C changes."""
+    return A0*(1.0 + B*np.asarray(f, float))
+
+
+def ceff2_f_eta(f, eta, A0=0.55, B=0.0):
+    """Deliverable formula: ceff2(f, eta) = (1/3)(1 - exp(-3*A0*(1+B*f)*eta)).
+
+    B = 0 reduces to eta_plateau_cfs (the f-independent eta-law). Calibrated at
+    kappa=6, a_t=0.13 only (notebook 18); universality in (kappa, a_t) untested."""
+    return saturating_cfs(np.asarray(eta, float), A=A_eff_of_f(f, A0, B))
+
+
 def collapse_band(x_grid, curves, eps=1e-30):
     """Quantify collapse of several (x_i, y_i) curves onto x_grid (log-interp).
     At each x covered by >=2 curves, band = (max-min)/|median|. Returns

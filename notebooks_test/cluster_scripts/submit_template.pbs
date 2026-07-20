@@ -1,0 +1,53 @@
+#!/bin/bash
+#PBS -N accdm-cache
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=24:00:00
+#PBS -q batch
+#PBS -l mem=16gb
+#PBS -t 0-10
+#PBS -j oe
+
+# Torque/Maui array template for the nbNN cache generators (same conventions
+# as param_scan.sh). Submit from notebooks_test/ so the cache lands in
+# ./accDM_scans exactly like on the laptop:
+#
+#   cd $HOME/Workplace/class_accDM/notebooks_test
+#   python cluster_scripts/gen_nb19_cache.py --list        # note the job count N
+#   qsub -t 0-$((N-1)) \
+#        -v 'GENERATOR=cluster_scripts/gen_nb19_cache.py,GEN_ARGS=--trigger 0.2 --shear no' \
+#        cluster_scripts/submit_template.pbs
+#
+# NOTE: unlike param_scan.sh, the array ID is a 0-based JOB INDEX (--index),
+# not a seed - always start the range at 0. The generators skip files that
+# already exist, so resubmitting after a walltime kill only redoes the
+# missing runs. qsub -v uses commas to separate variables, so GEN_ARGS may
+# contain spaces but not commas (for nb19 --corners, edit a copy of this
+# template instead).
+
+cd $PBS_O_WORKDIR
+
+# Environment Setup
+eval "$(/opt/anaconda3/bin/conda shell.bash hook)"
+conda activate accDM
+
+: "${GENERATOR:?set via qsub -v GENERATOR=cluster_scripts/gen_nbNN_cache.py}"
+: "${GEN_ARGS:=}"
+: "${CACHE_ROOT:=accDM_scans}"
+
+# Match thread count to the requested cores (ppn=4) to avoid oversubscription.
+export PYTHONUNBUFFERED=1
+export OMP_NUM_THREADS=4
+export OPENBLAS_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+export NUMEXPR_NUM_THREADS=4
+
+echo "Python version: $(python --version)"
+echo "Running on host: $(hostname)"
+echo "Generator:       $GENERATOR"
+echo "Extra args:      $GEN_ARGS"
+echo "Cache root:      $CACHE_ROOT"
+echo "Job index:       $PBS_ARRAYID"
+
+python -u "$GENERATOR" --index "$PBS_ARRAYID" --cache-root "$CACHE_ROOT" $GEN_ARGS
+
+echo "Job finished."

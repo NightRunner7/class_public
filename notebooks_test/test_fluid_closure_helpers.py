@@ -3,7 +3,8 @@ import pytest
 from fluid_closure_helpers import (
     ca2_from_kfs, sound_speed_response, shear_response,
     log_upper_envelope, collapse_band, mask_small_denom,
-    smooth_step, two_regime_ceff2, saturating_cfs,
+    smooth_step, two_regime_ceff2, saturating_cfs, eta_plateau_cfs,
+    desaturate_cfs, fit_eta_slope, fit_A_of_f, A_eff_of_f, ceff2_f_eta,
 )
 
 def test_ca2_from_kfs_inverts_convention():
@@ -81,6 +82,81 @@ def test_saturating_cfs_matches_nb15_eta1_break():
 def test_saturating_cfs_zero_and_negative_ca2_give_zero():
     out = saturating_cfs(np.array([0.0, -1e-3]), A=13.0)
     assert np.allclose(out, 0.0)
+
+def test_eta_plateau_cfs_small_eta_is_linear():
+    # unsaturated regime: c_eff^2 ~ A*eta with the default A=0.55
+    assert np.isclose(eta_plateau_cfs(1e-5), 0.55e-5, rtol=1e-3)
+
+def test_eta_plateau_cfs_matches_exact_plateau_scan():
+    # exact-hierarchy ceff2 plateaus at kappa=6, a_t=0.13 (eta-scan, read off
+    # the measured plateau levels; A=0.55 fit by eye). 10% tolerance until the
+    # scan numbers are re-fit properly.
+    measured = {0.01: 0.0055, 0.05: 0.027, 0.1: 0.053, 0.3: 0.13, 0.5: 0.18}
+    for eta, plateau in measured.items():
+        assert abs(float(eta_plateau_cfs(eta))/plateau - 1.0) < 0.10, \
+            'eta={}: model {} vs measured {}'.format(eta, eta_plateau_cfs(eta), plateau)
+
+def test_eta_plateau_cfs_ceiling_and_zero_guard():
+    # saturates at the relativistic free-gas ceiling 1/3, never above
+    c = eta_plateau_cfs(1e3)
+    assert c <= 1./3. + 1e-15 and np.isclose(c, 1./3., atol=1e-6)
+    # eta=0 (no kick) and unphysical negative eta both give 0
+    out = eta_plateau_cfs(np.array([0.0, -1e-3]))
+    assert np.allclose(out, 0.0)
+
+def test_desaturate_cfs_round_trips_saturating_cfs():
+    # desaturate is the exact inverse of the saturating map: y = A*x recovered
+    x = np.array([1e-4, 1e-2, 0.05, 0.2])
+    y = desaturate_cfs(saturating_cfs(x, A=7.3))
+    assert np.allclose(y, 7.3 * x, rtol=1e-10)
+
+def test_desaturate_cfs_guards():
+    out = desaturate_cfs(np.array([0.0, -1e-3, 1.0/3.0, 0.4]))
+    assert out[0] == 0.0 and out[1] == 0.0            # no/unphysical pressure -> 0
+    assert np.isinf(out[2]) and np.isinf(out[3])      # at/above the 1/3 ceiling -> inf
+
+def test_fit_eta_slope_recovers_known_A():
+    etas = np.array([0.01, 0.05, 0.1, 0.3, 0.5])
+    plateaus = saturating_cfs(etas, A=0.62)           # synthetic exact plateaus
+    assert np.isclose(fit_eta_slope(etas, plateaus), 0.62, rtol=1e-10)
+
+def test_fit_eta_slope_drops_saturated_points():
+    # a plateau pinned at the 1/3 ceiling carries no slope information; it must
+    # be dropped (y = inf), not poison the fit
+    etas = np.array([0.01, 0.1, 1e3])
+    plateaus = np.array([float(saturating_cfs(0.01, A=0.62)),
+                         float(saturating_cfs(0.1, A=0.62)), 1.0/3.0])
+    assert np.isclose(fit_eta_slope(etas, plateaus), 0.62, rtol=1e-10)
+
+def test_fit_eta_slope_all_bad_gives_nan():
+    assert np.isnan(fit_eta_slope([0.1, 0.2], [1.0/3.0, np.nan]))
+
+def test_fit_A_of_f_recovers_A0_and_B():
+    f = np.array([0.03, 0.1, 0.2, 0.3])
+    A = 0.55 * (1.0 + 0.8 * f)
+    A0, B = fit_A_of_f(f, A)
+    assert np.isclose(A0, 0.55, rtol=1e-10) and np.isclose(B, 0.8, rtol=1e-10)
+
+def test_fit_A_of_f_flat_gives_B_zero():
+    f = np.array([0.03, 0.1, 0.2, 0.3])
+    A0, B = fit_A_of_f(f, np.full(f.shape, 0.55))
+    assert np.isclose(A0, 0.55, rtol=1e-10) and np.isclose(B, 0.0, atol=1e-10)
+
+def test_A_eff_of_f_is_the_amplitude_law():
+    assert np.isclose(A_eff_of_f(0.3, A0=0.5, B=2.0), 0.5 * 1.6)
+
+def test_ceff2_f_eta_reduces_to_eta_plateau_at_B_zero():
+    etas = np.array([0.01, 0.1, 0.5])
+    assert np.allclose(ceff2_f_eta(0.3, etas, A0=0.55, B=0.0),
+                       eta_plateau_cfs(etas, A=0.55))
+
+def test_ceff2_f_eta_monotone_in_f_for_positive_B():
+    lo = float(ceff2_f_eta(0.03, 0.1, A0=0.55, B=0.8))
+    hi = float(ceff2_f_eta(0.3, 0.1, A0=0.55, B=0.8))
+    assert hi > lo
+    # and consistent with passing A_eff through the eta-only law (what the C
+    # run receives via ncdm_ceff2_eta_A)
+    assert np.isclose(hi, float(eta_plateau_cfs(0.1, A=A_eff_of_f(0.3, 0.55, 0.8))))
 
 def test_collapse_band_zero_for_identical_curves():
     x = np.logspace(0, 2, 20)
