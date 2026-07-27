@@ -1407,7 +1407,7 @@ int background_ncdm_distribution(
 
         /*** Final expression for f0 ***/
         
-        *f0 = n_dcdm_comoving / (4.0 * _PI_ * qcube) * Gamma_q_over_H_q; // * exp(-Gamma_q * t_q);
+        *f0 = n_dcdm_comoving / (4.0 * _PI_ * qcube) * Gamma_q_over_H_q; 
         }
     }
 
