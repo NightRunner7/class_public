@@ -2610,13 +2610,6 @@ int input_read_parameters_species(struct file_content * pfc,
     pba->Omega_ini_dcdm = param2/pba->h/pba->h;
   }
   class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
-
-  // class_call(parser_read_int(pfc,"acc_ncdm_index",&param1,&flag1,errmsg), errmsg, errmsg);
-  // pba->acc_ncdm_index = (int)param1;
-  // // If acc_ncdm_indec != NULL, then check whether N_ncdm>0 and whether the index is in the correct range. If not, stop with an error message.
-  // class_test(flag1 == _TRUE_ && (pba->N_ncdm == 0 || pba->acc_ncdm_index > pba->N_ncdm), errmsg, 
-  // "If you want to have WDM you need to specify which ncdm species is the one that corresponds to WDM. You can do that by setting 'acc_ncdm_index' to the correct value between 1 and N_ncdm. Currently you set 'acc_ncdm_index' to %d, but N_ncdm is equal to %d.", pba->acc_ncdm_index, pba->N_ncdm);
-
   class_call(parser_read_double(pfc,"f_acc",&param3,&flag3,errmsg), errmsg, errmsg);
   
   /* Proceed only if WDM is active in this run */
@@ -2624,42 +2617,48 @@ int input_read_parameters_species(struct file_content * pfc,
     pba->has_acc = _TRUE_;
     if (flag3 == _TRUE_) pba->f_acc = param3;
 
-    /* --- Handle Energy Boost (eta = E/m_acc-1) --- */
+    /* --- Handle Energy Boost (eta = E/m_acc-1) where E is the total energy --- */
     class_call(parser_read_double(pfc,"eta_acc",&param1,&flag1,errmsg),
               errmsg,
               errmsg);
     class_call(parser_read_double(pfc,"m_acc_in_GeV",&param2,&flag2,errmsg),
               errmsg,
               errmsg);
-    // class_call(parser_read_double(pfc,"E_acc_in_GeV",&param3,&flag3,errmsg),
-    //           errmsg,
-    //           errmsg);
-      class_call(parser_read_double(pfc,"m_cdm_in_GeV",&param3,&flag3,errmsg),
+    class_call(parser_read_double(pfc,"m_cdm_in_GeV",&param3,&flag3,errmsg),
               errmsg,
               errmsg);
 
-    class_test(flag1 == _FALSE_, 
-                errmsg, 
-                "If you want to have WDM you need to provide the energy boost eta_acc.");
     class_test(flag2 == _FALSE_, 
                 errmsg, 
                 "If you want to have accDM you need to provide its mass in GeV.");
-    class_test(flag3 == _FALSE_, 
-                errmsg, 
-                "To compute PSD of accDM we need the mass of CDM in GeV.");
+
+    /* m_acc_in_GeV is guaranteed present by the class_test above; assign it
+       first so the eta default below can use it. */
+    pba->m_acc_in_GeV = param2;
 
     if (flag1 == _TRUE_) {
         pba->eta_acc = param1;
-        double eta = pba->eta_acc;
-        double eta2 = eta*eta;
-        pba->eps_acc = - eta2 + sqrt(eta2*eta2 + 4*eta2*eta + 5*eta2 + 2*eta) - 2*eta;
       }
-    if (flag2 == _TRUE_) {
-        pba->m_acc_in_GeV = param2;
+    else {
+        pba->eta_acc = 1e11/pba->m_acc_in_GeV; // This 1e11 is the KINETIC energy due to the boost. TO DO: Make it an input param.
       }
+
+    /* eps_acc feeds the W-weight of the published ceff2 fit (modes 0/1 in
+       perturbations.c); see the comment there - that approach is known to be
+       incorrect but kept for clarity/reproducibility. */
+    {
+      double eta = pba->eta_acc;
+      double eta2 = eta*eta;
+      pba->eps_acc = - eta2 + sqrt(eta2*eta2 + 4*eta2*eta + 5*eta2 + 2*eta) - 2*eta;
+    }
+
     if (flag3 == _TRUE_) {
         pba->M_cdm_in_GeV = param3;
       }
+    else {
+        pba->M_cdm_in_GeV = param2; // Default value for CDM mass to the mass of accDM if not provided. NOTE: This is required for the rest of the code to work. 
+      }
+
     /* Precompute kick momentum once: used in f0, ncdm_momenta, and ncdm_qmax */
     pba->P_acc = pba->M_cdm_in_GeV * sqrt(pba->eta_acc * (pba->eta_acc + 2.0));
     
