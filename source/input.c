@@ -2772,14 +2772,26 @@ int input_read_parameters_species(struct file_content * pfc,
                errmsg);
 
     /** 5.d) Mass and/or Omega of each ncdm species */
-    /* Read. This is the expansion of class_read_list_of_doubles_or_default,
-       inlined because the macro cannot report whether 'm_ncdm' was actually
-       present, and the 'm_nu' alternative below needs to know. */
-    int flag_m_ncdm;
+    /* Read. 'm_nu' is a convenience alternative to 'm_ncdm': it gives the mass
+       in eV of a single massive neutrino species, taken to be common to all of
+       them, and spares the user from spelling out a length-N_ncdm list whose
+       accDM entry is a discarded placeholder anyway (see just below). The list
+       read is the inlined expansion of class_read_list_of_doubles_or_default,
+       because the macro cannot report whether 'm_ncdm' was actually present. */
+    int flag_m_nu, flag_m_ncdm;
+    double m_nu_in_eV;
 
+    class_call(parser_read_double(pfc,"m_nu",&m_nu_in_eV,&flag_m_nu,errmsg),
+               errmsg,
+               errmsg);
     class_call(parser_read_list_of_doubles(pfc,"m_ncdm",&entries_read,&(pba->m_ncdm_in_eV),&flag_m_ncdm,errmsg),
                errmsg,
                errmsg);
+
+    /* Test */
+    class_test((flag_m_nu == _TRUE_) && (flag_m_ncdm == _TRUE_),
+               errmsg,
+               "You can only enter one of 'm_nu' or 'm_ncdm'.");
 
     /* Complete set of parameters */
     if (flag_m_ncdm == _TRUE_){
@@ -2789,16 +2801,25 @@ int input_read_parameters_species(struct file_content * pfc,
                  entries_read,N_ncdm);
     }
     else {
+      /* Neither given: fall back to 0.0, which the loop further down turns
+         into the ultra-relativistic default of 1e-5 eV. */
+      if (flag_m_nu == _FALSE_) m_nu_in_eV = 0.0;
       class_alloc(pba->m_ncdm_in_eV,N_ncdm*sizeof(double),errmsg);
-      for (n=0; n<N_ncdm; n++){ pba->m_ncdm_in_eV[n] = 0.0; }
+      for (n=0; n<N_ncdm; n++){ pba->m_ncdm_in_eV[n] = m_nu_in_eV; }
     }
 
-    /* The last index is supposed to be reserved for the WDM component of the ADM model, so if the user has provided a mass for WDM, we set it as the default value for the last ncdm species.
+    /* The last ncdm slot is reserved for the accDM daughter, whose mass always
+       comes from 'm_acc_in_GeV'; whatever sits in m_ncdm[N_ncdm-1] (a
+       placeholder, or the m_nu broadcast above) is discarded here.
        Guard on has_acc: without it, a plain (non-accDM) run would have its last
-       ncdm species' mass overwritten with m_acc_in_GeV*1e9 = 0, silently turning
-       e.g. the neutrino massless. */
+       ncdm species' mass overwritten with m_acc_in_GeV*1e9 = 0, silently
+       turning e.g. the neutrino massless. */
     if (pba->N_ncdm > 0 && pba->has_acc == _TRUE_) {
-      pba->m_ncdm_in_eV[pba->N_ncdm-1] = pba->m_acc_in_GeV*1e9; // Set a default value for the last species
+      class_test((flag_m_nu == _TRUE_) && (N_ncdm < 2),
+                 errmsg,
+                 "You set 'm_nu' together with accDM, but 'N_ncdm = %d': the only ncdm species is the accDM daughter, which takes its mass from 'm_acc_in_GeV', so 'm_nu' would be silently discarded. Set 'N_ncdm = 2' for both massive neutrinos and accDM.",
+                 N_ncdm);
+      pba->m_ncdm_in_eV[pba->N_ncdm-1] = pba->m_acc_in_GeV*1e9;
     }
     for (n=0; n<N_ncdm; n++){
       class_test(pba->m_ncdm_in_eV[n]<0,

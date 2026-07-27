@@ -164,9 +164,16 @@ reordering is needed.
 ## Behaviour when `N_ncdm = 0`
 
 Section 5.d sits inside `if (N_ncdm > 0)`, so a `m_nu` passed with `N_ncdm = 0` is never
-read. CLASS then reports it under the opt-in `write_warnings` path (`input.c:5946`) as an
-unused input line, and otherwise ignores it. This matches how CLASS treats every other
-inapplicable parameter; no special handling is added.
+read. The two front ends then diverge, and both are left as they are:
+
+- The **C binary** reports it under the opt-in `write_warnings` path (`input.c:5946`) as an
+  unused input line, and otherwise ignores it.
+- **classy** raises `CosmoSevereError: Class did not read input parameter(s): m_nu`, because
+  the wrapper treats any unread parameter as fatal (`python/classy.pyx:357-364`).
+
+This is how CLASS already treats every other inapplicable parameter, so no special handling
+is added. Note the practical consequence for the Python front end: an `m_nu` that CLASS
+cannot apply is an error rather than a silent no-op, which is the desirable direction.
 
 ## Backwards compatibility
 
