@@ -3862,6 +3862,10 @@ static double perturbations_ceff2_ncdm(struct precision * ppr,
     return (ceff2 < 1./3.) ? ceff2 : (1./3.);
   }
 
+  /* NOTE: the eps_acc-based W-weight below is NOT correct for the accDM
+     daughter (the nb18 fit study found the paper's W-weight has the wrong
+     sign for this model). It is kept only for clarity and to reproduce the
+     published Eq-38 fit bit-identically in modes 0/1; prefer modes 2/3. */
   double W   = 1.0 - 2.0*pba->eps_acc;                     /* in (0,1] for physical eta>=0 */
   double xr  = sqrt(k*sqrt(2./3.)*sqrt(cs2_base)/(a*H));   /* sqrt(k/k_fs) */
   double fit = cs2_base*(1.0 + ppr->ncdm_ceff2_fs_amp*W*xr);
