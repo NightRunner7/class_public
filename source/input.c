@@ -2772,8 +2772,26 @@ int input_read_parameters_species(struct file_content * pfc,
                errmsg);
 
     /** 5.d) Mass and/or Omega of each ncdm species */
-    /* Read */
-    class_read_list_of_doubles_or_default("m_ncdm",pba->m_ncdm_in_eV,0.0,N_ncdm);
+    /* Read. This is the expansion of class_read_list_of_doubles_or_default,
+       inlined because the macro cannot report whether 'm_ncdm' was actually
+       present, and the 'm_nu' alternative below needs to know. */
+    int flag_m_ncdm;
+
+    class_call(parser_read_list_of_doubles(pfc,"m_ncdm",&entries_read,&(pba->m_ncdm_in_eV),&flag_m_ncdm,errmsg),
+               errmsg,
+               errmsg);
+
+    /* Complete set of parameters */
+    if (flag_m_ncdm == _TRUE_){
+      class_test(entries_read != N_ncdm,
+                 errmsg,
+                 "Number of entries of 'm_ncdm' (%d) does not match expected number (%d).",
+                 entries_read,N_ncdm);
+    }
+    else {
+      class_alloc(pba->m_ncdm_in_eV,N_ncdm*sizeof(double),errmsg);
+      for (n=0; n<N_ncdm; n++){ pba->m_ncdm_in_eV[n] = 0.0; }
+    }
 
     /* The last index is supposed to be reserved for the WDM component of the ADM model, so if the user has provided a mass for WDM, we set it as the default value for the last ncdm species.
        Guard on has_acc: without it, a plain (non-accDM) run would have its last
