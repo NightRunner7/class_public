@@ -1360,7 +1360,8 @@ int background_ncdm_distribution(
     /*    FERMI-DIRAC INCLUDING CHEMICAL POTENTIALS   */
     /**************************************************/
 
-    if (n_ncdm==0) {
+    /* every species except the accDM daughter (last slot), whose p.s.d. is set below */
+    if (!(n_ncdm==pba->N_ncdm-1 && pba->has_acc == _TRUE_)) {
       *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)+1.) +1./(exp(q+ksi)+1.));
     }
 

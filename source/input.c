@@ -2611,9 +2611,12 @@ int input_read_parameters_species(struct file_content * pfc,
   }
   class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
   class_call(parser_read_double(pfc,"f_acc",&param3,&flag3,errmsg), errmsg, errmsg);
-  
-  /* Proceed only if WDM is active in this run */
-  if (pba->Omega0_acc_cdm > 0. || pba->Omega_ini_dcdm > 0. || (flag3 == _TRUE_ && param3 > 0.)) {
+  class_call(parser_read_double(pfc,"m_acc_in_GeV",&param4,&flag4,errmsg), errmsg, errmsg);
+
+  /* Proceed only if WDM is active in this run. Omega_ini_dcdm alone means
+     standard decaying CDM (section 7.1); it selects accDM only together with
+     m_acc_in_GeV, consistently with background_indices(). */
+  if (pba->Omega0_acc_cdm > 0. || (pba->Omega_ini_dcdm > 0. && flag4 == _TRUE_) || (flag3 == _TRUE_ && param3 > 0.)) {
     pba->has_acc = _TRUE_;
     if (flag3 == _TRUE_) pba->f_acc = param3;
 
@@ -3117,6 +3120,10 @@ int input_read_parameters_species(struct file_content * pfc,
   if (flag2 == _TRUE_)
     pba->Omega0_dcdmdr = param2/pba->h/pba->h;
   class_test(pba->Omega0_dcdmdr<0,errmsg,"You cannot set the dcdmdr density to negative values.");
+  /* accDM reuses the dcdm perturbation slot, so the two cannot coexist */
+  class_test((pba->has_acc == _TRUE_) && (pba->Omega0_dcdmdr > 0.),
+             errmsg,
+             "Decaying CDM ('Omega_dcdmdr') and accDM cannot be used together: they share the dcdm perturbation variables.");
 
   /** 7.1.b) Omega_ini_dcdm or omega_ini_dcdm */
   /* Read */
