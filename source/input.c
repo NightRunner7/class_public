@@ -2668,30 +2668,11 @@ int input_read_parameters_species(struct file_content * pfc,
     int vary_Gamma_acc = _FALSE_;
     class_read_flag("vary_Gamma_acc", vary_Gamma_acc);
 
-    if (vary_Gamma_acc == _FALSE_) {
-    /* Let's deal with Gamma_acc */
-      class_call(parser_read_double(pfc,"Gamma_acc",&param1,&flag1,errmsg), errmsg, errmsg);
-      class_call(parser_read_double(pfc,"tau_acc",&param2,&flag2,errmsg), errmsg, errmsg);
-
-      /* Require exactly one decay parameter */
-      class_test((flag1 == _TRUE_) && (flag2 == _TRUE_), 
-                  errmsg, 
-                  "You can only provide one of 'Gamma_acc' or 'tau_acc'.");
-      class_test((flag1 == _FALSE_) && (flag2 == _FALSE_), 
-                  errmsg, 
-                  "You must provide a decay parameter: either 'Gamma_acc' or 'tau_acc'.");
-      
-      if (flag1 == _TRUE_) {
-          /* User provided Gamma directly. Input is in km/s/Mpc. */
-          pba->Gamma_dcdm = param1 * (1.e3 / _c_);       // [Mpc]
-          pba->tau_dcdm = _Mpc_over_m_ * 1e-3 / param1;  // [s]
-      }
-      else if (flag2 == _TRUE_) { 
-        pba->tau_dcdm = param2; // [s]
-        pba->Gamma_dcdm = _Mpc_over_m_/(param2*_c_);  // [Mpc]
-      }
-    }
-
+    /* The accDM p.s.d. and parent always use the Gamma(a) law set by kappa_acc
+       and a_t_acc; a constant Gamma_acc/tau_acc is not implemented. */
+    class_test(vary_Gamma_acc == _FALSE_,
+               errmsg,
+               "accDM requires 'vary_Gamma_acc = yes' with 'kappa_acc' and 'a_t_acc': a constant 'Gamma_acc'/'tau_acc' is not implemented.");
 
     if (vary_Gamma_acc == _TRUE_) {
       pba->has_varGamma_dcdm = _TRUE_;
@@ -2723,17 +2704,23 @@ int input_read_parameters_species(struct file_content * pfc,
             "In input file, you can only enter one of a_t_acc or log10a_t_acc, choose one");
       if (flag7 == _TRUE_) pba->a_t_acc = param7;
       if (flag8 == _TRUE_) pba->a_t_acc = pow(10.0, param8);
+      class_test((flag7 == _FALSE_) && (flag8 == _FALSE_),
+                 errmsg,
+                 "You need to provide a_t_acc or log10a_t_acc when vary_Gamma_acc = yes.");
     }
-  
+
     class_read_flag("switch_on_eq_delta_p_acc", ppt->switch_on_eq_delta_p_acc);
     class_read_flag("switch_off_shear_acc", ppt->switch_off_shear_acc);
-
   }
 
   /** 5) Non-cold relics (ncdm) */
   /** 5.a) Number of non-cold relics */
   /* Read */
   class_read_int("N_ncdm",N_ncdm);
+  /* The accDM daughter occupies the last ncdm slot */
+  class_test((pba->has_acc == _TRUE_) && (N_ncdm < 1),
+             errmsg,
+             "accDM needs 'N_ncdm >= 1': the accDM daughter is stored as the last ncdm species.");
   /* Complete set of parameters */
   if (N_ncdm > 0){
     pba->N_ncdm = N_ncdm;
@@ -2877,6 +2864,10 @@ int input_read_parameters_species(struct file_content * pfc,
     else {
       class_read_list_of_integers_or_default("ncdm_quadrature_strategy", pba->ncdm_quadrature_strategy, 0, N_ncdm);
     }
+    /* qm_auto builds a separate background q-grid, but aq_ncdm_acc lives on the perturbation grid */
+    class_test((pba->has_acc == _TRUE_) && (pba->ncdm_quadrature_strategy[N_ncdm-1] == qm_auto),
+               errmsg,
+               "The accDM daughter (last ncdm species) cannot use ncdm_quadrature_strategy = 0 (qm_auto); use 4 (qm_simpson_log).");
 
     /** 5.h.1) qmax, if relevant */
     /* Read */

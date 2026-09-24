@@ -728,6 +728,15 @@ int perturbations_init(
              ppt->error_message,
              "In the synchronous gauge, it is not self-consistent to assume no CDM: the later is used to define the initial timelike hypersurface. You can either add a negligible amount of CDM, or switch to newtonian gauge");
 
+  /* The accDM daughter is only correct in synchronous gauge, and its
+     pre-production slaving writes into y inside perturbations_derivs, which needs rk. */
+  class_test((pba->has_acc == _TRUE_) && (ppt->gauge != synchronous),
+             ppt->error_message,
+             "accDM is only implemented in synchronous gauge: set 'gauge = synchronous'.");
+  class_test((pba->has_acc == _TRUE_) && (ppr->evolver != rk),
+             ppt->error_message,
+             "accDM requires the rk evolver: set 'evolver = 0'.");
+
   class_test ((ppr->tight_coupling_approximation < first_order_MB) ||
               (ppr->tight_coupling_approximation > compromise_CLASS),
               ppt->error_message,
