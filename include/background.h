@@ -90,7 +90,8 @@ struct background
 
   double M_cdm_in_GeV;   /**< \f$ m_{cdm} \f$: mass of Cold Dark Matter particle in GeV, necessary to compute number density, should be large. */
   double P_acc;          /**< \f$ P_{acc} \f$: momentum kick imparted to WDM daughter in parent rest frame [GeV], precomputed as M_cdm*sqrt(eta*(eta+2)) */
-  double T_acc_GeV;   
+  double T_acc_GeV;
+  double a_min_acc;      /**< lower edge in a_q of the daughter q-grid for ncdm_quadrature_strategy = 5 */
   double eps_acc;
   double cfs_acc; /**< plateau ceff2 of the acc daughter, set in
                        background_init; mode 2: (1/3)(1-exp(-3*A*ca2_bg(a=1)))
@@ -504,6 +505,22 @@ extern "C" {
   int background_indices(
                          struct background *pba
                          );
+
+  double background_acc_born_fraction(
+                                      struct background *pba,
+                                      double a
+                                      );
+
+  double background_acc_birth_rate(
+                                   struct background *pba,
+                                   double a
+                                   );
+
+  int background_acc_a_min(
+                           struct background *pba,
+                           double eps,
+                           double * a_min
+                           );
 
   int background_ncdm_distribution(
                                    void *pba,

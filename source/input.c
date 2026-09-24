@@ -2865,7 +2865,12 @@ int input_read_parameters_species(struct file_content * pfc,
     /* qm_auto builds a separate background q-grid, but aq_ncdm_acc lives on the perturbation grid */
     class_test((pba->has_acc == _TRUE_) && (pba->ncdm_quadrature_strategy[N_ncdm-1] == qm_auto),
                errmsg,
-               "The accDM daughter (last ncdm species) cannot use ncdm_quadrature_strategy = 0 (qm_auto); use 4 (qm_simpson_log).");
+               "The accDM daughter (last ncdm species) cannot use ncdm_quadrature_strategy = 0 (qm_auto); use 4 (qm_simpson_log) or 5 (qm_acc_birth).");
+    for (n=0; n < N_ncdm; n++) {
+      class_test((pba->ncdm_quadrature_strategy[n] == qm_acc_birth) && !((pba->has_acc == _TRUE_) && (n == N_ncdm-1)),
+                 errmsg,
+                 "ncdm_quadrature_strategy = 5 (qm_acc_birth) is only valid for the accDM daughter (last ncdm species, accDM on); species %d uses it.", n);
+    }
 
     /** 5.h.1) qmax, if relevant */
     /* Read */
@@ -2886,7 +2891,18 @@ int input_read_parameters_species(struct file_content * pfc,
 
         /* Set qmax to safely encompass the momentum peak */
         pba->ncdm_qmax[idx_acc] = 1.3 * pba->P_acc / pba->T_acc_GeV; /* AG: 1.3 is ad hoc, but seems to work well */
-        
+
+        /* qm_acc_birth: sample a_q in [a_min, 1] only, where daughters exist */
+        if (pba->ncdm_quadrature_strategy[idx_acc] == qm_acc_birth) {
+          class_call(background_acc_a_min(pba, ppr->accdm_q_number_tol, &(pba->a_min_acc)),
+                     pba->error_message,
+                     errmsg);
+          pba->ncdm_qmax[idx_acc] = pba->P_acc / pba->T_acc_GeV;
+          if (input_verbose > 0)
+            printf("accDM qm_acc_birth: a_q grid on [%e, 1], born fraction at a_min = %g.\n",
+                   pba->a_min_acc, background_acc_born_fraction(pba, pba->a_min_acc));
+        }
+
         if (input_verbose > 2) {
             printf("Setting ncdm_qmax for accDM species (index %d) to %e to capture the momentum distribution peak at P_acc = %e GeV.\n", idx_acc, pba->ncdm_qmax[idx_acc], pba->P_acc);
         }
@@ -2932,6 +2948,13 @@ int input_read_parameters_species(struct file_content * pfc,
         if ((accdm_q_schedule == _TRUE_) && (input_verbose > 0))
           printf("accDM q(f) schedule bypassed: momentum bins supplied explicitly (daughter q_size = %d).\n",
                  pba->ncdm_input_q_size[N_ncdm-1]);
+      }
+      else if (pba->ncdm_quadrature_strategy[N_ncdm-1] == qm_acc_birth) {
+        /* fixed density in ln a_q; the q(f) schedule below is calibrated for the 20-decade grid */
+        pba->ncdm_input_q_size[N_ncdm-1] = MAX(3, (int)ceil(ppr->accdm_q_bins_per_decade*log10(1./pba->a_min_acc)) + 1);
+        if (input_verbose > 0)
+          printf("accDM qm_acc_birth: %g bins per decade -> q_size = %d for ncdm species %d.\n",
+                 ppr->accdm_q_bins_per_decade, pba->ncdm_input_q_size[N_ncdm-1], N_ncdm-1);
       }
       else if (accdm_q_schedule == _TRUE_) {
 
@@ -3011,10 +3034,11 @@ int input_read_parameters_species(struct file_content * pfc,
 
     /* Simpson weights need an odd number of nodes */
     for (n=0; n < N_ncdm; n++) {
-      if ((pba->ncdm_quadrature_strategy[n] == qm_simpson_log) && (pba->ncdm_input_q_size[n] % 2 == 0)) {
+      if (((pba->ncdm_quadrature_strategy[n] == qm_simpson_log) || (pba->ncdm_quadrature_strategy[n] == qm_acc_birth))
+          && (pba->ncdm_input_q_size[n] % 2 == 0)) {
         pba->ncdm_input_q_size[n] += 1;
         if (input_verbose > 0)
-          printf("ncdm species %d: qm_simpson_log needs an odd number of momentum bins, using %d.\n",
+          printf("ncdm species %d: Simpson quadrature needs an odd number of momentum bins, using %d.\n",
                  n, pba->ncdm_input_q_size[n]);
       }
     }
@@ -6234,6 +6258,7 @@ int input_default_params(struct background *pba,
   pba->T_ncdm_default = 0.71611; /* this value gives m/omega = 93.14 eV b*/
   pba->T_ncdm = NULL;
   pba->T_acc_GeV = 0.;
+  pba->a_min_acc = 0.;
   /** 5.f) ncdm chemical potential */
   pba->ksi_ncdm_default = 0.;
   pba->ksi_ncdm = NULL;

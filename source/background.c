@@ -1278,6 +1278,68 @@ int background_indices(
 }
 
 /**
+ * Fraction of accDM daughters born before scale factor a,
+ * F(a) = 1 - (1-a^kappa)/(1+(a/a_t)^kappa). Must match the parent law used in
+ * background_ncdm_distribution.
+ */
+
+double background_acc_born_fraction(
+                                    struct background *pba,
+                                    double a
+                                    ) {
+  if (a >= 1.) return 1.;
+  return 1. - (1.-pow(a,pba->kappa_acc))/(1.+pow(a/pba->a_t_acc,pba->kappa_acc));
+}
+
+/**
+ * Daughter birth rate per ln a as a fraction of the initial parent number,
+ * dF/dln a = kappa (a^kappa + (a/a_t)^kappa)/(1+(a/a_t)^kappa)^2. This is
+ * n_parent*Gamma/H with the (1-a^kappa) factors cancelled, so it stays finite at a = 1.
+ * Its logarithmic slope is dln(rate)/dln a = kappa (1-y)/(1+y), y = (a/a_t)^kappa.
+ */
+
+double background_acc_birth_rate(
+                                 struct background *pba,
+                                 double a
+                                 ) {
+  double x = pow(a,pba->kappa_acc);
+  double y = pow(a/pba->a_t_acc,pba->kappa_acc);
+  return pba->kappa_acc*(x+y)/((1.+y)*(1.+y));
+}
+
+/**
+ * Scale factor a_min at which the born fraction F(a) reaches eps, found by
+ * bisection in ln a. Clamped below at 1e-14, where the daughter p.s.d. is cut.
+ */
+
+int background_acc_a_min(
+                         struct background *pba,
+                         double eps,
+                         double * a_min
+                         ) {
+  double ln_lo = log(1.e-14), ln_hi = 0., ln_mid;
+  int iter;
+
+  class_test((eps <= 0.) || (eps >= 1.), pba->error_message,
+             "accdm_q_number_tol must lie in (0,1), got %g.", eps);
+
+  if (background_acc_born_fraction(pba, exp(ln_lo)) >= eps) {
+    *a_min = exp(ln_lo);
+    return _SUCCESS_;
+  }
+  for (iter=0; iter<100; iter++) {
+    ln_mid = 0.5*(ln_lo+ln_hi);
+    if (background_acc_born_fraction(pba, exp(ln_mid)) < eps)
+      ln_lo = ln_mid;
+    else
+      ln_hi = ln_mid;
+    if (ln_hi-ln_lo < 1.e-10) break;
+  }
+  *a_min = exp(ln_lo);
+  return _SUCCESS_;
+}
+
+/**
  * This is the routine where the distribution function f0(q) of each
  * ncdm species is specified (it is the only place to modify if you
  * need a partlar f0(q))
@@ -1391,24 +1453,19 @@ int background_ncdm_distribution(
       /* Scale factor corresponding to the considered comoving momentum q */
       double a_q = q*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
 
-      if (a_q >= 1.0 || a_q < 1e-14) {
-        /* If a_q > 1, it means that the considered momentum q is not yet reached by the acceleration mechanism, so f0 should be zero */
+      /* No daughter has a_q > 1 (born after today). a_q = 1 takes the limit from below,
+         so the qm_acc_birth end node at a_q = 1 carries the birth rate today;
+         the 1e-12 margin absorbs rounding in q*T/P. */
+      if (a_q > 1.0 + 1e-12 || a_q < 1e-14) {
         *f0 = 0.0;
       }
       else {
-        /*** qcube and number density computation -- rho_dcdm has different functional form so it WON'T evolve as exp(-Gamma*q) ***/
-        double rho_acc_cdm_comoving = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_acc *(1-pow(a_q, pba->kappa_acc))/(1+pow(a_q/pba->a_t_acc, pba->kappa_acc)) * 3 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
+        /* initial comoving parent number density [1/Mpc^3] */
+        double rho_acc_cdm_ini = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_acc * 3 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
         double parent_mass_kg = M_cdm * 1e9 * _eV_ / (_c_ * _c_);
-        double n_dcdm_comoving = rho_acc_cdm_comoving / parent_mass_kg; // In 1/Mpc^3
+        double n_dcdm_ini = rho_acc_cdm_ini / parent_mass_kg;
 
-        /*** General Gamma ***/
-        double Gamma_q_over_H_q = pba->kappa_acc * (pow(a_q, pba->kappa_acc)+pow(a_q/pba->a_t_acc, pba->kappa_acc))/(1-pow(a_q, pba->kappa_acc))/(1+pow(a_q/pba->a_t_acc, pba->kappa_acc));
-        // Ensure that Gamma_q_over_H_q does not exceed 100 to avoid numerical issues
-        Gamma_q_over_H_q = MIN(Gamma_q_over_H_q, 100.0);
-
-        /*** Final expression for f0 ***/
-        
-        *f0 = n_dcdm_comoving / (4.0 * _PI_ * qcube) * Gamma_q_over_H_q; 
+        *f0 = n_dcdm_ini / (4.0 * _PI_ * qcube) * background_acc_birth_rate(pba, MIN(a_q, 1.0));
         }
     }
 
@@ -1633,6 +1690,7 @@ int background_ncdm_init(
       class_call(get_qsampling_manual(pba->q_ncdm[k],
                                       pba->w_ncdm[k],
                                       pba->q_size_ncdm[k],
+                                      (pba->ncdm_quadrature_strategy[k] == qm_acc_birth) ? pba->a_min_acc*pba->P_acc/pba->T_acc_GeV : 0.,
                                       pba->ncdm_qmax[k],
                                       pba->ncdm_quadrature_strategy[k],
                                       pbadist.q,
@@ -1668,7 +1726,8 @@ int background_ncdm_init(
                  pba->error_message,pba->error_message);
 
       if (k == pba->N_ncdm - 1 && pba->has_acc == _TRUE_) {
-        pba->aq_ncdm_acc[k][index_q] = q * pba->T_acc_GeV / pba->P_acc;
+        /* clamped so the qm_acc_birth end node (a_q = 1 up to rounding) is born today */
+        pba->aq_ncdm_acc[k][index_q] = MIN(q * pba->T_acc_GeV / pba->P_acc, 1.0);
       }
 
       //Loop to find appropriate dq:
@@ -1808,7 +1867,7 @@ int background_ncdm_momenta(
       z_q = 1.0/pba->aq_ncdm_acc[n_ncdm][index_q] - 1.0; // Redshift corresponding to a_q */
     }
 
-    if (z < z_q){ // Neglect contribution of WDM particles that have not yet been produced at redshift z.
+    if (z <= z_q){ // Neglect contribution of WDM particles that have not yet been produced at redshift z (a bin with a_q = 1 counts today).
       /* squared momentum */
       q2 = qvec[index_q]*qvec[index_q];
 

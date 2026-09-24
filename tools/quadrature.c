@@ -8,6 +8,7 @@
 int get_qsampling_manual(double *x,
 			 double *w,
 			 int N,
+			 double qmin,
 			 double qmax,
 			 enum ncdm_quadrature_method method,
 			 double *qvec,
@@ -16,11 +17,11 @@ int get_qsampling_manual(double *x,
 			 void * params_for_function,
 			 ErrorMsg errmsg) {
 
+  /* qmin is used only by qm_acc_birth */
   double y, h, t;
   double *b, *c;
   int i,j;
-  double qmin;
-  switch (method){ 
+  switch (method){
   case (qm_auto) :
     return _FAILURE_;
   case (qm_Laguerre) :
@@ -60,6 +61,11 @@ int get_qsampling_manual(double *x,
   case (qm_simpson_log): // Check whether this is correct, in 2102.12498 the implementaiton was different, they lacked multiplication by ln10 and they had 1, 4, 1, 4, 1,..., 1 instead of 1, 4, 2, 4, 2,..., 1
   /** Simpson rule on a log interval. */
 	qmin = qmax*1e-20;
+  /* fall through */
+  case (qm_acc_birth):
+  /** Same rule on [qmin, qmax] set by the caller */
+  class_test((N < 3) || (N % 2 == 0), errmsg,
+             "Simpson quadrature needs an odd number of momentum bins >= 3, got %d.", N);
 	h = (log10(qmax)-log10(qmin))/(N-1);
   double ln10 = log(10.0);
 

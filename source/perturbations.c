@@ -7449,6 +7449,7 @@ int perturbations_total_stress_energy(
           rho_plus_p_shear_ncdm = 0.0;
           delta_p_ncdm = 0.0;
           factor = pba->factor_ncdm[n_ncdm]/pow(a,4);
+          int idx_first_bin = idx;
 
           for (index_q=0; index_q < ppw->pv->q_size_ncdm[n_ncdm]; index_q ++) {
 
@@ -7481,7 +7482,21 @@ int perturbations_total_stress_energy(
           rho_plus_p_shear_ncdm *= 2.0/3.0*factor;
           delta_p_ncdm *= factor/3.;
 
-          if ((ppt->has_source_delta_ncdm == _TRUE_) || (ppt->has_source_theta_ncdm == _TRUE_) || (ppt->has_source_delta_m == _TRUE_)) {
+          int has_ncdm_sources = (ppt->has_source_delta_ncdm == _TRUE_) || (ppt->has_source_theta_ncdm == _TRUE_) || (ppt->has_source_delta_m == _TRUE_);
+          if (has_ncdm_sources && (n_ncdm == pba->N_ncdm-1) && (pba->has_acc == _TRUE_) && (ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm] == 0.)) {
+            /* No daughter born yet (a < a_min): report the limit of the first bin
+               about to be born, from its pinned state y = f0*(...); zero matter weight. */
+            double f0_first = pba->f0_ncdm_acc[n_ncdm][0];
+            q = pba->q_ncdm[n_ncdm][0];
+            q2 = q*q;
+            epsilon = sqrt(q2+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]*a2);
+            ppw->delta_ncdm[n_ncdm] = (f0_first != 0.) ? y[idx_first_bin]/f0_first : 0.;
+            ppw->theta_ncdm[n_ncdm] = 0.;
+            ppw->shear_ncdm[n_ncdm] = (f0_first != 0.) ?
+              2./3.*q2/epsilon*y[idx_first_bin+2]/f0_first/(epsilon+q2/(3.*epsilon)) : 0.;
+            ppw->delta_p_over_delta_rho_ncdm[n_ncdm] = q2/(3.*epsilon*epsilon);
+          }
+          else if (has_ncdm_sources) {
             ppw->delta_ncdm[n_ncdm] = rho_delta_ncdm/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
             ppw->theta_ncdm[n_ncdm] = rho_plus_p_theta_ncdm/
               (ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]);
@@ -7498,7 +7513,11 @@ int perturbations_total_stress_energy(
           ppw->rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm];
         
           if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-              rho_ncdm_bg_m = ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]*(1.0-3.0*(ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm])); /* contribution to matter, it will be used below  */
+              /* contribution to matter, used below; zero before the first birth, avoiding 0/0 */
+              if (ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm] == 0.)
+                rho_ncdm_bg_m = 0.;
+              else
+                rho_ncdm_bg_m = ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]*(1.0-3.0*(ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]));
           }
         }
       }
@@ -11318,32 +11337,27 @@ int background_ncdm_distribution_perts(
                                  
 
 
-  double aq, qcube, q_factor, rho_acc_cdm_comoving, n_dcdm_comoving, Gamma_q_over_H_q;
+  double aq, qcube, q_factor, rho_acc_cdm_ini, n_dcdm_ini;
   double parent_mass_kg;
 
   /* Scale factor at which a particle with comoving momentum q was produced */
   aq = q * pba->T_acc_GeV / pba->P_acc;
 
+  /* same cuts as background_ncdm_distribution: a_q = 1 takes the limit from below */
   *f0 = 0;
-  if (aq <= 1e-14 || aq >= 1.0) {
+  if (aq <= 1e-14 || aq > 1.0 + 1e-12) {
     return _SUCCESS_;
   }
 
   q_factor = pba->T_cmb * pba->T_ncdm[n_ncdm] / (_h_P_ * _c_ / _k_B_ / 2 / _PI_) * _Mpc_over_m_;
   qcube = pow(q * q_factor, 3);
 
-  rho_acc_cdm_comoving = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_acc
-    * (1-pow(aq, pba->kappa_acc))/(1+pow(aq/pba->a_t_acc, pba->kappa_acc))
+  rho_acc_cdm_ini = pba->Omega0_cdm * pow(pba->H0,2) * pba->f_acc
     * 3 / (8.0 * _PI_ * _G_) * (_c_ * _c_) * (_Mpc_over_m_);
   parent_mass_kg = pba->M_cdm_in_GeV * 1e9 * _eV_ / (_c_ * _c_);
-  n_dcdm_comoving = rho_acc_cdm_comoving / parent_mass_kg;
+  n_dcdm_ini = rho_acc_cdm_ini / parent_mass_kg;
 
-  Gamma_q_over_H_q = pba->kappa_acc
-    * (pow(aq, pba->kappa_acc) + pow(aq/pba->a_t_acc, pba->kappa_acc))
-    / (1-pow(aq, pba->kappa_acc)) / (1+pow(aq/pba->a_t_acc, pba->kappa_acc));
-  Gamma_q_over_H_q = MIN(Gamma_q_over_H_q, 100.0);
-
-  *f0 = n_dcdm_comoving / (4.0 * _PI_ * qcube) * Gamma_q_over_H_q;
+  *f0 = n_dcdm_ini / (4.0 * _PI_ * qcube) * background_acc_birth_rate(pba, MIN(aq, 1.0));
 
   return _SUCCESS_;
 }
@@ -11352,8 +11366,8 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
                           struct background *pba,
                           struct perturbations *ppt,
                           int n_ncdm){
-    int index_q, tolexp;
-    double f0m2= 0,f0m1= 0,f0= 0,f0p1= 0,f0p2= 0,dq= 0,q= 0,df0dq= 0,f0back= 0;
+    int index_q;
+    double f0= 0,q= 0,df0dq= 0,f0back= 0;
     struct background_parameters_for_distributions pbadist;
 
     pbadist.pba = pba;
@@ -11377,41 +11391,16 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
     if(f0back!=0)pba->w_ncdm[n_ncdm][index_q] = pba->w_ncdm_bg[n_ncdm][index_q]/f0back;
     else pba->w_ncdm[n_ncdm][index_q] = 0;
 
-    // Loop to find appropriate dq:
     class_call(background_ncdm_distribution_perts(pba,q,n_ncdm,&f0),
                pba->error_message,ppt->error_message);
     pba->f0_ncdm_acc[n_ncdm][index_q] = f0;   /* save */
 
-    for(tolexp=_PSD_DERIVATIVE_EXP_MIN_; tolexp<_PSD_DERIVATIVE_EXP_MAX_; tolexp++){
-
-      if (index_q == 0){
-        dq = MIN((0.5-ppr->smallest_allowed_variation)*q,2*exp(tolexp)*(pba->q_ncdm[n_ncdm][index_q+1]-q));
-      }
-      else if (index_q == pba->q_size_ncdm[n_ncdm]-1){
-        dq = exp(tolexp)*2.0*(pba->q_ncdm[n_ncdm][index_q]-pba->q_ncdm[n_ncdm][index_q-1]);
-      }
-      else{
-        dq = exp(tolexp)*(pba->q_ncdm[n_ncdm][index_q+1]-pba->q_ncdm[n_ncdm][index_q-1]);
-      }
-      class_call(background_ncdm_distribution_perts(pba,q-2*dq,n_ncdm,&f0m2),
-                 pba->error_message,ppt->error_message);
-      class_call(background_ncdm_distribution_perts(pba,q+2*dq,n_ncdm,&f0p2),
-                 pba->error_message,ppt->error_message);
-
-      if (fabs((f0p2-f0m2)/f0)>sqrt(ppr->smallest_allowed_variation) && f0!= 0) {
-        break;
-      }
-    }
-    class_call(background_ncdm_distribution_perts(pba,q-dq,n_ncdm,&f0m1),
-               pba->error_message,ppt->error_message);
-    class_call(background_ncdm_distribution_perts(pba,q+dq,n_ncdm,&f0p1),
-               pba->error_message,ppt->error_message);
-    //5 point estimate of the derivative:
-    if (index_q == 0 || index_q == pba->q_size_ncdm[n_ncdm]-1){
-      df0dq=0;
-    }
-    else{
-      df0dq = (+f0m2-8*f0m1+8*f0p1-f0p2)/12.0/dq;
+    /* Exact derivative: f0 ~ rate(a_q)/q^3 with a_q ~ q, so
+       dln f0/dln q = kappa (1-y)/(1+y) - 3, y = (a_q/a_t)^kappa.
+       Finite differences would straddle the jump of f0 at a_q = 1. */
+    {
+      double y = pow(MIN(q*pba->T_acc_GeV/pba->P_acc, 1.0)/pba->a_t_acc, pba->kappa_acc);
+      df0dq = f0/q*(pba->kappa_acc*(1.-y)/(1.+y) - 3.);
     }
     //Avoid underflow in extreme tail:
     if (fabs(f0)==0.)

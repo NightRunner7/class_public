@@ -67,6 +67,18 @@ class_precision_parameter(tol_ncdm_bg,double,1.e-5)
  */
 class_precision_parameter(tol_ncdm_initial_w,double,1.e-3)
 /**
+ * accDM daughter with ncdm_quadrature_strategy = 5: the q-grid starts at the
+ * scale factor a_min where the fraction of daughters already born equals this value.
+ */
+class_precision_parameter(accdm_q_number_tol,double,1.e-6)
+/**
+ * accDM daughter with ncdm_quadrature_strategy = 5: momentum bins per decade of
+ * a_q in [a_min, 1], used unless the number of bins is given explicitly.
+ * 50 converges Omega_acc to ~1e-6 for a_t ~ 0.1; late transitions (a_t >~ 0.5)
+ * need more bins near a_q = 1.
+ */
+class_precision_parameter(accdm_q_bins_per_decade,double,50.)
+/**
  * Tolerance on the deviation of the conformal time of equality from the true value in 1/Mpc.
  */
 class_precision_parameter(tol_tau_eq,double,1.e-6)

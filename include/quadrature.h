@@ -10,7 +10,8 @@
 /******************************************/
 #include "common.h"
 
-enum ncdm_quadrature_method {qm_auto, qm_Laguerre, qm_trapz_indefinite, qm_trapz, qm_simpson_log};
+/* qm_acc_birth: Simpson in ln q on [qmin, qmax], for the accDM daughter only */
+enum ncdm_quadrature_method {qm_auto, qm_Laguerre, qm_trapz_indefinite, qm_trapz, qm_simpson_log, qm_acc_birth};
 
 /* Structures for QSS */
 
@@ -44,6 +45,7 @@ typedef struct adaptive_integration_tree_node{
        int get_qsampling_manual(double *x,
 				double *w,
 				int N,
+				double qmin,
 				double qmax,
 				enum ncdm_quadrature_method method,
 				double *qvec,
