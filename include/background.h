@@ -92,7 +92,6 @@ struct background
   double P_acc;          /**< \f$ P_{acc} \f$: momentum kick imparted to WDM daughter in parent rest frame [GeV], precomputed as M_cdm*sqrt(eta*(eta+2)) */
   double T_acc_GeV;   
   double eps_acc;
-  double k_fss_acc;
   double cfs_acc; /**< plateau ceff2 of the acc daughter, set in
                        background_init; mode 2: (1/3)(1-exp(-3*A*ca2_bg(a=1)))
                        from the last background-table row; mode 3:

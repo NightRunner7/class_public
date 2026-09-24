@@ -777,7 +777,9 @@ int perturbations_init(
 
     for(n_ncdm = 0; n_ncdm < pba->N_ncdm; n_ncdm++){
       if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-        compute_dfdlnq_ncdm(ppr, pba, ppt, n_ncdm);
+        class_call(compute_dfdlnq_ncdm(ppr, pba, ppt, n_ncdm),
+                   ppt->error_message,
+                   ppt->error_message);
       }
     }
 
@@ -3049,7 +3051,7 @@ int perturbations_solve(
 
   if (pba->has_ncdm == _TRUE_) {
     for (n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++) {
-      if(n_ncdm != pba->N_ncdm-1) {
+      if (!(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_)) {
         class_test(fabs(ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]-1./3.)>ppr->tol_ncdm_initial_w,
                   ppt->error_message,
                   "your choice of initial time for integrating wavenumbers is inappropriate: it corresponds to a time at which the ncdm species number %d is not ultra-relativistic anymore, with w=%g, p=%g and rho=%g\n",
@@ -11350,61 +11352,14 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
                           struct background *pba,
                           struct perturbations *ppt,
                           int n_ncdm){
-    int index_q, k,tolexp,row,status,filenum;
-    double f0m2= 0,f0m1= 0,f0= 0,f0p1= 0,f0p2= 0,dq= 0,q= 0,df0dq= 0,tmp1= 0,tmp2= 0,f0back= 0;
-    double * pvecback;
-    int first_index_back;
-    double a_D, H_D;
-    double tau;
-    double qmin_tmp;
-    double ca2_ncdm;
-    double rho_cdm_bg, rho_ncdm_bg, p_ncdm_bg, pseudo_p_ncdm, w_ncdm, rho_acc_cdm_bg, ratio_rho, gamma, eta; 
+    int index_q, tolexp;
+    double f0m2= 0,f0m1= 0,f0= 0,f0p1= 0,f0p2= 0,dq= 0,q= 0,df0dq= 0,f0back= 0;
     struct background_parameters_for_distributions pbadist;
 
     pbadist.pba = pba;
     pbadist.n_ncdm = n_ncdm;
     pbadist.q = NULL;
     pbadist.tablesize = 0;
-
-    class_alloc(pvecback,pba->bg_size*sizeof(double),pba->error_message);
-
-    /** Evaluate background quantities at a_t_acc, the characteristic acceleration scale factor */
-    a_D = pba->a_t_acc;
-    class_call(background_tau_of_z(pba, 1./a_D - 1., &tau),
-              pba->error_message, ppr->error_message);
-    class_call(background_at_tau(pba, tau, long_info, inter_normal, &first_index_back, pvecback),
-              pba->error_message, ppr->error_message);
-
-    H_D = pvecback[pba->index_bg_H];
-    rho_ncdm_bg   = pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
-    rho_acc_cdm_bg   = pvecback[pba->index_bg_rho_acc_cdm];
-    rho_cdm_bg    = pvecback[pba->index_bg_rho_cdm];
-    p_ncdm_bg     = pvecback[pba->index_bg_p_ncdm1+n_ncdm];
-    pseudo_p_ncdm = pvecback[pba->index_bg_pseudo_p_ncdm1+n_ncdm];
-    w_ncdm        = p_ncdm_bg/(rho_ncdm_bg);
-    ratio_rho     = rho_acc_cdm_bg / rho_ncdm_bg;
-    gamma         = pvecback[pba->index_bg_Gamma_acc];
-    eta = pba->eta_acc;
-    { /* AG: distribute w_ncdm analytically so 1/w_ncdm never appears */
-      double term3 = ratio_rho * gamma / (3.0 * H_D) * (eta * eta + 2*eta) / (1. + eta); // AG: +2*eta somewhere?
-      double ca2_num = w_ncdm * (5.0 - pseudo_p_ncdm/p_ncdm_bg) - term3;
-      double ca2_den = 3.0*(1.0+w_ncdm) - ratio_rho*(gamma/H_D)*(1.+eta);
-      double ca2_0 = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg)/(3.0*(1.0+w_ncdm));
-      /* fall back to source-free sound speed near the singularity */
-      if (fabs(ca2_den) < ppr->ncdm_ca2_den_tol*fabs(3.0*(1.0+w_ncdm)))
-        ca2_ncdm = ca2_0;
-      else
-        ca2_ncdm = ca2_num / ca2_den;
-      if (isnan(ca2_ncdm) || isinf(ca2_ncdm)) ca2_ncdm = ca2_0;
-      if (ca2_ncdm < 0.) ca2_ncdm = 0.;
-      if (ca2_ncdm > 1.) ca2_ncdm = 1.; /* causality */
-    }
-
-    /* GFA: compute free-streaming length of the warm dark daughter,
-    evaluated at the time of decay a_D (equal to present time if lifetime >age universe) */
-    pba->k_fss_acc = (ca2_ncdm > 0.) ? sqrt(3./2.)*a_D*H_D/sqrt(ca2_ncdm) : 0.;
-    //Note: works well for lifetime > age_universe, but not on the contrary, maybe I should evaluate it before a_D
-    // for lifetimes smaller than age of universe, maybe I should evaluate at a_nr, smaller than a_D by some velocity factors (see page 13 in Aoyama paper)
 
   /* Use the same q-grid as the background (set in input.c via ncdm_qmax).
      Resampling here would break delta_ncdm = delta_dcdm at IC time because
@@ -11415,15 +11370,16 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
   for (index_q=0; index_q<pba->q_size_ncdm[n_ncdm]; index_q++) {
     q = pba->q_ncdm[n_ncdm][index_q];
 
-    //we need to correct w_ncdm because we use a slightly different definition for the description of dcdm perturbations
+    /* The daughter hierarchy evolves f0*Psi, so its perturbation weights exclude f0.
+       Divide the untouched background copy, so repeated calls give the same result. */
     class_call(background_ncdm_distribution(&pbadist,q,&f0back),
-                pba->error_message,ppr->error_message);
-    if(f0back!=0)pba->w_ncdm[n_ncdm][index_q] /= f0back;
+                pba->error_message,ppt->error_message);
+    if(f0back!=0)pba->w_ncdm[n_ncdm][index_q] = pba->w_ncdm_bg[n_ncdm][index_q]/f0back;
     else pba->w_ncdm[n_ncdm][index_q] = 0;
 
     // Loop to find appropriate dq:
     class_call(background_ncdm_distribution_perts(pba,q,n_ncdm,&f0),
-               pba->error_message,ppr->error_message);
+               pba->error_message,ppt->error_message);
     pba->f0_ncdm_acc[n_ncdm][index_q] = f0;   /* save */
 
     for(tolexp=_PSD_DERIVATIVE_EXP_MIN_; tolexp<_PSD_DERIVATIVE_EXP_MAX_; tolexp++){
@@ -11438,18 +11394,18 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
         dq = exp(tolexp)*(pba->q_ncdm[n_ncdm][index_q+1]-pba->q_ncdm[n_ncdm][index_q-1]);
       }
       class_call(background_ncdm_distribution_perts(pba,q-2*dq,n_ncdm,&f0m2),
-                 pba->error_message,pba->error_message);
+                 pba->error_message,ppt->error_message);
       class_call(background_ncdm_distribution_perts(pba,q+2*dq,n_ncdm,&f0p2),
-                 pba->error_message,pba->error_message);
+                 pba->error_message,ppt->error_message);
 
       if (fabs((f0p2-f0m2)/f0)>sqrt(ppr->smallest_allowed_variation) && f0!= 0) {
         break;
       }
     }
     class_call(background_ncdm_distribution_perts(pba,q-dq,n_ncdm,&f0m1),
-               pba->error_message,pba->error_message);
+               pba->error_message,ppt->error_message);
     class_call(background_ncdm_distribution_perts(pba,q+dq,n_ncdm,&f0p1),
-               pba->error_message,pba->error_message);
+               pba->error_message,ppt->error_message);
     //5 point estimate of the derivative:
     if (index_q == 0 || index_q == pba->q_size_ncdm[n_ncdm]-1){
       df0dq=0;
@@ -11465,7 +11421,6 @@ int compute_dfdlnq_ncdm(  struct precision *ppr,
     }
 
   }
-  free(pvecback);
 
   return _SUCCESS_;
 }

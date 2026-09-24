@@ -579,6 +579,9 @@ int input_shooting(struct file_content * pfc,
                errmsg,
                errmsg);
     if (flag1 == _TRUE_){
+      class_test((index_target == Omega_acc_cdm) || (index_target == omega_acc_cdm),
+                 errmsg,
+                 "'Omega_acc_cdm'/'omega_acc_cdm' are not supported: set the accDM fraction with 'f_acc'.");
       /* input_needs_shoting_for_target takes care of the case where, for
          instance, Omega_dcdmdr is set to 0.0, and we don't need shooting */
       class_call(input_needs_shooting_for_target(pfc,
@@ -2579,16 +2582,11 @@ int input_read_parameters_species(struct file_content * pfc,
   class_call(parser_read_double(pfc,"omega_acc_cdm",&param2,&flag2,errmsg),
             errmsg,
             errmsg);
-  class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)),
+  /* The accDM parent follows f_acc analytically; shooting on Omega_ini_dcdm
+     cannot reach a target Omega_acc_cdm, and the daughter is already counted in Omega0_ncdm_tot. */
+  class_test((flag1 == _TRUE_) || (flag2 == _TRUE_),
             errmsg,
-            "You can only enter one of 'Omega_acc_cdm' or 'omega_acc_cdm'.");
-
-  /* ---> if user passes directly the acc_cdm sector density (parent + wdm daughter) */
-  if (flag1 == _TRUE_)
-    pba->Omega0_acc_cdm = param1;
-  if (flag2 == _TRUE_)
-    pba->Omega0_acc_cdm = param2/pba->h/pba->h;
-  class_test(pba->Omega0_acc_cdm<0,errmsg,"You cannot set the acc_cdm density to negative values.");
+            "'Omega_acc_cdm'/'omega_acc_cdm' are not supported: set the accDM fraction with 'f_acc'.");
 
   /** 7.1.b) Omega_ini_dcdm or omega_ini_dcdm */
   /* Read */
@@ -2655,12 +2653,12 @@ int input_read_parameters_species(struct file_content * pfc,
       pba->eps_acc = - eta2 + sqrt(eta2*eta2 + 4*eta2*eta + 5*eta2 + 2*eta) - 2*eta;
     }
 
-    if (flag3 == _TRUE_) {
-        pba->M_cdm_in_GeV = param3;
-      }
-    else {
-        pba->M_cdm_in_GeV = param2; // Default value for CDM mass to the mass of accDM if not provided. NOTE: This is required for the rest of the code to work. 
-      }
+    /* P_acc uses the parent mass and the daughter p.s.d. uses m_acc, so the two must agree */
+    class_test((flag3 == _TRUE_) && (fabs(param3 - param2) > 1e-10*fabs(param2)),
+               errmsg,
+               "'m_cdm_in_GeV' (%g) must equal 'm_acc_in_GeV' (%g); omit 'm_cdm_in_GeV' to use m_acc_in_GeV.",
+               param3, param2);
+    pba->M_cdm_in_GeV = param2;
 
     /* Precompute kick momentum once: used in f0, ncdm_momenta, and ncdm_qmax */
     pba->P_acc = pba->M_cdm_in_GeV * sqrt(pba->eta_acc * (pba->eta_acc + 2.0));
@@ -3008,6 +3006,16 @@ int input_read_parameters_species(struct file_content * pfc,
 
         free(schedule_f_edges);
         free(schedule_q_sizes);
+      }
+    }
+
+    /* Simpson weights need an odd number of nodes */
+    for (n=0; n < N_ncdm; n++) {
+      if ((pba->ncdm_quadrature_strategy[n] == qm_simpson_log) && (pba->ncdm_input_q_size[n] % 2 == 0)) {
+        pba->ncdm_input_q_size[n] += 1;
+        if (input_verbose > 0)
+          printf("ncdm species %d: qm_simpson_log needs an odd number of momentum bins, using %d.\n",
+                 n, pba->ncdm_input_q_size[n]);
       }
     }
 

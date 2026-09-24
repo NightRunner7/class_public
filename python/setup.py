@@ -13,8 +13,7 @@ GCCPATH_STRING = sbp.Popen(
     stdout=sbp.PIPE).communicate()[0]
 GCCPATH = osp.normpath(osp.dirname(GCCPATH_STRING)).decode()
 
-# Monopole (BRINGMANN 2018) modification: added GSL/BLAS
-liblist = ["class", "gsl", "gslcblas"]
+liblist = ["class"]
 MVEC_STRING = sbp.Popen(
     ['gcc', '-lmvec'],
     stderr=sbp.PIPE).communicate()[1]
