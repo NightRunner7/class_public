@@ -357,6 +357,8 @@ struct background
   double ** dlnf0_dlnq_ncdm; /**< Pointers to vectors of logarithmic derivatives of p-s-d */
   double ** f0_ncdm_acc;   /**< Precomputed f0(q) for WDM perturbation species */
   double ** aq_ncdm_acc;   /**< Precomputed a_q = q*T_acc/P_acc per q-bin */
+  double ** lna_birth_lo_acc; /**< ln a where the accDM bin starts to be born (ramp start) */
+  double ** lna_birth_hi_acc; /**< ln a where the accDM bin is fully born (ramp end) */
   int * q_size_ncdm_bg; /**< Size of the q_ncdm_bg arrays */
   int * q_size_ncdm;    /**< Size of the q_ncdm arrays */
   double * factor_ncdm; /**< List of normalization factors for calculating energy density etc.*/
@@ -515,6 +517,12 @@ extern "C" {
                                    struct background *pba,
                                    double a
                                    );
+
+  double background_acc_born_weight(
+                                    struct background *pba,
+                                    int index_q,
+                                    double lna
+                                    );
 
   int background_acc_a_min(
                            struct background *pba,

@@ -79,6 +79,13 @@ class_precision_parameter(accdm_q_number_tol,double,1.e-6)
  */
 class_precision_parameter(accdm_q_bins_per_decade,double,50.)
 /**
+ * accDM daughter with ncdm_quadrature_strategy = 5: 0 births each bin at once at a_q;
+ * 1 spreads its birth over its cell in ln a (smooth background, no integrator steps).
+ * Smooth births release each bin at the end of its cell, which biases P(k) by
+ * O(cell width), about 0.7% at 50 bins per decade, so they are off by default.
+ */
+class_precision_parameter(accdm_smooth_births,int,0)
+/**
  * Tolerance on the deviation of the conformal time of equality from the true value in 1/Mpc.
  */
 class_precision_parameter(tol_tau_eq,double,1.e-6)

@@ -3997,7 +3997,7 @@ int perturbations_vector_init(
   int index_pt;
   int l;
   int n_ncdm,index_q,ncdm_l_size;
-  double rho_plus_p_ncdm,q,q2,epsilon,a,factor, aq;
+  double rho_plus_p_ncdm,q,q2,epsilon,a,factor;
 
   /** - allocate a new perturbations_vector structure to which ppw-->pv will point at the end of the routine */
 
@@ -5220,24 +5220,24 @@ int perturbations_vector_init(
               epsilon = sqrt(q2+a*a*pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
 
               if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-                aq = pba->aq_ncdm_acc[n_ncdm][index_q];
+                double born = background_acc_born_weight(pba, index_q, log(a));
 
-                if (a > aq){
+                if (born > 0.){
                   ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm] +=
-                  pba->w_ncdm[n_ncdm][index_q]*q2*epsilon*
+                  born*pba->w_ncdm[n_ncdm][index_q]*q2*epsilon*
                   ppw->pv->y[index_pt];
 
                   ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+1] +=
-                  pba->w_ncdm[n_ncdm][index_q]*q2*q*
+                  born*pba->w_ncdm[n_ncdm][index_q]*q2*q*
                   ppw->pv->y[index_pt+1];
 
                   ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+2] +=
-                    pba->w_ncdm[n_ncdm][index_q]*q2*q2/epsilon*
+                    born*pba->w_ncdm[n_ncdm][index_q]*q2*q2/epsilon*
                     ppw->pv->y[index_pt+2];
 
                   if (ppt->switch_on_eq_delta_p_acc == _TRUE_) {
                     ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm+3] +=
-                      pba->w_ncdm[n_ncdm][index_q]*q2*q2/epsilon*
+                      born*pba->w_ncdm[n_ncdm][index_q]*q2*q2/epsilon*
                       ppw->pv->y[index_pt]; //CS2DYN
                   }
                 }
@@ -7081,7 +7081,6 @@ int perturbations_total_stress_energy(
   double delta_p_b_over_rho_b;
 
   /** Accelerating Dark Matter START */
-  double aq; 
   double rho_ncdm_bg_m;
   double ratio_rho, rho_cdm_bg, rho_acc_cdm_bg, H, eta, gamma, f_dr; 
   double weight_0=0., weight_1=0., weight_2=0., weight_3 =0.;
@@ -7458,13 +7457,13 @@ int perturbations_total_stress_energy(
             epsilon = sqrt(q2+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]*a2);
 
             if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-              aq = pba->aq_ncdm_acc[n_ncdm][index_q];
+              double born = background_acc_born_weight(pba, index_q, log(a));
 
-              if(a>=aq){
-                if(y[idx]!=0) rho_delta_ncdm += q2*epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
-                if(y[idx+1]!=0) rho_plus_p_theta_ncdm += q2*q*pba->w_ncdm[n_ncdm][index_q]*y[idx+1];
-                if(y[idx+2]!=0) rho_plus_p_shear_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx+2];
-                if(y[idx]!=0) delta_p_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx];
+              if(born > 0.){
+                if(y[idx]!=0) rho_delta_ncdm += q2*epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx]*born;
+                if(y[idx+1]!=0) rho_plus_p_theta_ncdm += q2*q*pba->w_ncdm[n_ncdm][index_q]*y[idx+1]*born;
+                if(y[idx+2]!=0) rho_plus_p_shear_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx+2]*born;
+                if(y[idx]!=0) delta_p_ncdm += q2*q2/epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx]*born;
               }
             }
             else{
@@ -9399,7 +9398,7 @@ int perturbations_derivs(double tau,
   double f_dr, fprime_dr;
 
   /* for use with accDM */
-  double aq, rho_dcdm, rho_cdm_bg, rho_acc_cdm_bg, n_dcdm; /* aq used in source terms below */
+  double rho_dcdm, rho_cdm_bg, rho_acc_cdm_bg, n_dcdm;
   double decay, ratio_rho, gamma, eta;
   double rho_plus_p_sshear_ncdm;
   double w_theta, w_delta_p;
@@ -10348,10 +10347,12 @@ int perturbations_derivs(double tau,
 
             /** - -----> accDM Boltzmann hierarchy (same equations as standard ncdm) */
             if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-              aq = pba->aq_ncdm_acc[n_ncdm][index_q];
-
-              if(a<=aq){ // AG: Track the acc_cdm parent until production — algebraic slaving
-                /* Before production (a <= aq) the daughter is slaved algebraically to
+              /* The bin tracks the parent until it is fully born: a single freely
+                 evolving state cannot stand for particles born at different times, and
+                 releasing it while only partly counted spuriously boosts clustering.
+                 For instant births the ramp has zero width and this is a = a_q. */
+              if(log(a) <= pba->lna_birth_hi_acc[n_ncdm][index_q]){ // AG: Track the acc_cdm parent until production — algebraic slaving
+                /* Before its birth ramp starts (a <= aq for instantaneous births) the daughter is slaved algebraically to
                    the parent every derivs call:
                      monopole  y[idx]   = FD_ncdm * (delta_dcdm - metric_continuity/(3 a H))
                      shear     y[idx+2] = FD_ncdm * (2/15) metric_shear/(a H)

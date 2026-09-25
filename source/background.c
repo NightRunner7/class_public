@@ -988,6 +988,8 @@ int background_free_input(
       free(pba->dlnf0_dlnq_ncdm[k]);
       free(pba->f0_ncdm_acc[k]);
       free(pba->aq_ncdm_acc[k]);
+      free(pba->lna_birth_lo_acc[k]);
+      free(pba->lna_birth_hi_acc[k]);
     }
     free(pba->ncdm_quadrature_strategy);
     free(pba->ncdm_input_q_size);
@@ -999,6 +1001,8 @@ int background_free_input(
     free(pba->dlnf0_dlnq_ncdm);
     free(pba->f0_ncdm_acc);
     free(pba->aq_ncdm_acc);
+    free(pba->lna_birth_lo_acc);
+    free(pba->lna_birth_hi_acc);
     free(pba->q_size_ncdm);
     free(pba->q_size_ncdm_bg);
     free(pba->M_ncdm);
@@ -1308,6 +1312,25 @@ double background_acc_birth_rate(
 }
 
 /**
+ * Born fraction of accDM daughter bin index_q at ln a: rises linearly from 0 to 1
+ * across the bin's cell in ln a. For qm_acc_birth the cells tile [a_min, 1]; for
+ * other strategies the cell has zero width, i.e. the bin is born at once at a_q.
+ */
+
+double background_acc_born_weight(
+                                  struct background *pba,
+                                  int index_q,
+                                  double lna
+                                  ) {
+  int n_acc = pba->N_ncdm-1;
+  double lo = pba->lna_birth_lo_acc[n_acc][index_q];
+  double hi = pba->lna_birth_hi_acc[n_acc][index_q];
+  if (lna >= hi) return 1.;
+  if (lna <= lo) return 0.;
+  return (lna-lo)/(hi-lo);
+}
+
+/**
  * Scale factor a_min at which the born fraction F(a) reaches eps, found by
  * bisection in ln a. Clamped below at 1e-14, where the daughter p.s.d. is cut.
  */
@@ -1577,6 +1600,8 @@ int background_ncdm_init(
   class_alloc(pba->dlnf0_dlnq_ncdm, sizeof(double*)*pba->N_ncdm,pba->error_message);
   class_alloc(pba->f0_ncdm_acc,  sizeof(double*)*pba->N_ncdm, pba->error_message);
   class_alloc(pba->aq_ncdm_acc,  sizeof(double*)*pba->N_ncdm, pba->error_message);
+  class_alloc(pba->lna_birth_lo_acc, sizeof(double*)*pba->N_ncdm, pba->error_message);
+  class_alloc(pba->lna_birth_hi_acc, sizeof(double*)*pba->N_ncdm, pba->error_message);
 
   /* Allocate pointers: */
   class_alloc(pba->q_size_ncdm,sizeof(int)*pba->N_ncdm,pba->error_message);
@@ -1718,6 +1743,8 @@ int background_ncdm_init(
                 pba->error_message);
     class_alloc(pba->f0_ncdm_acc[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
     class_alloc(pba->aq_ncdm_acc[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
+    class_alloc(pba->lna_birth_lo_acc[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
+    class_alloc(pba->lna_birth_hi_acc[k], pba->q_size_ncdm[k]*sizeof(double), pba->error_message);
 
 
     for (index_q=0; index_q<pba->q_size_ncdm[k]; index_q++) {
@@ -1772,6 +1799,36 @@ int background_ncdm_init(
         }
       }
     }
+
+    /* accDM birth ramps. Default: each bin is born at once at a_q (zero-width ramp).
+       With qm_acc_birth and accdm_smooth_births, each bin is born gradually across a
+       cell of width h*W_i in ln a, W = (1,4,2,4,...,2,4,1)/3 its Simpson weight.
+       The cells tile [a_min, 1] and are centred on the nodes, and the birth rate
+       inside each cell equals the integrand at its node, so rho_acc grows without
+       steps or panel-to-panel oscillation. */
+    if (k == pba->N_ncdm - 1 && pba->has_acc == _TRUE_) {
+      int nq = pba->q_size_ncdm[k];
+      if ((pba->ncdm_quadrature_strategy[k] == qm_acc_birth) && (nq > 1) && (ppr->accdm_smooth_births == _TRUE_)) {
+        double lna_first = log(pba->aq_ncdm_acc[k][0]);
+        double h_lna = (log(pba->aq_ncdm_acc[k][nq-1]) - lna_first)/(nq-1);
+        double edge = lna_first;
+        for (index_q=0; index_q<nq; index_q++) {
+          double simpson_weight = (index_q == 0 || index_q == nq-1) ? 1./3. : ((index_q % 2 == 1) ? 4./3. : 2./3.);
+          pba->lna_birth_lo_acc[k][index_q] = edge;
+          edge += h_lna*simpson_weight;
+          pba->lna_birth_hi_acc[k][index_q] = edge;
+        }
+        /* remove rounding so the last bin is fully born exactly today */
+        pba->lna_birth_hi_acc[k][nq-1] = log(pba->aq_ncdm_acc[k][nq-1]);
+      }
+      else {
+        for (index_q=0; index_q<nq; index_q++) {
+          pba->lna_birth_lo_acc[k][index_q] = log(pba->aq_ncdm_acc[k][index_q]);
+          pba->lna_birth_hi_acc[k][index_q] = pba->lna_birth_lo_acc[k][index_q];
+        }
+      }
+    }
+
     pba->factor_ncdm[k]=pba->deg_ncdm[k]*4*_PI_*pow(pba->T_cmb*pba->T_ncdm[k]*_k_B_,4)*8*_PI_*_G_
       /3./pow(_h_P_/2./_PI_,3)/pow(_c_,7)*_Mpc_over_m_*_Mpc_over_m_;
 
@@ -1831,7 +1888,7 @@ int background_ncdm_momenta(
   double factor2;
 
   /* Variables for WDM case: */
-  double z_q;
+  double born;
   double P_acc = 1.;  
   double T_cmb_in_GeV = 1.0;
   double T_ncdm_today_GeV = 1.0; 
@@ -1860,14 +1917,13 @@ int background_ncdm_momenta(
   /** - loop over momenta */
   for (index_q=0; index_q<qsize; index_q++) {
 
-    z_q = 1e100; // some large value, so that it'll always compute for non-WDM species
-
+    /* fraction of the bin already born; 1 for every species except the accDM daughter */
+    born = 1.;
     if (is_acc) {
-      //double a_q = qvec[index_q]*(T_ncdm_today_GeV/P_acc); /* Dimensionless */
-      z_q = 1.0/pba->aq_ncdm_acc[n_ncdm][index_q] - 1.0; // Redshift corresponding to a_q */
+      born = background_acc_born_weight(pba, index_q, -log(1.+z));
     }
 
-    if (z <= z_q){ // Neglect contribution of WDM particles that have not yet been produced at redshift z (a bin with a_q = 1 counts today).
+    if (born > 0.){
       /* squared momentum */
       q2 = qvec[index_q]*qvec[index_q];
 
@@ -1875,11 +1931,11 @@ int background_ncdm_momenta(
       epsilon = sqrt(q2+M*M/(1.+z)/(1.+z));
 
       /* integrand of the various quantities */
-      if (n!=NULL) *n += q2*wvec[index_q];
-      if (rho!=NULL) *rho += q2*epsilon*wvec[index_q];
-      if (p!=NULL) *p += q2*q2/3./epsilon*wvec[index_q];
-      if (drho_dM!=NULL) *drho_dM += q2*M/(1.+z)/(1.+z)/epsilon*wvec[index_q];
-      if (pseudo_p!=NULL) *pseudo_p += pow(q2/epsilon,3)/3.0*wvec[index_q];
+      if (n!=NULL) *n += q2*wvec[index_q]*born;
+      if (rho!=NULL) *rho += q2*epsilon*wvec[index_q]*born;
+      if (p!=NULL) *p += q2*q2/3./epsilon*wvec[index_q]*born;
+      if (drho_dM!=NULL) *drho_dM += q2*M/(1.+z)/(1.+z)/epsilon*wvec[index_q]*born;
+      if (pseudo_p!=NULL) *pseudo_p += pow(q2/epsilon,3)/3.0*wvec[index_q]*born;
     }
   }
 
