@@ -49,15 +49,32 @@ Residual max abs r of ln(P₁/P₂), k ∈ [0.02, 2]/Mpc, m_acc = 1e11 GeV, θ_s
 | on/off, P(k) output only | 1.5e-3 | 5.0e-3 |
 | on/off, tol 1e-7 | failed: rk step collapses at τ ≈ 4665 Mpc (a ≈ 0.11, birth peak) | |
 
-- The jitter is a per-k-mode error, not interpolation: denser k sampling does not remove it, and
-  shifting nodes with identical physics reproduces it.
-- It lives in the daughter sector and scales with f_acc; CLASS alone is at 1e-6.
-- It is insensitive to the integration tolerance and time sampling, and slightly reduced by smooth
-  births; tightening the tolerance makes rk fail at the birth peak. This points to the discontinuous
-  birth switch-on (bins pinned to the parent via writes into y inside derivs, then released) but
-  does not isolate it from other daughter-sector per-mode errors.
-- Consequence: any accDM run at f_acc = 0.1 carries ~0.16% rms, ~0.7% max per-mode P(k) error,
-  above the 1e-3 emulator target for f_acc ≳ 0.01. On/off comparisons cancel it only when both runs
-  take identical steps (e.g. m_acc = 1e16 in nb29).
-- Candidate fix (separate spec): stop the integrator at each bin's birth time and start the bin from
-  the parent state there; test with the nb30 null pair (target max < 1e-3 at f_acc = 0.1).
+Follow-up measurements (nb30 sampling test, nb31):
+
+| test | result |
+|---|---|
+| null pair vs `k_step_sub` 0.05 / 0.02 / 0.01 / 0.005, 51 bins (max) | 6.8e-3 / 7.6e-3 / 3.1e-3 / 5.2e-3 |
+| same, 201 bins | 6.8e-3 / 9.8e-3 / 3.2e-3 / 4.8e-3 |
+| ln P jaggedness at exact nodes, k ∈ [0.100, 0.105], N_Q = 51 / 201 / 801 / 1601 | 1.4e-3 / 1.5e-3 / 1.5e-3 / 1.5e-3 |
+| δ_daughter / δ_cdm today, same band | 1.6e-2 at every N_Q |
+| k ∈ [0.1000, 0.1015], spacing 5e-5, N_Q = 201 | smooth sinusoid in δ_d and ln P, period 1.30e-3/Mpc, amplitude ±8e-4 in ln P |
+| birth breakpoints (integration stops at every birth) | null pair unchanged (6.762e-3); tol 1e-7 now completes |
+
+**Conclusion.** The "jitter" is a real, numerically converged oscillation of the daughter density
+in k, aliased by CLASS's k sampling.
+
+- Physics: every daughter starts with the same kick momentum, so the distance travelled by today
+  has a maximum over birth times, D_max ≈ 4800 Mpc. The stationary phase leaves an undamped
+  cos(k D_max) term in δ_d, which enters δ_m with the daughter's matter weight. It is independent of
+  the number of daughter bins, the tolerance, time sampling and birth handling.
+- Aliasing: the period 2π/D_max ≈ 1.3e-3/Mpc is finer than the k node spacing (~2e-3 in the
+  `k_step_sub` range and ~10 nodes per decade above k_max_cmb ≈ 0.3/Mpc), so the spline turns it into
+  apparent per-mode scatter that moves with the nodes. The null-pair maximum sits in the coarse
+  range, which is why denser `k_step_sub` did not converge.
+- Earlier readings in this spec were wrong: the scatter is interpolation of a real oscillation, not
+  an integration error, and the birth switch-on is not its cause.
+- Observability: a ~0.1% ripple (f_acc = 0.1, m_acc = 1e11 GeV) with period 1.3e-3/Mpc is below the
+  k resolution of survey windows and averages out in band powers; a spread of kick momenta would
+  damp it. Its amplitude grows with f_acc and depends on η.
+- Treatment: smooth or band-average P(k) over Δk of a few × 1.3e-3/Mpc before emulator training,
+  or evaluate observables that include the survey window. No CLASS change is needed for the ripple.
