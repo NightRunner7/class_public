@@ -3361,6 +3361,7 @@ int perturbations_prepare_k_output(struct background * pba,
       class_store_columntitle(ppt->scalar_titles, "rho_plus_p_theta", _TRUE_); // AG: For testing
       class_store_columntitle(ppt->scalar_titles, "delta_rho_tot", _TRUE_); // AG: For testing
       class_store_columntitle(ppt->scalar_titles, "eta", ppt->gauge == synchronous); // AG: For testing
+      class_store_columntitle(ppt->scalar_titles, "delta_p_tot", _TRUE_); // AG: For testing
 
       /* Perturbed recombination */
       class_store_columntitle(ppt->scalar_titles,"delta_Tb",ppt->has_perturbed_recombination);
@@ -9112,8 +9113,9 @@ int perturbations_print_variables(double tau,
     class_store_double(dataptr, h_prime, _TRUE_, storeidx);  /* Original DCDM->DR+WDM Implementation */
     class_store_double(dataptr, phi_prime, _TRUE_, storeidx);  /* Original DCDM->DR+WDM Implementation */
     class_store_double(dataptr, ppw->rho_plus_p_theta, _TRUE_, storeidx); /* AG: For testing */
-    class_store_double(dataptr, y[ppw->pv->index_pt_eta], ppt->gauge == synchronous, storeidx); /* AG: For testing */
     class_store_double(dataptr, ppw->delta_rho, _TRUE_, storeidx); /* AG: For testing, this is deltaT00*/
+    class_store_double(dataptr, y[ppw->pv->index_pt_eta], ppt->gauge == synchronous, storeidx); /* AG: For testing */
+    class_store_double(dataptr, ppw->delta_p, _TRUE_, storeidx); /* AG: For testing */
 
     /* perturbed recombination */
     class_store_double(dataptr, delta_temp, ppt->has_perturbed_recombination, storeidx);
@@ -10151,11 +10153,11 @@ int perturbations_derivs(double tau,
           if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_ ) {
             /* AG: w_ncdm distributed analytically into numerator so 1/w_ncdm never appears */
             double term1_num = w_ncdm*(5.0-pseudo_p_ncdm/p_ncdm_bg);
-            double term2_num = ratio_rho*(gamma/(3.0*H))*eta*(2. + eta)/(1. + eta); // AG: Eta version
+            double term2_num = ratio_rho*(gamma/(3.0*H))*eta*(2. + eta)/(1. + eta);
             double numerator = term1_num - term2_num;
 
             double term1_den = 3.0*(1.0 + w_ncdm);
-            double term2_den = ratio_rho*(gamma/H)*(1. + eta); // AG: Eta version
+            double term2_den = ratio_rho*(gamma/H)*(1. + eta);
             double denominator = term1_den - term2_den;
 
             /* source-free adiabatic sound speed: always physical, used as a
@@ -10247,12 +10249,6 @@ int perturbations_derivs(double tau,
               dy[idx+2] = 0.;
             } 
             else {
-              // if (pba->kappa_acc <= 3.0) { /* AG: It seems that for kappa less than 3 setting shear to zero gives better approximation */
-              //                              /* NOTE: heuristic predates the removal of the spurious delta_dcdm
-              //                                 source below; its empirical basis is stale -- retest. */
-              //   dy[idx+2] = 0.;
-              // }
-              // else {
                 /* l=2 moment of the daughter hierarchy: isotropic injection from a
                    comoving parent sources no quadrupole, and the production-front
                    deltas inside dbar_f/dq cancel by parts in integrated moments, so
@@ -10262,9 +10258,10 @@ int perturbations_derivs(double tau,
                    -(1+2eta)(3+2eta)/(3(1+eta)) * a*gamma*ratio_rho/(1+w) * sigma
                    built on the source-free ca2_0. Closures as stock CLASS ncdmfa:
                    pseudo-shear ratio -> pseudo_p/p, l=3 -> 1/tau, l=1 -> cvis2 term. */
-                dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+1./tau+a*gamma*(1.+pba->eta_acc)*((1.+ca2_ncdm)/(3.+3.*w_ncdm))*ratio_rho)*y[idx+2]
-                          +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*s_l[2]*(y[idx+1]+metric_ufa_class);
-              // }
+                dy[idx+2] = -3.0*(a_prime_over_a*(2./3.-ca2_ncdm-pseudo_p_ncdm/p_ncdm_bg/3.)+
+                            1./tau+
+                            a*gamma*(1.+pba->eta_acc)*((1.+ca2_ncdm)/(3.+3.*w_ncdm))*ratio_rho)*y[idx+2]
+                            +8.0/3.0*cvis2_ncdm/(1.0+w_ncdm)*s_l[2]*(y[idx+1]+metric_ufa_class);
             }
 
             //   (corrected)formula (A.8) of 1505.05511v2
