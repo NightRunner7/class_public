@@ -2711,6 +2711,12 @@ int input_read_parameters_species(struct file_content * pfc,
     class_read_flag("switch_off_shear_acc", ppt->switch_off_shear_acc);
   }
 
+  /* accDM DE sink: w=-1 component that pays the daughters' kick energy */
+  class_read_flag("acc_de_sink", pba->has_acc_de_sink);
+  class_test((pba->has_acc_de_sink == _TRUE_) && (pba->has_acc == _FALSE_),
+             errmsg,
+             "'acc_de_sink = yes' requires accDM (set f_acc and m_acc_in_GeV).");
+
   /** 5) Non-cold relics (ncdm) */
   /** 5.a) Number of non-cold relics */
   /* Read */
@@ -6286,6 +6292,8 @@ int input_default_params(struct background *pba,
   pba->tau_dcdm = 0.0;
 
   /* START Accelerating DM */
+  pba->has_acc = _FALSE_;
+  pba->has_acc_de_sink = _FALSE_;
   pba->eta_acc = 0.;
   pba->eps_acc = 0.;
   pba->m_acc_in_GeV = 0.;

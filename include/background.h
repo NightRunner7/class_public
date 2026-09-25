@@ -337,6 +337,7 @@ struct background
 
   /* Accelerating DM */
   short has_acc;      /**< presence of accelerating dark matter? */
+  short has_acc_de_sink; /**< accDM daughters' kick energy drained from a w=-1 component? */
   short has_varGamma_dcdm; /**< presence of time-varying decay rate for decaying cold dark matter? */
   /* END Accelerating DM */
 
