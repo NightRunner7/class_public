@@ -710,7 +710,12 @@ int perturbations_init(
   int index_tp;
   /* background quantities */
   double w_fld_ini, w_fld_0,dw_over_da_fld,integral_fld;
-  int n_ncdm;                      
+  int n_ncdm;
+
+  ppt->tau_birth_lo_acc = NULL;
+  ppt->tau_birth_hi_acc = NULL;
+  ppt->tau_birth_break = NULL;
+  ppt->tau_birth_break_size = 0;
 
   /** - perform preliminary checks */
 
@@ -736,6 +741,13 @@ int perturbations_init(
   class_test((pba->has_acc == _TRUE_) && (ppr->evolver != rk),
              ppt->error_message,
              "accDM requires the rk evolver: set 'evolver = 0'.");
+
+  /* accDM: daughter birth times, used as integration breakpoints */
+  if (pba->has_acc == _TRUE_) {
+    class_call(perturbations_acc_birth_times(pba, ppt),
+               ppt->error_message,
+               ppt->error_message);
+  }
 
   class_test ((ppr->tight_coupling_approximation < first_order_MB) ||
               (ppr->tight_coupling_approximation > compromise_CLASS),
@@ -1054,6 +1066,10 @@ int perturbations_free(
   perturbations_free_input(ppt);
 
   if (ppt->has_perturbations == _TRUE_) {
+
+    free(ppt->tau_birth_lo_acc);
+    free(ppt->tau_birth_hi_acc);
+    free(ppt->tau_birth_break);
 
     for (index_md = 0; index_md < ppt->md_size; index_md++) {
 
@@ -3241,7 +3257,8 @@ int perturbations_solve(
                ppt->error_message,
                ppt->error_message);
 
-    /** - --> (d) integrate the perturbations over the current interval. */
+    /** - --> (d) integrate the perturbations over the current interval, in sub-intervals
+        cut at the accDM daughter birth times so that no rk step straddles a birth. */
 
     if (ppr->evolver == rk){
       generic_evolver = evolver_rk;
@@ -3250,33 +3267,48 @@ int perturbations_solve(
       generic_evolver = evolver_ndf15;
     }
 
-    class_call_except(generic_evolver(perturbations_derivs,
-                                      interval_limit[index_interval],
-                                      interval_limit[index_interval+1],
-                                      ppw->pv->y,
-                                      ppw->pv->used_in_sources,
-                                      ppw->pv->pt_size,
-                                      &ppaw,
-                                      ppr->tol_perturbations_integration,
-                                      ppr->smallest_allowed_variation,
-                                      perturbations_timescale,
-                                      ppr->perturbations_integration_stepsize,
-                                      ppt->tau_sampling,
-                                      tau_actual_size,
-                                      perturbations_sources,
-                                      perhaps_print_variables,
-                                      ppt->error_message),
-                      ppt->error_message,
-                      ppt->error_message,
-                      {
-                        ErrorMsg _saved_err;
-                        strncpy(_saved_err, ppt->error_message, _ERRORMSGSIZE_-1);
-                        _saved_err[_ERRORMSGSIZE_-1] = '\0';
-                        snprintf(ppt->error_message, _ERRORMSGSIZE_,
-                                 "%s [ca2_ncdm_bad=%d]",
-                                 _saved_err,
-                                 ppw->ca2_ncdm_bad == _TRUE_ ? 1 : 0);
-                      });
+    double tau_start = interval_limit[index_interval];
+    while (tau_start < interval_limit[index_interval+1]) {
+
+      double tau_stop = interval_limit[index_interval+1];
+      int index_break;
+      for (index_break=0; index_break<ppt->tau_birth_break_size; index_break++) {
+        if (ppt->tau_birth_break[index_break] > tau_start) {
+          tau_stop = MIN(tau_stop, ppt->tau_birth_break[index_break]);
+          break;
+        }
+      }
+
+      class_call_except(generic_evolver(perturbations_derivs,
+                                        tau_start,
+                                        tau_stop,
+                                        ppw->pv->y,
+                                        ppw->pv->used_in_sources,
+                                        ppw->pv->pt_size,
+                                        &ppaw,
+                                        ppr->tol_perturbations_integration,
+                                        ppr->smallest_allowed_variation,
+                                        perturbations_timescale,
+                                        ppr->perturbations_integration_stepsize,
+                                        ppt->tau_sampling,
+                                        tau_actual_size,
+                                        perturbations_sources,
+                                        perhaps_print_variables,
+                                        ppt->error_message),
+                        ppt->error_message,
+                        ppt->error_message,
+                        {
+                          ErrorMsg _saved_err;
+                          strncpy(_saved_err, ppt->error_message, _ERRORMSGSIZE_-1);
+                          _saved_err[_ERRORMSGSIZE_-1] = '\0';
+                          snprintf(ppt->error_message, _ERRORMSGSIZE_,
+                                   "%s [ca2_ncdm_bad=%d]",
+                                   _saved_err,
+                                   ppw->ca2_ncdm_bad == _TRUE_ ? 1 : 0);
+                        });
+
+      tau_start = tau_stop;
+    }
 
     // class_test(ppw->ca2_ncdm_bad == _TRUE_,
     //            ppt->error_message,
@@ -5221,7 +5253,7 @@ int perturbations_vector_init(
               epsilon = sqrt(q2+a*a*pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]);
 
               if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-                double born = background_acc_born_weight(pba, index_q, log(a));
+                double born = perturbations_acc_born(pba, ppt, index_q, tau, log(a));
 
                 if (born > 0.){
                   ppv->y[ppv->index_pt_psi0_ncdm1+ncdm_l_size*n_ncdm] +=
@@ -6831,6 +6863,8 @@ int perturbations_einstein(
   a_prime_over_a = ppw->pvecback[pba->index_bg_H]*a;
   s2_squared = 1.-3.*pba->K/k2;
 
+  ppw->tau_acc = tau;
+
   /** - sum up perturbations from all species */
   class_call(perturbations_total_stress_energy(ppr,pba,pth,ppt,index_md,k,y,ppw),
              ppt->error_message,
@@ -7027,6 +7061,97 @@ int perturbations_einstein(
 
   return _SUCCESS_;
 
+}
+
+/**
+ * Conformal time at ln a, clamped to [0, tau_0] outside the background table.
+ */
+
+static int perturbations_acc_tau_of_lna(
+                                        struct background * pba,
+                                        double lna,
+                                        double * tau
+                                        ) {
+  double z = exp(-lna) - 1.;
+
+  if (z <= pba->z_table[pba->bt_size-1]) {
+    *tau = pba->conformal_age;
+    return _SUCCESS_;
+  }
+  if (z >= pba->z_table[0]) {
+    *tau = 0.;
+    return _SUCCESS_;
+  }
+  class_call(background_tau_of_z(pba, z, tau),
+             pba->error_message,
+             pba->error_message);
+  return _SUCCESS_;
+}
+
+static int perturbations_compare_doubles(const void * x, const void * y) {
+  double dx = *(const double *)x;
+  double dy = *(const double *)y;
+  return (dx > dy) - (dx < dy);
+}
+
+/**
+ * Birth times of the accDM daughter bins (ramp start and end) and their sorted unique
+ * list, used as integration breakpoints so that no rk step straddles a birth.
+ */
+
+int perturbations_acc_birth_times(
+                                  struct background * pba,
+                                  struct perturbations * ppt
+                                  ) {
+  int n_acc = pba->N_ncdm-1;
+  int nq = pba->q_size_ncdm[n_acc];
+  int index_q, i, n;
+  double * all;
+
+  class_alloc(ppt->tau_birth_lo_acc, nq*sizeof(double), ppt->error_message);
+  class_alloc(ppt->tau_birth_hi_acc, nq*sizeof(double), ppt->error_message);
+  class_alloc(all, 2*nq*sizeof(double), ppt->error_message);
+
+  for (index_q=0; index_q<nq; index_q++) {
+    class_call(perturbations_acc_tau_of_lna(pba, pba->lna_birth_lo_acc[n_acc][index_q],
+                                            &(ppt->tau_birth_lo_acc[index_q])),
+               pba->error_message,
+               ppt->error_message);
+    class_call(perturbations_acc_tau_of_lna(pba, pba->lna_birth_hi_acc[n_acc][index_q],
+                                            &(ppt->tau_birth_hi_acc[index_q])),
+               pba->error_message,
+               ppt->error_message);
+    all[2*index_q] = ppt->tau_birth_lo_acc[index_q];
+    all[2*index_q+1] = ppt->tau_birth_hi_acc[index_q];
+  }
+
+  qsort(all, 2*nq, sizeof(double), perturbations_compare_doubles);
+  n = 0;
+  for (i=0; i<2*nq; i++) {
+    if ((n == 0) || (all[i] > all[n-1]))
+      all[n++] = all[i];
+  }
+  ppt->tau_birth_break = all;
+  ppt->tau_birth_break_size = n;
+
+  return _SUCCESS_;
+}
+
+/**
+ * Born weight of daughter bin index_q. Instant births switch just after tau_birth, which
+ * is an integration breakpoint; smooth ramps are linear in ln a as in the background.
+ */
+
+double perturbations_acc_born(
+                              struct background * pba,
+                              struct perturbations * ppt,
+                              int index_q,
+                              double tau,
+                              double lna
+                              ) {
+  if (ppt->tau_birth_lo_acc[index_q] == ppt->tau_birth_hi_acc[index_q])
+    return (tau > ppt->tau_birth_hi_acc[index_q]) ? 1. : 0.;
+  return background_acc_born_weight(pba, index_q, lna);
 }
 
 int perturbations_total_stress_energy(
@@ -7458,7 +7583,7 @@ int perturbations_total_stress_energy(
             epsilon = sqrt(q2+pba->M_ncdm[n_ncdm]*pba->M_ncdm[n_ncdm]*a2);
 
             if(n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-              double born = background_acc_born_weight(pba, index_q, log(a));
+              double born = perturbations_acc_born(pba, ppt, index_q, ppw->tau_acc, log(a));
 
               if(born > 0.){
                 if(y[idx]!=0) rho_delta_ncdm += q2*epsilon*pba->w_ncdm[n_ncdm][index_q]*y[idx]*born;
@@ -10348,7 +10473,7 @@ int perturbations_derivs(double tau,
                  evolving state cannot stand for particles born at different times, and
                  releasing it while only partly counted spuriously boosts clustering.
                  For instant births the ramp has zero width and this is a = a_q. */
-              if(log(a) <= pba->lna_birth_hi_acc[n_ncdm][index_q]){ // AG: Track the acc_cdm parent until production — algebraic slaving
+              if(tau <= ppt->tau_birth_hi_acc[index_q]){ // AG: Track the acc_cdm parent until production — algebraic slaving
                 /* Before its birth ramp starts (a <= aq for instantaneous births) the daughter is slaved algebraically to
                    the parent every derivs call:
                      monopole  y[idx]   = FD_ncdm * (delta_dcdm - metric_continuity/(3 a H))

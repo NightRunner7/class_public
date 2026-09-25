@@ -368,6 +368,11 @@ struct perturbations
   double * tau_sampling;    /**< array of tau values */
   int tau_size;             /**< number of values in this array */
 
+  double * tau_birth_lo_acc;  /**< accDM daughter: conformal time where each bin starts to be born */
+  double * tau_birth_hi_acc;  /**< accDM daughter: conformal time where each bin is fully born */
+  double * tau_birth_break;   /**< sorted unique birth times, used as integration breakpoints */
+  int tau_birth_break_size;   /**< number of values in tau_birth_break */
+
   double selection_min_of_tau_min; /**< used in presence of selection functions (for matter density, cosmic shear...) */
   double selection_max_of_tau_max; /**< used in presence of selection functions (for matter density, cosmic shear...) */
 
@@ -570,6 +575,7 @@ struct perturbations_workspace
   //@{
 
   double * pvecback;          /**< background quantities */
+  double tau_acc;             /**< tau of the current Einstein-equation call, for the accDM born weights */
   double * pvecthermo;        /**< thermodynamics quantities */
   double * pvecmetric;        /**< metric quantities */
   struct perturbations_vector * pv; /**< pointer to vector of integrated
@@ -932,6 +938,19 @@ extern "C" {
                                         double * y,
                                         struct perturbations_workspace * ppw
                                         );
+
+  int perturbations_acc_birth_times(
+                                    struct background * pba,
+                                    struct perturbations * ppt
+                                    );
+
+  double perturbations_acc_born(
+                                struct background * pba,
+                                struct perturbations * ppt,
+                                int index_q,
+                                double tau,
+                                double lna
+                                );
 
   int perturbations_sources(
                             double tau,
