@@ -90,3 +90,28 @@ Builds and tests run where `classy` is built (cluster or WSL); this Windows host
 - **Spline accuracy near a_t** at large κ (sharply peaked F′): covered by test 2.
 - **Large early DE** at m_acc ~ 1e11 GeV changes H strongly: one run at that corner in test 3.
 - **Sign error in `dp_dloga`** would silently corrupt `p_tot_prime` users: covered by test 5.
+
+## Results (2026-09-25 implementation)
+
+Audit notebooks rerun with every accDM run at `acc_de_sink = yes`; flag-off values are their saved outputs.
+
+| check | flag off | flag on | floor / reference |
+|---|---|---|---|
+| nb21 Ω_K_eff(1), fiducial (f=0.1, η=0.1) | 1.85e-2 | 1.31e-4 | ΛCDM 1.07e-4 |
+| nb21 Ω_K_eff(1), worst point (f=1, η=0.5) | 5.0e-1 | 3.4e-4 | Planck 1.9e-3 (1σ) |
+| nb21 max abs R_windowed, fiducial | 1.59e-2 | 4.80e-3 | 4.39e-3 at η=1e-5 (birth staircase) |
+| nb22 largest abs Δ(1) over η ≤ 1 | 5.79e-2 | 1.45e-5 | ΛCDM 1.4e-12 |
+| nb28 Δ_h(a=1), k = 0.1 | 8.67e-3 | 6.63e-3 | pre-injection floor 1.1e-4 |
+| nb28 meas/pred (ΣδQ = η aΓρ_p δ_p), k = 0.01 / 0.1 / 1 | 1.38 / 1.37 / 1.37 | 1.03 / 1.05 / 1.04 | 1 |
+
+- Background: the violation is gone to the estimator floor at every scanned point. The remaining
+  max abs R is the windowed estimator aliasing on the daughter's birth staircase; it is present at η ≈ 0
+  without the sink and scales with f_acc, so the "above 1e-2" verdict line in nb21 is not an
+  energy leak. The remaining Δ(1) in nb22 is the daughter's quadrature (1+η_eff)/(1+η) = 1.0015.
+- Perturbations: the flag-off drift was the ΣδQ leak plus a k-independent ~2.3e-3 imprint of the
+  background violation; the sink removes the latter, and the flag-on drift matches the ΣδQ
+  prediction to 2.5-5%.
+
+Option B needed: yes, for full conservation. With the sink on the only leak left is first order,
+ΣδQ = η aΓρ_p δ_p, at 6.6e-3 of max abs h' (60× the floor) for f_acc = 0.1, η = 0.1. Whether it matters
+observationally is a C_l / P(k) comparison, not decided here.
