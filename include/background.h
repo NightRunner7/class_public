@@ -99,6 +99,12 @@ struct background
                        (1/3)(1-exp(-3*A_eta*eta_acc)) from the input kick
                        alone; 0 unless has_acc */
 
+  int acc_de_sink_n;          /**< intervals of the acc_de_sink J(a) table */
+  double acc_de_sink_lna_min; /**< ln a of the first J(a) node */
+  double acc_de_sink_dlna;    /**< uniform ln a step of the J(a) table */
+  double * acc_de_sink_J;     /**< J(a) = int_a^1 F'(a') a'^-3 dln a' at the nodes */
+  double * acc_de_sink_g;     /**< F'(a) a^-3 at the nodes, = -dJ/dln a */
+
   int acc_ncdm_index; /** Index for the accelerating ncdm species, UNUSED RIGHT NOW */
 
   double Omega0_acc_cdm;    /**< \f$ \Omega_{0 acc\_cdm}+\Omega_{0 acc\_wdm} \f$: combined input density of the accelerating-DM sector (cdm parent accelerating into the wdm daughter) */
@@ -209,6 +215,7 @@ struct background
   /* Accelerating DM */
   int index_bg_Gamma_acc;      /**< acc DM decay rate */
   int index_bg_rho_acc_cdm;    /**< acc_cdm (accelerating-DM parent) density */
+  int index_bg_rho_de_acc;     /**< accDM dark-energy sink density (w=-1, excess over Lambda) */
   /* END Accelerating DM */
 
   int index_bg_phi_scf;       /**< scalar field value */
@@ -519,6 +526,16 @@ extern "C" {
                                    double a
                                    );
 
+  int background_acc_de_sink_init(
+                                  struct precision *ppr,
+                                  struct background *pba
+                                  );
+
+  double background_acc_de_sink_J(
+                                  struct background *pba,
+                                  double a
+                                  );
+
   double background_acc_born_weight(
                                     struct background *pba,
                                     int index_q,
@@ -711,6 +728,8 @@ extern "C" {
 
 #define _PSD_DERIVATIVE_EXP_MIN_ -30 /**< for ncdm, for accurate computation of dlnf0/dlnq, q step is varied in range specified by these parameters */
 #define _PSD_DERIVATIVE_EXP_MAX_ 2  /**< for ncdm, for accurate computation of dlnf0/dlnq, q step is varied in range specified by these parameters */
+#define _ACC_DE_SINK_N_ 20000        /**< intervals of the acc_de_sink J(a) table */
+#define _ACC_DE_SINK_LNA_MIN_ -69.   /**< ln a of the first J(a) node (a ~ 1e-30) */
 
 #define _zeta3_ 1.2020569031595942853997381615114499907649862923404988817922 /**< for quandrature test function */
 #define _zeta5_ 1.0369277551433699263313654864570341680570809195019128119741 /**< for quandrature test function */

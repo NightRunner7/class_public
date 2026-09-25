@@ -553,6 +553,19 @@ int background_functions(
     p_tot -= pvecback[pba->index_bg_rho_lambda];
   }
 
+  /* accDM DE sink: w=-1 component that pays the daughters' kick energy */
+  if (pba->has_acc_de_sink == _TRUE_) {
+    double norm_de_acc = pba->eta_acc * pba->f_acc * pba->Omega0_cdm * pow(pba->H0,2);
+    class_test(log(a) < pba->acc_de_sink_lna_min,
+               pba->error_message,
+               "a = %e is below the start of the acc_de_sink J(a) table", a);
+    pvecback[pba->index_bg_rho_de_acc] = norm_de_acc * background_acc_de_sink_J(pba,a);
+    rho_tot += pvecback[pba->index_bg_rho_de_acc];
+    p_tot -= pvecback[pba->index_bg_rho_de_acc];
+    if (a < 1.)
+      dp_dloga += norm_de_acc * background_acc_birth_rate(pba,a)/(a*a*a);
+  }
+
   /* fluid with w(a) and constant cs2 */
   if (pba->has_fld == _TRUE_) {
 
@@ -854,6 +867,13 @@ int background_init(
              pba->error_message,
              pba->error_message);
 
+  /** - accDM DE sink: tabulate J(a) before anything calls background_functions */
+  if (pba->has_acc_de_sink == _TRUE_) {
+    class_call(background_acc_de_sink_init(ppr,pba),
+               pba->error_message,
+               pba->error_message);
+  }
+
   /** - check that input parameters make sense and write additional information about them */
   class_call(background_checks(ppr,pba),
              pba->error_message,
@@ -962,6 +982,11 @@ int background_free_noinput(
   free(pba->d2z_dtau2_table);
   free(pba->background_table);
   free(pba->d2background_dloga2_table);
+
+  if (pba->has_acc_de_sink == _TRUE_) {
+    free(pba->acc_de_sink_J);
+    free(pba->acc_de_sink_g);
+  }
 
   return _SUCCESS_;
 }
@@ -1147,6 +1172,7 @@ int background_indices(
   /* START accDM */
   class_define_index(pba->index_bg_Gamma_acc,pba->has_acc,index_bg,1);
   class_define_index(pba->index_bg_rho_acc_cdm,pba->has_acc,index_bg,1);
+  class_define_index(pba->index_bg_rho_de_acc,pba->has_acc_de_sink,index_bg,1);
   /* END accDM */
 
   /* - index for dr */
@@ -1309,6 +1335,78 @@ double background_acc_birth_rate(
   double x = pow(a,pba->kappa_acc);
   double y = pow(a/pba->a_t_acc,pba->kappa_acc);
   return pba->kappa_acc*(x+y)/((1.+y)*(1.+y));
+}
+
+/**
+ * Tabulate J(a) = int_a^1 F'(a') a'^-3 dln a' on a uniform ln a grid, integrating
+ * backward from a = 1 with Simpson per cell. rho_de_acc = eta f_acc rho_cdm,0 J(a).
+ */
+
+int background_acc_de_sink_init(
+                                struct precision *ppr,
+                                struct background *pba
+                                ) {
+  int n = _ACC_DE_SINK_N_;
+  int i;
+  double h = -_ACC_DE_SINK_LNA_MIN_/n;
+  double a, a_mid, g_mid;
+
+  pba->acc_de_sink_n = n;
+  pba->acc_de_sink_lna_min = _ACC_DE_SINK_LNA_MIN_;
+  pba->acc_de_sink_dlna = h;
+
+  class_alloc(pba->acc_de_sink_J, (n+1)*sizeof(double), pba->error_message);
+  class_alloc(pba->acc_de_sink_g, (n+1)*sizeof(double), pba->error_message);
+
+  for (i=0; i<=n; i++) {
+    a = exp(pba->acc_de_sink_lna_min + i*h);
+    pba->acc_de_sink_g[i] = background_acc_birth_rate(pba,a)/(a*a*a);
+  }
+
+  pba->acc_de_sink_J[n] = 0.;
+  for (i=n-1; i>=0; i--) {
+    a_mid = exp(pba->acc_de_sink_lna_min + (i+0.5)*h);
+    g_mid = background_acc_birth_rate(pba,a_mid)/(a_mid*a_mid*a_mid);
+    pba->acc_de_sink_J[i] = pba->acc_de_sink_J[i+1]
+      + h/6.*(pba->acc_de_sink_g[i] + 4.*g_mid + pba->acc_de_sink_g[i+1]);
+  }
+
+  if (pba->background_verbose > 1) {
+    printf(" -> acc_de_sink: Omega_de_acc at a_ini = %e (in units of today's rho_crit)\n",
+           pba->eta_acc*pba->f_acc*pba->Omega0_cdm
+           *background_acc_de_sink_J(pba, ppr->a_ini_over_a_today_default));
+  }
+
+  return _SUCCESS_;
+}
+
+/**
+ * J(a) by cubic Hermite interpolation in ln a with the exact slope dJ/dln a = -F' a^-3.
+ * Zero for a >= 1. The caller must keep ln a >= acc_de_sink_lna_min.
+ */
+
+double background_acc_de_sink_J(
+                                struct background *pba,
+                                double a
+                                ) {
+  double h = pba->acc_de_sink_dlna;
+  double * J = pba->acc_de_sink_J;
+  double * g = pba->acc_de_sink_g;
+  double x, t, t2, t3;
+  int i;
+
+  if (a >= 1.) return 0.;
+
+  x = (log(a) - pba->acc_de_sink_lna_min)/h;
+  i = (int)floor(x);
+  if (i < 0) i = 0;
+  if (i > pba->acc_de_sink_n-1) i = pba->acc_de_sink_n-1;
+  t = x - i;
+  t2 = t*t;
+  t3 = t2*t;
+
+  return (2.*t3-3.*t2+1.)*J[i] - (t3-2.*t2+t)*h*g[i]
+    + (-2.*t3+3.*t2)*J[i+1] - (t3-t2)*h*g[i+1];
 }
 
 /**
@@ -2793,6 +2891,7 @@ int background_output_titles(
   class_store_columntitle(titles,"(.)rho_crit",_TRUE_);
   class_store_columntitle(titles,"(.)rho_dcdm",pba->has_dcdm);
   class_store_columntitle(titles,"(.)rho_acc_cdm",pba->has_acc);
+  class_store_columntitle(titles,"(.)rho_de_acc",pba->has_acc_de_sink);
   class_store_columntitle(titles,"(.)rho_dr",pba->has_dr);
 
   class_store_columntitle(titles,"(.)rho_scf",pba->has_scf);
@@ -2871,6 +2970,7 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_rho_crit],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dcdm],pba->has_dcdm,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_acc_cdm],pba->has_acc,storeidx);
+    class_store_double(dataptr,pvecback[pba->index_bg_rho_de_acc],pba->has_acc_de_sink,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dr],pba->has_dr,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_p_scf],pba->has_scf,storeidx);
