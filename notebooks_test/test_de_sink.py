@@ -14,7 +14,7 @@ N_LOGA = 10001
 
 
 def accdm_params(f_acc=0.1, eta=0.1, kappa=12.1, a_t=0.133, mass=1e16,
-                 n_q=501, strategy=4, sink=None):
+                 n_q=501, strategy=4, sink=None, n_loga=N_LOGA):
     """Background-only accDM run; sink=None leaves acc_de_sink unset."""
     p = {'omega_b': OMEGA_B, 'omega_cdm': OMEGA_CDM0, 'H0': H0,
          'vary_Gamma_acc': 'yes', 'kappa_acc': kappa, 'a_t_acc': a_t,
@@ -25,7 +25,7 @@ def accdm_params(f_acc=0.1, eta=0.1, kappa=12.1, a_t=0.133, mass=1e16,
          'T_ncdm': '0.71611, 1',
          'ncdm_quadrature_strategy': '0, {:d}'.format(strategy),
          'ncdm_N_momentum_bins': '15, {:d}'.format(n_q),
-         'N_ur': 0.00441, 'background_Nloga': N_LOGA}
+         'N_ur': 0.00441, 'background_Nloga': n_loga}
     if sink is not None:
         p['acc_de_sink'] = sink
     return p
@@ -126,3 +126,34 @@ def test_p_tot_prime_includes_sink():
     sel = on['a'] > 1e-3
     scale = np.max(np.abs(fd[sel]))
     np.testing.assert_allclose((dp_on - dp_off)[sel], fd[sel], rtol=0, atol=1e-3*scale)
+
+
+def cum_integral(y, x):
+    """Cumulative trapezoid with Euler-Maclaurin end correction, O(h^4) on a uniform grid."""
+    cum = np.concatenate(([0.0], np.cumsum(0.5*(y[1:] + y[:-1])*np.diff(x))))
+    h = float(np.median(np.diff(x)))
+    dy = np.gradient(y, x)
+    return cum - (h*h/12.0)*(dy - dy[0])
+
+
+def omega_k_eff_today(bg, a_start=1e-4):
+    """Spurious curvature today; zero iff rho_tot' = -3H(rho_tot + p_tot) (notebook 21)."""
+    sel = bg['a'] >= a_start
+    a = bg['a'][sel]
+    x = np.log(a)
+    rho, p = bg['(.)rho_tot'][sel], bg['(.)p_tot'][sel]
+    C = a**2*rho + cum_integral(a**2*(rho + 3.0*p), x)
+    return (C[-1] - C[0])/(a[-1]*bg['H [1/Mpc]'][sel][-1])**2
+
+
+@pytest.mark.parametrize('n_q', [51, 101])
+def test_background_conservation_restored(n_q):
+    """The sink removes the kick violation; what remains matches the eta ~ 0 run
+    (daughter staircase and estimator floor), which the sink does not address."""
+    grid = dict(n_q=n_q, strategy=5, n_loga=40001)
+    off = omega_k_eff_today(run(accdm_params(**grid)))
+    base = omega_k_eff_today(run(accdm_params(eta=1e-6, **grid)))
+    on = omega_k_eff_today(run(accdm_params(sink='yes', **grid)))
+    print('Omega_K_eff today: off {:+.3e}  base {:+.3e}  on {:+.3e}'.format(off, base, on))
+    assert abs(on) < 0.05*abs(off)
+    assert abs(on - base) < 1e-3*abs(off)

@@ -72,8 +72,11 @@ New `notebooks_test/test_de_sink.py` (pytest, background only):
    for κ ∈ {5, 12.1} and a_t ∈ {0.05, 0.133}; κ = 2 against direct `scipy.integrate.quad`.
 3. ρ_de_acc(1) = 0; `Omega_Lambda` and H(z=0) equal flag-off values to 1e-10 (the age and
    distances change, since the expansion history does). Also at m_acc = 1e11 GeV, f_acc = 0.3.
-4. Background conservation (integral residual of notebook 21): flag on reduces the residual
-   from ~η aQ₀ to the quadrature floor, and it decreases from 51 to 101 `qm_acc_birth` bins.
+4. Background conservation (integral residual Ω_K_eff of notebook 21), at `background_Nloga`
+   = 40001 and 51 / 101 `qm_acc_birth` bins: flag on cuts the flag-off residual by > 20×, and
+   |on(η=0.1) − off(η=1e-6)| < 1e-3 |off(η=0.1)|. The remaining residual is not monotonic in
+   n_q: it is the estimator's trapezoid across the daughter's birth staircase plus the ΛCDM
+   floor (1.1e-4 at Nloga = 10001, 1.7e-6 at 40001), present with η ≈ 0 and no sink.
 5. `p_tot_prime` matches a finite difference of `p_tot` from the table.
 6. `acc_de_sink = yes` without accDM fails with a CLASS error.
 
