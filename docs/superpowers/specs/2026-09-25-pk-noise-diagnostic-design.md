@@ -30,3 +30,34 @@ rk integration error (`tol_perturbations_integration`), source time sampling
   the cheapest case with max abs r < 1e-3.
 
 Out of scope: changing defaults in CLASS or in the emulator config (a follow-up once the source is known).
+
+## Results (2026-09-25)
+
+Residual max abs r of ln(P₁/P₂), k ∈ [0.02, 2]/Mpc, m_acc = 1e11 GeV, θ_s fixed.
+
+| pair | rms | max |
+|---|---|---|
+| null, ΛCDM (shifted k nodes) | 8.1e-7 | 6.2e-6 |
+| null, accDM f_acc = 0.01 | 1.6e-4 | 7.8e-4 |
+| null, accDM f_acc = 0.1 | 1.6e-3 | 6.8e-3 |
+| null, accDM f_acc = 0.1, smooth births | 1.4e-3 | 4.9e-3 |
+| on/off, default | 2.1e-3 | 7.4e-3 |
+| on/off, `k_step_sub` 0.02 / 0.01 | 1.3e-3 / 1.2e-3 | 9.9e-3 / 5.6e-3 |
+| on/off, `k_per_decade_for_bao` 200 | 2.2e-3 | 7.1e-3 |
+| on/off, tol 1e-6 / sampling 0.03 | 2.1e-3 | 7.4e-3 |
+| on/off, 101 bins / smooth births | 1.8e-3 | 7.2e-3 / 5.1e-3 |
+| on/off, P(k) output only | 1.5e-3 | 5.0e-3 |
+| on/off, tol 1e-7 | failed: rk step collapses at τ ≈ 4665 Mpc (a ≈ 0.11, birth peak) | |
+
+- The jitter is a per-k-mode error, not interpolation: denser k sampling does not remove it, and
+  shifting nodes with identical physics reproduces it.
+- It lives in the daughter sector and scales with f_acc; CLASS alone is at 1e-6.
+- It is insensitive to the integration tolerance and time sampling, and slightly reduced by smooth
+  births; tightening the tolerance makes rk fail at the birth peak. This points to the discontinuous
+  birth switch-on (bins pinned to the parent via writes into y inside derivs, then released) but
+  does not isolate it from other daughter-sector per-mode errors.
+- Consequence: any accDM run at f_acc = 0.1 carries ~0.16% rms, ~0.7% max per-mode P(k) error,
+  above the 1e-3 emulator target for f_acc ≳ 0.01. On/off comparisons cancel it only when both runs
+  take identical steps (e.g. m_acc = 1e16 in nb29).
+- Candidate fix (separate spec): stop the integrator at each bin's birth time and start the bin from
+  the parent state there; test with the nb30 null pair (target max < 1e-3 at f_acc = 0.1).
