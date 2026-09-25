@@ -49,11 +49,13 @@ Conformal time, parent and daughter unchanged:
 
 1. **Input** (`source/input.c`, next to `eta_acc`): `acc_de_sink = yes/no`, default `no`,
    stored as `pba->has_acc_de_sink`. `class_test` rejects `yes` without accDM.
-2. **Table** (`source/background.c`): built in `background_init` before `background_solve`,
-   only when the flag is on. J on a uniform ln a grid from `ppr->a_ini_over_a_today_default`
-   to 1, by cumulative Simpson integration backward from a = 1; lookup by cubic spline in ln a.
-   Depends only on κ and a_t. Freed in `background_free_noinput`. Arrays live in
-   `struct background` (`include/background.h`).
+2. **Table** (`source/background.c`): built in `background_init` right after
+   `background_indices` (before anything calls `background_functions`), only when the flag is
+   on. J on a uniform ln a grid from ln a = −69 (a ≈ 1e-30, below any background start, since
+   `background_initial_conditions` may lower a_ini for ncdm) to 0, by Simpson per cell
+   integrating backward from a = 1; lookup by cubic Hermite interpolation in ln a using the
+   analytic derivative dJ/d ln a = −F′a⁻³. Depends only on κ and a_t. Freed in
+   `background_free_noinput`. Arrays live in `struct background` (`include/background.h`).
 3. **Background** (`background_functions`): new index `index_bg_rho_de_acc` (defined only
    with the flag). `rho_tot += ρ_de_acc`, `p_tot -= ρ_de_acc`,
    `dp_dloga += η f_acc ρ_cdm,0 F′(a) a⁻³`. Not added to `rho_m`; `rho_plus_p_tot` untouched.
@@ -68,7 +70,8 @@ New `notebooks_test/test_de_sink.py` (pytest, background only):
 1. Flag off: background table and P(k) identical to the golden regression.
 2. `(.)rho_de_acc` matches η f ρ_cdm,0 J(a) from `scipy.special.betainc` to < 1e-6 relative
    for κ ∈ {5, 12.1} and a_t ∈ {0.05, 0.133}; κ = 2 against direct `scipy.integrate.quad`.
-3. ρ_de_acc(1) = 0; `Omega_Lambda`, H0 and conformal age equal flag-off values to 1e-10.
+3. ρ_de_acc(1) = 0; `Omega_Lambda` and H(z=0) equal flag-off values to 1e-10 (the age and
+   distances change, since the expansion history does). Also at m_acc = 1e11 GeV, f_acc = 0.3.
 4. Background conservation (integral residual of notebook 21): flag on reduces the residual
    from ~η aQ₀ to the quadrature floor, and it decreases from 51 to 101 `qm_acc_birth` bins.
 5. `p_tot_prime` matches a finite difference of `p_tot` from the table.
