@@ -78,3 +78,26 @@ in k, aliased by CLASS's k sampling.
   damp it. Its amplitude grows with f_acc and depends on η.
 - Treatment: smooth or band-average P(k) over Δk of a few × 1.3e-3/Mpc before emulator training,
   or evaluate observables that include the survey window. No CLASS change is needed for the ripple.
+
+## What to feed the emulator (nb30, f_acc = 0.3, k ∈ [0.03, 1.5]/Mpc)
+
+| test | max abs Δ ln P (null pair) | ΛCDM shape distortion |
+|---|---|---|
+| P_m raw | 1.8e-2 | - |
+| P_m, Gaussian σ = 0.05 in ln k (kpd 10 / 30) | 6.4e-3 / 1.0e-2 | 1.2e-2 |
+| P_m, Savitzky–Golay 0.15, cubic (kpd 10 / 30) | 1.3e-2 / 1.8e-2 | 7.4e-4 |
+| **P_cb** | **1.4e-5** | - |
+
+- Smoothing P_m does not work: the aliased error varies on the node scale, so a window narrow
+  enough to keep BAO and the broadband shape cannot average it out; more nodes per decade do not help.
+- P_cb (baryons + CDM + accDM parent; `delta_cb` is formed before the ncdm species are added) is
+  clean to 1.4e-5, since the ripple lives only in the daughter's own δ. It is also the physical input
+  for galaxy clustering, as for massive neutrinos.
+- ln(P_m/P_cb) ≈ −0.43 (range −0.45 to −0.41) at f_acc = 0.3, so P_m carries the daughter's matter
+  share and its slow clustering plus the ripple. Weak lensing needs P_m; a P_cb-based construction
+  with a smooth daughter correction is not yet validated.
+
+Recommended settings for scans and emulator data: daughter `ncdm_quadrature_strategy = 5` with 51
+bins, `tol_perturbations_integration = 1e-5`, default k sampling, `evolver = 0`,
+`ncdm_fluid_approximation = 3`; use `pk_cb` for clustering. Do not use `pk` (P_m) directly for
+P(k)-based likelihoods or emulator targets.
