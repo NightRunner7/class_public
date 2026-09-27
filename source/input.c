@@ -2611,26 +2611,32 @@ int input_read_parameters_species(struct file_content * pfc,
   class_call(parser_read_double(pfc,"f_acc",&param3,&flag3,errmsg), errmsg, errmsg);
   class_call(parser_read_double(pfc,"m_acc_in_GeV",&param4,&flag4,errmsg), errmsg, errmsg);
 
-  /* accDM is on when f_acc > 0. Omega_ini_dcdm alone means standard decaying
-     CDM (section 7.1); together with m_acc_in_GeV it is rejected below. */
+  /* accDM is on when m_acc_in_GeV is given; f_acc = 0 then leaves the daughter
+     slot empty. Omega_ini_dcdm alone means standard decaying CDM (section 7.1). */
   class_test((flag3 == _TRUE_) && (param3 < 0.),
              errmsg,
              "'f_acc' must be >= 0, got %g.", param3);
-  if (pba->Omega0_acc_cdm > 0. || (pba->Omega_ini_dcdm > 0. && flag4 == _TRUE_) || (flag3 == _TRUE_ && param3 > 0.)) {
+  if ((flag4 == _TRUE_) || (flag3 == _TRUE_ && param3 > 0.)) {
     /* the parent density is f_acc*Omega_cdm; Omega_ini_dcdm is not an accDM input */
     class_test(pba->Omega_ini_dcdm > 0.,
                errmsg,
                "'Omega_ini_dcdm'/'omega_ini_dcdm' do not set the accDM abundance: remove them and set 'f_acc'.");
-    class_test((flag3 == _FALSE_) || (param3 <= 0.),
+    class_test(flag3 == _FALSE_,
                errmsg,
-               "accDM needs 'f_acc' > 0.");
+               "accDM needs 'f_acc' (f_acc = 0 leaves the daughter slot empty).");
     pba->has_acc = _TRUE_;
-    if (flag3 == _TRUE_) pba->f_acc = param3;
+    pba->f_acc = param3;
 
-    /* --- Handle Energy Boost (eta = E/m_acc-1) where E is the total energy --- */
+    /* --- Kick: eta = E_kin/m_acc, from 'eta_acc' or from 'E_acc_in_GeV' (default 1e11 GeV) --- */
     class_call(parser_read_double(pfc,"eta_acc",&param1,&flag1,errmsg),
               errmsg,
               errmsg);
+    class_call(parser_read_double(pfc,"E_acc_in_GeV",&param5,&flag5,errmsg),
+              errmsg,
+              errmsg);
+    class_test((flag1 == _TRUE_) && (flag5 == _TRUE_),
+               errmsg,
+               "You can only enter one of 'eta_acc' or 'E_acc_in_GeV'.");
     class_call(parser_read_double(pfc,"m_acc_in_GeV",&param2,&flag2,errmsg),
               errmsg,
               errmsg);
@@ -2642,16 +2648,23 @@ int input_read_parameters_species(struct file_content * pfc,
                 errmsg, 
                 "If you want to have accDM you need to provide its mass in GeV.");
 
-    /* m_acc_in_GeV is guaranteed present by the class_test above; assign it
-       first so the eta default below can use it. */
+    class_test(param2 <= 0.,
+               errmsg,
+               "'m_acc_in_GeV' must be > 0, got %g.", param2);
     pba->m_acc_in_GeV = param2;
 
     if (flag1 == _TRUE_) {
-        pba->eta_acc = param1;
-      }
+      pba->eta_acc = param1;
+    }
     else {
-        pba->eta_acc = 1e11/pba->m_acc_in_GeV; // This 1e11 is the KINETIC energy due to the boost. TO DO: Make it an input param.
-      }
+      pba->eta_acc = ((flag5 == _TRUE_) ? param5 : 1.e11)/pba->m_acc_in_GeV;
+    }
+    class_test(pba->eta_acc <= 0.,
+               errmsg,
+               "The accDM kick must be positive, got eta_acc = %g.", pba->eta_acc);
+    pba->E_acc_in_GeV = pba->eta_acc*pba->m_acc_in_GeV;
+    if (input_verbose > 0)
+      printf("accDM kick: eta_acc = %g (E_acc = %g GeV).\n", pba->eta_acc, pba->E_acc_in_GeV);
 
     /* eps_acc feeds the W-weight of the published ceff2 fit (modes 0/1 in
        perturbations.c); see the comment there - that approach is known to be
@@ -2693,11 +2706,9 @@ int input_read_parameters_species(struct file_content * pfc,
       class_test(((flag5 == _TRUE_) && (flag6 == _TRUE_)),errmsg,"In input file, you can only enter one of kappa_acc or log10kappa_acc, choose one");
       if (flag5 == _TRUE_) {
         pba->kappa_acc = param5;
-        if (pba->kappa_acc == 1.0) pba->kappa_acc = 0.99999;
       }
       else if (flag6 == _TRUE_) {
         pba->kappa_acc = pow(10.0, param6);
-        if (pba->kappa_acc == 1.0) pba->kappa_acc = 0.99999;
       }
       else {
         class_test(_TRUE_, errmsg, "You need to provide kappa_acc or log10kappa_acc when vary_Gamma_acc = yes.");
@@ -2714,6 +2725,12 @@ int input_read_parameters_species(struct file_content * pfc,
       class_test((flag7 == _FALSE_) && (flag8 == _FALSE_),
                  errmsg,
                  "You need to provide a_t_acc or log10a_t_acc when vary_Gamma_acc = yes.");
+      class_test(pba->kappa_acc <= 0.,
+                 errmsg,
+                 "'kappa_acc' must be > 0, got %g.", pba->kappa_acc);
+      class_test(pba->a_t_acc <= 0.,
+                 errmsg,
+                 "'a_t_acc' must be > 0, got %g.", pba->a_t_acc);
     }
 
     class_read_flag("switch_on_eq_delta_p_acc", ppt->switch_on_eq_delta_p_acc);
@@ -3031,16 +3048,9 @@ int input_read_parameters_species(struct file_content * pfc,
           class_test(schedule_q_sizes[index_edge] < 2, errmsg,
                      "'accdm_q_schedule_q_sizes' entries must be >= 2.");
 
-        /* daughter fraction driving the schedule; -1 means undeterminable */
-        double daughter_fraction_for_schedule = -1.;
-        if (pba->f_acc > 0.)
-          daughter_fraction_for_schedule = pba->f_acc;
-        else if ((pba->Omega_ini_dcdm > 0.) && (pba->Omega0_cdm > 0.))
-          daughter_fraction_for_schedule = pba->Omega_ini_dcdm / pba->Omega0_cdm;
-        else if (pba->Omega0_acc_cdm > 0.)
-          daughter_fraction_for_schedule = pba->Omega0_acc_cdm / (pba->Omega0_cdm + pba->Omega0_acc_cdm);
+        /* daughter fraction driving the schedule */
+        double daughter_fraction_for_schedule = pba->f_acc;
 
-        /* undeterminable fraction -> most conservative (finest) grid, never fast-wrong */
         int daughter_q_size_scheduled = schedule_q_sizes[number_of_sizes-1];
         if (daughter_fraction_for_schedule >= 0.) {
           for (index_edge=0; index_edge < number_of_edges; index_edge++) {
@@ -6320,6 +6330,7 @@ int input_default_params(struct background *pba,
   pba->eta_acc = 0.;
   pba->eps_acc = 0.;
   pba->m_acc_in_GeV = 0.;
+  pba->E_acc_in_GeV = 0.;
   pba->M_cdm_in_GeV = 0.;
   pba->P_acc = 0.;
   pba->f_acc = 0.;

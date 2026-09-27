@@ -1105,10 +1105,9 @@ int background_indices(
       pba->has_dr = _TRUE_;
   }
 
-  /* accDM: the parent (acc_cdm) is its own component, gated on has_acc only.
-     It no longer piggybacks on has_dcdm (that flag is now reserved for genuine
-     decaying cold dark matter). */
-  if (pba->Omega0_acc_cdm != 0. || (pba->Omega_ini_dcdm != 0. && pba->m_acc_in_GeV != 0.) || (pba->f_acc != 0. && pba->m_acc_in_GeV != 0.)) {
+  /* accDM (parent acc_cdm + daughter in the last ncdm slot): m_acc_in_GeV is set
+     in input only for accDM runs; f_acc = 0 keeps an empty daughter slot */
+  if (pba->m_acc_in_GeV != 0.) {
       pba->has_acc = _TRUE_;
   }
 

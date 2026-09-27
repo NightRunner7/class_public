@@ -7152,8 +7152,10 @@ double perturbations_acc_born(
                               double tau,
                               double lna
                               ) {
-  if (ppt->tau_birth_lo_acc[index_q] == ppt->tau_birth_hi_acc[index_q])
-    return (tau > ppt->tau_birth_hi_acc[index_q]) ? 1. : 0.;
+  double tau_hi = ppt->tau_birth_hi_acc[index_q];
+  /* a bin born today (a_q = 1) counts at tau_0, as in the background at a = 1 */
+  if (ppt->tau_birth_lo_acc[index_q] == tau_hi)
+    return ((tau > tau_hi) || ((tau_hi >= pba->conformal_age) && (tau >= tau_hi))) ? 1. : 0.;
   return background_acc_born_weight(pba, index_q, lna);
 }
 
@@ -8440,9 +8442,11 @@ int perturbations_sources(
     /* delta_ncdm1 */
     if (ppt->has_source_delta_ncdm == _TRUE_) {
       for (index_tp = ppt->index_tp_delta_ncdm1; index_tp < ppt->index_tp_delta_ncdm1+pba->N_ncdm; index_tp++) {
+        /* w = 0 for an empty species (accDM daughter before its first birth, or f_acc = 0) */
+        double rho_n = pvecback[index_tp - ppt->index_tp_delta_ncdm1 + pba->index_bg_rho_ncdm1];
+        double w_n = (rho_n != 0.) ? pvecback[index_tp - ppt->index_tp_delta_ncdm1 + pba->index_bg_p_ncdm1]/rho_n : 0.;
         _set_source_(index_tp) = ppw->delta_ncdm[index_tp - ppt->index_tp_delta_ncdm1]
-          + 3.*a_prime_over_a*(1+pvecback[index_tp - ppt->index_tp_delta_ncdm1 + pba->index_bg_p_ncdm1]
-                               /pvecback[index_tp - ppt->index_tp_delta_ncdm1 + pba->index_bg_rho_ncdm1])*theta_over_k2; // N-body gauge correction
+          + 3.*a_prime_over_a*(1+w_n)*theta_over_k2; // N-body gauge correction
       }
 
       // /* Original DCDM->DR+WDM Implementation */
