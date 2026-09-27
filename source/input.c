@@ -2611,10 +2611,19 @@ int input_read_parameters_species(struct file_content * pfc,
   class_call(parser_read_double(pfc,"f_acc",&param3,&flag3,errmsg), errmsg, errmsg);
   class_call(parser_read_double(pfc,"m_acc_in_GeV",&param4,&flag4,errmsg), errmsg, errmsg);
 
-  /* Proceed only if WDM is active in this run. Omega_ini_dcdm alone means
-     standard decaying CDM (section 7.1); it selects accDM only together with
-     m_acc_in_GeV, consistently with background_indices(). */
+  /* accDM is on when f_acc > 0. Omega_ini_dcdm alone means standard decaying
+     CDM (section 7.1); together with m_acc_in_GeV it is rejected below. */
+  class_test((flag3 == _TRUE_) && (param3 < 0.),
+             errmsg,
+             "'f_acc' must be >= 0, got %g.", param3);
   if (pba->Omega0_acc_cdm > 0. || (pba->Omega_ini_dcdm > 0. && flag4 == _TRUE_) || (flag3 == _TRUE_ && param3 > 0.)) {
+    /* the parent density is f_acc*Omega_cdm; Omega_ini_dcdm is not an accDM input */
+    class_test(pba->Omega_ini_dcdm > 0.,
+               errmsg,
+               "'Omega_ini_dcdm'/'omega_ini_dcdm' do not set the accDM abundance: remove them and set 'f_acc'.");
+    class_test((flag3 == _FALSE_) || (param3 <= 0.),
+               errmsg,
+               "accDM needs 'f_acc' > 0.");
     pba->has_acc = _TRUE_;
     if (flag3 == _TRUE_) pba->f_acc = param3;
 
@@ -2857,6 +2866,20 @@ int input_read_parameters_species(struct file_content * pfc,
     /** 5.g) Degeneracy of each ncdm species */
     /* Read */
     class_read_list_of_doubles_or_default("deg_ncdm",pba->deg_ncdm,pba->deg_ncdm_default,N_ncdm);
+
+    /* The accDM daughter's p.s.d. and abundance follow from f_acc, m_acc_in_GeV and the birth law */
+    if (pba->has_acc == _TRUE_) {
+      class_test(pba->got_files[N_ncdm-1] == _TRUE_,
+                 errmsg,
+                 "The accDM daughter (last ncdm species) cannot take its p.s.d. from a file: set its 'use_ncdm_psd_files' entry to 0.");
+      class_test(pba->Omega0_ncdm[N_ncdm-1] != 0.,
+                 errmsg,
+                 "The accDM daughter (last ncdm species) cannot be given 'Omega_ncdm'/'omega_ncdm': its abundance is set by 'f_acc'. Set its entry to 0.");
+      class_test(pba->deg_ncdm[N_ncdm-1] != 1.,
+                 errmsg,
+                 "The accDM daughter (last ncdm species) needs 'deg_ncdm' = 1 (one daughter per parent), got %g.",
+                 pba->deg_ncdm[N_ncdm-1]);
+    }
 
     /** 5.h) Quadrature modes, 0 is qm_auto */
     /* Read */

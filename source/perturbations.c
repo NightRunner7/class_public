@@ -741,6 +741,9 @@ int perturbations_init(
   class_test((pba->has_acc == _TRUE_) && (ppr->evolver != rk),
              ppt->error_message,
              "accDM requires the rk evolver: set 'evolver = 0'.");
+  class_test((pba->has_acc == _TRUE_) && (ppr->ncdm_fluid_approximation != ncdmfa_none),
+             ppt->error_message,
+             "accDM needs the exact daughter hierarchy: set 'ncdm_fluid_approximation = 3'.");
 
   /* accDM: daughter birth times, used as integration breakpoints */
   if (pba->has_acc == _TRUE_) {
@@ -7207,7 +7210,6 @@ int perturbations_total_stress_energy(
   double delta_p_b_over_rho_b;
 
   /** Accelerating Dark Matter START */
-  double rho_ncdm_bg_m;
   double ratio_rho, rho_cdm_bg, rho_acc_cdm_bg, H, eta, gamma, f_dr; 
   double weight_0=0., weight_1=0., weight_2=0., weight_3 =0.;
   // double* kfs;
@@ -7494,9 +7496,6 @@ int perturbations_total_stress_energy(
 
           H = ppw->pvecback[pba->index_bg_H];
 
-          if (n_ncdm == pba->N_ncdm-1 || pba->has_acc == _FALSE_){
-            rho_ncdm_bg_m = rho_ncdm_bg*(1.0-3.0*w_ncdm); /* contribution to matter, it will be used below  */
-          }
           if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
             rho_acc_cdm_bg = ppw->pvecback[pba->index_bg_rho_acc_cdm];
             rho_cdm_bg = ppw->pvecback[pba->index_bg_rho_cdm];
@@ -7636,42 +7635,21 @@ int perturbations_total_stress_energy(
           ppw->delta_p += delta_p_ncdm;
 
           ppw->rho_plus_p_tot += ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm];
-        
-          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-              /* contribution to matter, used below; zero before the first birth, avoiding 0/0 */
-              if (ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm] == 0.)
-                rho_ncdm_bg_m = 0.;
-              else
-                rho_ncdm_bg_m = ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]*(1.0-3.0*(ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]/ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]));
-          }
         }
       }
+      /* the accDM daughter is weighted like any ncdm species: rho for delta, rho+p for theta
+         (zero weight before its first birth) */
       if (ppt->has_source_delta_m == _TRUE_) {
         for (n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++){
-          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-            delta_rho_m += rho_ncdm_bg_m*ppw->delta_ncdm[n_ncdm]; // contribution to delta rho_matter
-            rho_m += rho_ncdm_bg_m;
-          }
-          else{
-            delta_rho_m += ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]*ppw->delta_ncdm[n_ncdm]; // contribution to delta rho_matter
-            rho_m += ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
-          }
+          delta_rho_m += ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]*ppw->delta_ncdm[n_ncdm]; // contribution to delta rho_matter
+          rho_m += ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm];
         }
       }
       if ((ppt->has_source_delta_m == _TRUE_) || (ppt->has_source_theta_m == _TRUE_)) {
         for (n_ncdm=0; n_ncdm < pba->N_ncdm; n_ncdm++){
-          if (n_ncdm == pba->N_ncdm-1 && pba->has_acc == _TRUE_){
-            rho_plus_p_theta_m += rho_ncdm_bg_m*ppw->theta_ncdm[n_ncdm]; // contribution to [(rho+p)theta]_matter
-            rho_plus_p_m += rho_ncdm_bg_m;
-            // GFA: or should we choose this one as is done for neutrinos?
-            //  rho_plus_p_theta_m += (rho_ncdm_bg_m+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm])*ppw->theta_ncdm[n_ncdm];
-            //  rho_plus_p_m += (rho_ncdm_bg_m+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]);
-          }
-          else{
-            rho_plus_p_theta_m += (ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm])
-              *ppw->theta_ncdm[n_ncdm]; // contribution to [(rho+p)theta]_matter
-            rho_plus_p_m += (ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]);
-          }
+          rho_plus_p_theta_m += (ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm])
+            *ppw->theta_ncdm[n_ncdm]; // contribution to [(rho+p)theta]_matter
+          rho_plus_p_m += (ppw->pvecback[pba->index_bg_rho_ncdm1+n_ncdm]+ppw->pvecback[pba->index_bg_p_ncdm1+n_ncdm]);
         }
       }
     }
