@@ -2539,6 +2539,25 @@ int input_read_parameters_species(struct file_content * pfc,
     pba->Omega0_cdm = param2/pba->h/pba->h;
     has_cdm_userdefined = _TRUE_;
   }
+  /* omega_dm_tot = omega_cdm (1 + f_acc): stable cdm plus accDM parent */
+  class_call(parser_read_double(pfc,"omega_dm_tot",&param3,&flag3,errmsg),
+             errmsg,
+             errmsg);
+  if (flag3 == _TRUE_){
+    class_test(((flag1 == _TRUE_) || (flag2 == _TRUE_)),
+               errmsg,
+               "You can only enter one of 'Omega_cdm', 'omega_cdm' or 'omega_dm_tot'.");
+    double f_acc_dm_tot = 0.;
+    int flag_f_acc_dm_tot;
+    class_call(parser_read_double(pfc,"f_acc",&f_acc_dm_tot,&flag_f_acc_dm_tot,errmsg),
+               errmsg,
+               errmsg);
+    class_test(f_acc_dm_tot < 0.,
+               errmsg,
+               "'f_acc' must be >= 0, got %g.", f_acc_dm_tot);
+    pba->Omega0_cdm = param3/(1.+f_acc_dm_tot)/pba->h/pba->h;
+    has_cdm_userdefined = _TRUE_;
+  }
   class_test(pba->Omega0_cdm<0,errmsg, "You cannot set the cold dark matter density to negative values.");
 
   /** 4) (Second part) Omega_0_m (total non-relativistic) */
