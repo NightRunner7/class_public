@@ -31,15 +31,19 @@ def test_share_out_of_range_is_rejected():
 def test_share_with_smooth_births_is_rejected():
     expect_error(accdm_params(**CHAIN, accdm_q_log_share=0.4, accdm_smooth_births=1),
                  "cannot be combined with 'accdm_smooth_births'")
+    # the default share is < 1 too
+    expect_error(accdm_params(**CHAIN, accdm_smooth_births=1), "cannot be combined with 'accdm_smooth_births'")
 
 
-def test_share_one_is_bit_identical_to_the_default():
+def test_default_share_is_one_quarter():
     cl = lambda c: c.lensed_cl(1000)
     p = dict(output="tCl,pCl,lCl", lensing="yes", l_max_scalars=1000)
     a = run(accdm_params(**CHAIN, **p), ["lensing"], cl)
-    b = run(accdm_params(**CHAIN, **p, accdm_q_log_share=1.0), ["lensing"], cl)
+    b = run(accdm_params(**CHAIN, **p, accdm_q_log_share=0.25), ["lensing"], cl)
+    c = run(accdm_params(**CHAIN, **p, accdm_q_log_share=1.0), ["lensing"], cl)
     for s in ("tt", "ee", "te", "pp"):
         assert np.array_equal(a[s], b[s]), s
+    assert not np.array_equal(a["tt"], c["tt"])
 
 
 def daughter_omega(params):
@@ -51,7 +55,7 @@ def daughter_omega(params):
 
 def test_born_nodes_keep_the_daughter_abundance():
     # fewer nodes in the tails: Omega_acc moves by 2.5e-5 at s = 0.4 (1e-6 at 0.6, 6e-5 at 0.25)
-    ref = daughter_omega(accdm_params(**CHAIN))
+    ref = daughter_omega(accdm_params(**CHAIN, accdm_q_log_share=1.0))
     new = daughter_omega(accdm_params(**CHAIN, accdm_q_log_share=0.4))
     assert abs(new/ref - 1) < 1e-4, new/ref - 1
 
@@ -59,7 +63,7 @@ def test_born_nodes_keep_the_daughter_abundance():
 def test_born_nodes_move_the_perturbations_slightly():
     s8 = lambda c: c.sigma8()
     p = dict(output="mPk", **CHAIN)
-    ref = run(accdm_params(**p), ["fourier"], s8)
+    ref = run(accdm_params(**p, accdm_q_log_share=1.0), ["fourier"], s8)
     new = run(accdm_params(**p, accdm_q_log_share=0.4), ["fourier"], s8)
     assert 1e-7 < abs(new/ref - 1) < 1e-2, new/ref - 1
 

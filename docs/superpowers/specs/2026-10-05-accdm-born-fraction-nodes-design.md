@@ -1,6 +1,7 @@
 # accDM daughter nodes placed by born fraction — Design Spec
 
-**Status:** approved design (2026-10-05). New precision parameter, off by default.
+**Status:** approved design (2026-10-05). New precision parameter, off by default; default changed to
+s = 0.25 on 2026-10-05 after notebooks 38 (chain settings) and 39 (κ = 2–290).
 
 ## Problem
 

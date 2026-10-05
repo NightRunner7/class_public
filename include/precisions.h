@@ -83,14 +83,17 @@ class_precision_parameter(accdm_q_bins_per_decade,double,50.)
  * 1 spreads its birth over its cell in ln a (smooth background, no integrator steps).
  * Smooth births release each bin at the end of its cell, which biases P(k) by
  * O(cell width), about 0.7% at 50 bins per decade, so they are off by default.
+ * They need the even grid, accdm_q_log_share = 1.
  */
 class_precision_parameter(accdm_smooth_births,int,0)
 /**
  * accDM daughter with ncdm_quadrature_strategy = 5: share of the nodes spread
  * evenly in ln a_q; the rest follow the born fraction F(a_q), which puts more
- * nodes inside the birth window. 1 is the even ln a_q grid.
+ * nodes inside the birth window. 1 is the even ln a_q grid. 0.25 cuts the
+ * large-f grid error by 20-2500x and stays stable up to kappa ~ 290 at 51 bins
+ * (notebooks 38, 39), at the price of Omega_acc ~ 6e-5 from thinner tails.
  */
-class_precision_parameter(accdm_q_log_share,double,1.)
+class_precision_parameter(accdm_q_log_share,double,0.25)
 /**
  * Tolerance on the deviation of the conformal time of equality from the true value in 1/Mpc.
  */
