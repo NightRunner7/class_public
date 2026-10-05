@@ -548,6 +548,15 @@ extern "C" {
                            double * a_min
                            );
 
+  int background_acc_q_nodes(
+                             struct background *pba,
+                             double share,
+                             double * q,
+                             double * w,
+                             int N,
+                             void * params_for_distribution
+                             );
+
   int background_ncdm_distribution(
                                    void *pba,
                                    double q,

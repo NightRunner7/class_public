@@ -1460,6 +1460,68 @@ int background_acc_a_min(
 }
 
 /**
+ * Daughter nodes and weights for ncdm_quadrature_strategy = 5 with
+ * accdm_q_log_share = share < 1. Nodes are even in
+ * u(ln a) = share (ln a - ln a_min)/L + (1-share) (F(a) - F_min)/(1 - F_min), L = ln(1/a_min),
+ * so a share 1-share of them follows the born fraction F; weights are Simpson in u.
+ * q = a P_acc/T_acc, with the first node at a_min and the last at a = 1.
+ */
+
+int background_acc_q_nodes(
+                           struct background *pba,
+                           double share,
+                           double * q,
+                           double * w,
+                           int N,
+                           void * params_for_distribution
+                           ) {
+  double lna_min = log(pba->a_min_acc);
+  double L = -lna_min;
+  double F_min = background_acc_born_fraction(pba, pba->a_min_acc);
+  double q_of_a = pba->P_acc/pba->T_acc_GeV;
+  double h_u = 1./(N-1);
+  double lo, hi, mid, u_mid, a, dlna_du, simpson_weight, f0;
+  int i, iter;
+
+  class_test((N < 3) || (N % 2 == 0), pba->error_message,
+             "Simpson quadrature needs an odd number of momentum bins >= 3, got %d.", N);
+
+  for (i=0; i<N; i++) {
+    /* ln a_i solves u(ln a_i) = i h_u; u is monotone in ln a */
+    if (i == 0) {
+      a = pba->a_min_acc;
+    }
+    else if (i == N-1) {
+      a = 1.;
+    }
+    else {
+      lo = lna_min;
+      hi = 0.;
+      for (iter=0; (iter<200) && (hi-lo > 1.e-14); iter++) {
+        mid = 0.5*(lo+hi);
+        u_mid = share*(mid-lna_min)/L
+          + (1.-share)*(background_acc_born_fraction(pba, exp(mid))-F_min)/(1.-F_min);
+        if (u_mid < i*h_u)
+          lo = mid;
+        else
+          hi = mid;
+      }
+      a = exp(0.5*(lo+hi));
+    }
+    q[i] = (i == N-1) ? q_of_a : a*q_of_a;
+
+    dlna_du = 1./(share/L + (1.-share)*background_acc_birth_rate(pba, a)/(1.-F_min));
+    simpson_weight = ((i == 0) || (i == N-1)) ? 1./3. : ((i % 2 == 1) ? 4./3. : 2./3.);
+    class_call(background_ncdm_distribution(params_for_distribution, q[i], &f0),
+               pba->error_message,
+               pba->error_message);
+    w[i] = f0*q[i]*dlna_du*h_u*simpson_weight;
+  }
+
+  return _SUCCESS_;
+}
+
+/**
  * This is the routine where the distribution function f0(q) of each
  * ncdm species is specified (it is the only place to modify if you
  * need a partlar f0(q))
@@ -1809,19 +1871,32 @@ int background_ncdm_init(
       class_alloc(pba->w_ncdm_bg[k],pba->q_size_ncdm_bg[k]*sizeof(double),pba->error_message);
       class_alloc(pba->q_ncdm[k],pba->q_size_ncdm[k]*sizeof(double),pba->error_message);
       class_alloc(pba->w_ncdm[k],pba->q_size_ncdm[k]*sizeof(double),pba->error_message);
-      class_call(get_qsampling_manual(pba->q_ncdm[k],
-                                      pba->w_ncdm[k],
-                                      pba->q_size_ncdm[k],
-                                      (pba->ncdm_quadrature_strategy[k] == qm_acc_birth) ? pba->a_min_acc*pba->P_acc/pba->T_acc_GeV : 0.,
-                                      pba->ncdm_qmax[k],
-                                      pba->ncdm_quadrature_strategy[k],
-                                      pbadist.q,
-                                      pbadist.tablesize,
-                                      background_ncdm_distribution,
-                                      &pbadist,
-                                      pba->error_message),
-                 pba->error_message,
-                 pba->error_message);
+      if ((pba->ncdm_quadrature_strategy[k] == qm_acc_birth) && (ppr->accdm_q_log_share < 1.)) {
+        /* daughter nodes partly placed by born fraction */
+        class_call(background_acc_q_nodes(pba,
+                                          ppr->accdm_q_log_share,
+                                          pba->q_ncdm[k],
+                                          pba->w_ncdm[k],
+                                          pba->q_size_ncdm[k],
+                                          &pbadist),
+                   pba->error_message,
+                   pba->error_message);
+      }
+      else {
+        class_call(get_qsampling_manual(pba->q_ncdm[k],
+                                        pba->w_ncdm[k],
+                                        pba->q_size_ncdm[k],
+                                        (pba->ncdm_quadrature_strategy[k] == qm_acc_birth) ? pba->a_min_acc*pba->P_acc/pba->T_acc_GeV : 0.,
+                                        pba->ncdm_qmax[k],
+                                        pba->ncdm_quadrature_strategy[k],
+                                        pbadist.q,
+                                        pbadist.tablesize,
+                                        background_ncdm_distribution,
+                                        &pbadist,
+                                        pba->error_message),
+                   pba->error_message,
+                   pba->error_message);
+      }
       for (index_q=0; index_q<pba->q_size_ncdm[k]; index_q++) {
         pba->q_ncdm_bg[k][index_q] = pba->q_ncdm[k][index_q];
         pba->w_ncdm_bg[k][index_q] = pba->w_ncdm[k][index_q];

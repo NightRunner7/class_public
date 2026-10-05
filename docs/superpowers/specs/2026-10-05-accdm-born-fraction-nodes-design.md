@@ -52,7 +52,9 @@ A pure born-fraction grid (nodes evenly spaced in F) starves the tails and break
 - `notebooks_test/test_accdm_born_nodes.py` (pytest, m = 10¹⁶ GeV, f̃ = 0.5, background level unless stated):
   - s = 1 given explicitly is bit-identical to the default (lensed C_ℓ);
   - s ≤ 0, s > 1, and s < 1 with smooth births are rejected at input;
-  - s = 0.4 runs, and Ω_acc today matches the default grid to 1e-5.
+  - s = 0.4 runs, and Ω_acc today matches the default grid to 1e-4. (Measured: the tails get fewer nodes, so
+    Ω_acc moves by 1e-6, 2.5e-5 and 6e-5 at s = 0.6, 0.4, 0.25 against 2e-7 for the default grid, all relative
+    to the daughter density; 7e-9 at s = 0.4 with 100/decade.)
 - Notebook 38: at nb37's (mass, f̃) points, s ∈ {0.6, 0.4, 0.25} at 50/decade (71 nodes) and the 100/decade
   node count, Δχ² against nb37's 400/decade log-grid references (read from `37_cache.pkl`; both grids converge
   to the same continuum limit). Success: at equal node count, Δχ² drops at least 10× wherever nb37's 50/decade

@@ -42,6 +42,28 @@ def test_share_one_is_bit_identical_to_the_default():
         assert np.array_equal(a[s], b[s]), s
 
 
+def daughter_omega(params):
+    def extract(c):
+        bg = c.get_background()
+        return bg["(.)rho_ncdm[1]"][-1]/bg["(.)rho_crit"][-1]
+    return run(params, ["background"], extract)
+
+
+def test_born_nodes_keep_the_daughter_abundance():
+    # fewer nodes in the tails: Omega_acc moves by 2.5e-5 at s = 0.4 (1e-6 at 0.6, 6e-5 at 0.25)
+    ref = daughter_omega(accdm_params(**CHAIN))
+    new = daughter_omega(accdm_params(**CHAIN, accdm_q_log_share=0.4))
+    assert abs(new/ref - 1) < 1e-4, new/ref - 1
+
+
+def test_born_nodes_move_the_perturbations_slightly():
+    s8 = lambda c: c.sigma8()
+    p = dict(output="mPk", **CHAIN)
+    ref = run(accdm_params(**p), ["fourier"], s8)
+    new = run(accdm_params(**p, accdm_q_log_share=0.4), ["fourier"], s8)
+    assert 1e-7 < abs(new/ref - 1) < 1e-2, new/ref - 1
+
+
 if __name__ == "__main__":
     tests = [value for name, value in sorted(globals().items()) if name.startswith("test_")]
     failed = 0
