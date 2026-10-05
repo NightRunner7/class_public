@@ -3004,6 +3004,12 @@ int input_read_parameters_species(struct file_content * pfc,
 
         /* qm_acc_birth: sample a_q in [a_min, 1] only, where daughters exist */
         if (pba->ncdm_quadrature_strategy[idx_acc] == qm_acc_birth) {
+          class_test((ppr->accdm_q_log_share <= 0.) || (ppr->accdm_q_log_share > 1.),
+                     errmsg,
+                     "'accdm_q_log_share' must lie in (0,1], got %g.", ppr->accdm_q_log_share);
+          class_test((ppr->accdm_q_log_share < 1.) && (ppr->accdm_smooth_births == _TRUE_),
+                     errmsg,
+                     "'accdm_q_log_share' < 1 cannot be combined with 'accdm_smooth_births': smooth births need cells even in ln a.");
           class_call(background_acc_a_min(pba, ppr->accdm_q_number_tol, &(pba->a_min_acc)),
                      pba->error_message,
                      errmsg);

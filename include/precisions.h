@@ -86,6 +86,12 @@ class_precision_parameter(accdm_q_bins_per_decade,double,50.)
  */
 class_precision_parameter(accdm_smooth_births,int,0)
 /**
+ * accDM daughter with ncdm_quadrature_strategy = 5: share of the nodes spread
+ * evenly in ln a_q; the rest follow the born fraction F(a_q), which puts more
+ * nodes inside the birth window. 1 is the even ln a_q grid.
+ */
+class_precision_parameter(accdm_q_log_share,double,1.)
+/**
  * Tolerance on the deviation of the conformal time of equality from the true value in 1/Mpc.
  */
 class_precision_parameter(tol_tau_eq,double,1.e-6)
