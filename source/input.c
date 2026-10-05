@@ -2365,6 +2365,56 @@ int input_read_parameters_general(struct file_content * pfc,
 
 
 /**
+ * Read the accDM fraction, given either as 'f_acc' (parent over stable cdm)
+ * or as 'f_tilde' = f_acc/(1+f_acc) (accDM share of the dark matter today,
+ * suited to a flat prior on [0,1)). Returns f_acc in both cases.
+ *
+ * @param pfc     Input: pointer to local structure
+ * @param f_acc   Output: f_acc (left untouched if neither is given)
+ * @param flag    Output: _TRUE_ if 'f_acc' or 'f_tilde' was given
+ * @param errmsg  Input: Error message
+ * @return the error status
+ */
+
+int input_read_f_acc(struct file_content * pfc,
+                     double * f_acc,
+                     int * flag,
+                     ErrorMsg errmsg){
+
+  double param1,param2;
+  int flag1,flag2;
+
+  class_call(parser_read_double(pfc,"f_acc",&param1,&flag1,errmsg),
+             errmsg,
+             errmsg);
+  class_call(parser_read_double(pfc,"f_tilde",&param2,&flag2,errmsg),
+             errmsg,
+             errmsg);
+  class_test((flag1 == _TRUE_) && (flag2 == _TRUE_),
+             errmsg,
+             "You can only enter one of 'f_acc' or 'f_tilde'.");
+
+  *flag = (flag1 == _TRUE_) || (flag2 == _TRUE_);
+  if (flag1 == _TRUE_){
+    class_test(param1 < 0.,
+               errmsg,
+               "'f_acc' must be >= 0, got %g.", param1);
+    *f_acc = param1;
+  }
+  if (flag2 == _TRUE_){
+    /* f_tilde = 1 would leave no stable cdm for the parent to be a fraction of */
+    class_test((param2 < 0.) || (param2 >= 1.),
+               errmsg,
+               "'f_tilde' must be in [0,1), got %g.", param2);
+    *f_acc = param2/(1.-param2);
+  }
+
+  return _SUCCESS_;
+
+}
+
+
+/**
  * Read the parameters for each physical species
  *
  * @param pfc            Input: pointer to local structure
@@ -2549,12 +2599,9 @@ int input_read_parameters_species(struct file_content * pfc,
                "You can only enter one of 'Omega_cdm', 'omega_cdm' or 'omega_dm_tot'.");
     double f_acc_dm_tot = 0.;
     int flag_f_acc_dm_tot;
-    class_call(parser_read_double(pfc,"f_acc",&f_acc_dm_tot,&flag_f_acc_dm_tot,errmsg),
+    class_call(input_read_f_acc(pfc,&f_acc_dm_tot,&flag_f_acc_dm_tot,errmsg),
                errmsg,
                errmsg);
-    class_test(f_acc_dm_tot < 0.,
-               errmsg,
-               "'f_acc' must be >= 0, got %g.", f_acc_dm_tot);
     pba->Omega0_cdm = param3/(1.+f_acc_dm_tot)/pba->h/pba->h;
     has_cdm_userdefined = _TRUE_;
   }
@@ -2627,14 +2674,12 @@ int input_read_parameters_species(struct file_content * pfc,
     pba->Omega_ini_dcdm = param2/pba->h/pba->h;
   }
   class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
-  class_call(parser_read_double(pfc,"f_acc",&param3,&flag3,errmsg), errmsg, errmsg);
+  param3 = 0.;
+  class_call(input_read_f_acc(pfc,&param3,&flag3,errmsg), errmsg, errmsg);
   class_call(parser_read_double(pfc,"m_acc_in_GeV",&param4,&flag4,errmsg), errmsg, errmsg);
 
   /* accDM is on when m_acc_in_GeV is given; f_acc = 0 then leaves the daughter
      slot empty. Omega_ini_dcdm alone means standard decaying CDM (section 7.1). */
-  class_test((flag3 == _TRUE_) && (param3 < 0.),
-             errmsg,
-             "'f_acc' must be >= 0, got %g.", param3);
   if ((flag4 == _TRUE_) || (flag3 == _TRUE_ && param3 > 0.)) {
     /* the parent density is f_acc*Omega_cdm; Omega_ini_dcdm is not an accDM input */
     class_test(pba->Omega_ini_dcdm > 0.,
@@ -2642,7 +2687,7 @@ int input_read_parameters_species(struct file_content * pfc,
                "'Omega_ini_dcdm'/'omega_ini_dcdm' do not set the accDM abundance: remove them and set 'f_acc'.");
     class_test(flag3 == _FALSE_,
                errmsg,
-               "accDM needs 'f_acc' (f_acc = 0 leaves the daughter slot empty).");
+               "accDM needs 'f_acc' or 'f_tilde' (0 leaves the daughter slot empty).");
     pba->has_acc = _TRUE_;
     pba->f_acc = param3;
 

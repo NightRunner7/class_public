@@ -375,6 +375,11 @@ extern "C" {
                                     struct distortions * psd,
                                     ErrorMsg errmsg);
 
+  int input_read_f_acc(struct file_content * pfc,
+                       double * f_acc,
+                       int * flag,
+                       ErrorMsg errmsg);
+
   int input_read_parameters_species(struct file_content * pfc,
                                     struct precision * ppr,
                                     struct background * pba,
