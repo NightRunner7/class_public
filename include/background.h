@@ -80,7 +80,7 @@ struct background
 
   /* Accelerating Dark Matter */
 
-  double f_acc;          /**< \f$ f_{wdm} \f$: fraction of the initial CDM density comprised of accelerating dark matter */
+  double f_acc;          /**< \f$ f_{acc} \f$: initial accDM parent density relative to the stable cdm, rho_acc = f_acc rho_cdm before the transition; the accDM share of the dark matter is f_acc/(1+f_acc) ('f_tilde') */
   double kappa_acc;      /**< \f$ \zeta_{mon} \f$: rate parameter for accelerating dark matter */
   double a_t_acc;        /**< \f$ \Gamma_{mon} \f$: transition scale factor for the accelerating dark matter */
 
