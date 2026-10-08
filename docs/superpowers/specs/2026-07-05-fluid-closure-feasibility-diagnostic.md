@@ -1,6 +1,6 @@
 # Fluid-closure feasibility diagnostic (does a universal daughter closure exist?) — Design Spec
 
-**Status:** draft (2026-07-05). Prerequisite to any recalibration of the accDM daughter fluid approximation. Follows from the finding that [`7_test_ceff2_calibration.ipynb`](../../../notebooks_test/7_test_ceff2_calibration.ipynb) calibrates the wrong thing (a single `amp` on `P(k)`, confounded by the high-k blow-up) and that its Verdict numbers (RMS 2%→1.2%) do not match its own executed output (RMS 46–1316, dominated by architectural blow-up over k up to 10).
+**Status:** draft (2026-07-05). Prerequisite to any recalibration of the accDM daughter fluid approximation. Follows from the finding that [`7_test_ceff2_calibration.ipynb`](../../../notebooks_test/_archive/fluid_closure/7_test_ceff2_calibration.ipynb) calibrates the wrong thing (a single `amp` on `P(k)`, confounded by the high-k blow-up) and that its Verdict numbers (RMS 2%→1.2%) do not match its own executed output (RMS 46–1316, dominated by architectural blow-up over k up to 10).
 
 **Goal:** decide — *before building any fit* — whether a universal fluid closure exists for the accDM daughter over **k ≤ 1 Mpc⁻¹, f_acc ≤ 0.3**, at the ~1% P(k) accuracy target. Concretely: can the daughter's effective sound speed `ceff2` and viscosity `cvis2` each be written as **one function of `x = k/k_fs`**, or do they split by `f`/`η` (→ f-dependent coefficients), or fail to collapse at all (→ interpolation tables)?
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** CLASS (C), built with the user's toolchain (no compiler in the agent shell — the user builds and runs every verification). Validation via `classy` in `notebooks_test/`.
 
-> **Implementation update (2026-06-23, supersedes Task-3 code blocks below).** Mode 1 was simplified from the original "saturating blend" to a plain **`min(fit, 1/3)`** hard cap (see `perturbations_ceff2_ncdm` in `source/perturbations.c`). Reason: the blend deviated ~1% from the fit *below* the ceiling, so mode 1 was not a pure no-op in the safe regime; `min(fit,1/3)` is identical to mode 0 until a real overshoot, simpler, and makes the fit-vs-bounded divergence a clean overshoot detector. The `dmax`/`lin` blend in Task 3's code blocks is therefore historical — implement the `min` form. Calibration finding (`notebooks_test/7_test_ceff2_calibration.ipynb`): the published `amp=0.2` is miscalibrated for the boosted PSD; `amp ≈ 1.0–1.5` roughly **halves** the P(k) residual (RMS 2.0%→1.2%, max 5.6%→3.1%), and the bound only starts to engage once amp is pushed that high. Final amp TBD by a refined sweep.
+> **Implementation update (2026-06-23, supersedes Task-3 code blocks below).** Mode 1 was simplified from the original "saturating blend" to a plain **`min(fit, 1/3)`** hard cap (see `perturbations_ceff2_ncdm` in `source/perturbations.c`). Reason: the blend deviated ~1% from the fit *below* the ceiling, so mode 1 was not a pure no-op in the safe regime; `min(fit,1/3)` is identical to mode 0 until a real overshoot, simpler, and makes the fit-vs-bounded divergence a clean overshoot detector. The `dmax`/`lin` blend in Task 3's code blocks is therefore historical — implement the `min` form. Calibration finding (`notebooks_test/_archive/fluid_closure/7_test_ceff2_calibration.ipynb`): the published `amp=0.2` is miscalibrated for the boosted PSD; `amp ≈ 1.0–1.5` roughly **halves** the P(k) residual (RMS 2.0%→1.2%, max 5.6%→3.1%), and the bound only starts to engage once amp is pushed that high. Final amp TBD by a refined sweep.
 
 ## Global Constraints
 
@@ -51,7 +51,7 @@ class_precision_parameter(ncdm_ceff2_mode,int,0)
  * Amplitude of the accDM daughter free-streaming sound-speed correction (the
  * coefficient multiplying (1-2*eps_acc)*sqrt(k/k_fs)). Default 0.2 reproduces
  * the published fit. Recalibrated against the exact hierarchy for the boosted
- * PSD (see notebooks_test/7_test_ceff2_calibration.ipynb). Has no effect when
+ * PSD (see notebooks_test/_archive/fluid_closure/7_test_ceff2_calibration.ipynb). Has no effect when
  * has_acc is false.
  */
 class_precision_parameter(ncdm_ceff2_fs_amp,double,0.2)
@@ -284,7 +284,7 @@ git commit -m "feat(accDM): bounded saturating ceff2 mode (mode 1), capped at ca
 ### Task 4: Calibrate the bounded amplitude against the exact hierarchy
 
 **Files:**
-- Create: `notebooks_test/7_test_ceff2_calibration.ipynb`
+- Create: `notebooks_test/_archive/fluid_closure/7_test_ceff2_calibration.ipynb`
 
 **Interfaces:**
 - Consumes: the exact hierarchy (`ncdm_fluid_approximation = none`) as ground truth, and the two precision params from Task 1.
@@ -305,7 +305,7 @@ Choose the `ncdm_ceff2_fs_amp` that minimises the residual to the exact envelope
 - [ ] **Step 4: Commit**
 
 ```bash
-git add notebooks_test/7_test_ceff2_calibration.ipynb
+git add notebooks_test/_archive/fluid_closure/7_test_ceff2_calibration.ipynb
 git commit -m "test(accDM): ceff2 calibration notebook (fit vs bounded vs exact c_s^2)"
 ```
 
@@ -314,7 +314,7 @@ git commit -m "test(accDM): ceff2 calibration notebook (fit vs bounded vs exact 
 ### Task 5: Validate fluid-vs-exact improvement in the stable window
 
 **Files:**
-- Modify: `notebooks_test/6_test_fluid_vs_exact.ipynb` (add a mode-0 vs mode-1 comparison cell)
+- Modify: `notebooks_test/_archive/fluid_closure/6_test_fluid_vs_exact.ipynb` (add a mode-0 vs mode-1 comparison cell)
 
 **Interfaces:**
 - Consumes: modes 0/1 + the calibrated amplitude from Task 4.
@@ -344,7 +344,7 @@ Add a markdown cell summarising: where mode 1 helps (high k / large η), where i
 - [ ] **Step 4: Commit**
 
 ```bash
-git add notebooks_test/6_test_fluid_vs_exact.ipynb
+git add notebooks_test/_archive/fluid_closure/6_test_fluid_vs_exact.ipynb
 git commit -m "test(accDM): validate bounded ceff2 mode vs exact in stable window"
 ```
 

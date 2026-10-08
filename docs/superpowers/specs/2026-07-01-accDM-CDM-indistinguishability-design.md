@@ -1,7 +1,7 @@
 # accDM → CDM indistinguishability test — design
 
 **Date:** 2026-07-01
-**Deliverable:** `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`
+**Deliverable:** `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`
 **Status:** approved design, ready for implementation plan
 
 ## Goal

@@ -6,7 +6,7 @@
 
 ## Why this is the lever
 
-The exact hierarchy is the production path (~245 s, [`6_test_fluid_vs_exact.ipynb`](../../../notebooks_test/6_test_fluid_vs_exact.ipynb)). Its cost is dominated by the daughter, whose perturbation vector is `(l_max_ncdm+1) × q_size` per k. In the production config that is `18 × 1001 ≈ 18 000` ODE variables for the daughter alone — vs ~2 for the dcdm parent. This is also why `ndf15` OOMs (dense `O(neq²)` Jacobian; `memory: ndf15-oom-high-q`) and why `rk` is slow.
+The exact hierarchy is the production path (~245 s, [`6_test_fluid_vs_exact.ipynb`](../../../notebooks_test/_archive/fluid_closure/6_test_fluid_vs_exact.ipynb)). Its cost is dominated by the daughter, whose perturbation vector is `(l_max_ncdm+1) × q_size` per k. In the production config that is `18 × 1001 ≈ 18 000` ODE variables for the daughter alone — vs ~2 for the dcdm parent. This is also why `ndf15` OOMs (dense `O(neq²)` Jacobian; `memory: ndf15-oom-high-q`) and why `rk` is slow.
 
 The two alternative speedups are exhausted: the 3-moment **fluid** is architecturally unstable for the warm daughter at high k (cannot be patched; usable only at late trigger ≥0.4, ~1.8×), and **slaving to the parent** is invalid because the daughter free-streams away from it (`δ_acc` suppressed to ~0–7% of `δ_dcdm`, k-dependent; `memory: daughter-free-streams-not-slaved`).
 

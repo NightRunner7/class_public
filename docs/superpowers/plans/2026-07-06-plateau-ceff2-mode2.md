@@ -25,8 +25,8 @@
 ### Task 1: Python mirror `saturating_cfs` (TDD, no CLASS)
 
 **Files:**
-- Modify: `notebooks_test/fluid_closure_helpers.py`
-- Test: `notebooks_test/test_fluid_closure_helpers.py`
+- Modify: `notebooks_test/_archive/fluid_closure/fluid_closure_helpers.py`
+- Test: `notebooks_test/_archive/fluid_closure/test_fluid_closure_helpers.py`
 
 **Interfaces:**
 - Consumes: numpy only.
@@ -80,7 +80,7 @@ Expected: all PASS (15 tests).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add notebooks_test/fluid_closure_helpers.py notebooks_test/test_fluid_closure_helpers.py
+git add notebooks_test/_archive/fluid_closure/fluid_closure_helpers.py notebooks_test/_archive/fluid_closure/test_fluid_closure_helpers.py
 git commit -m "feat: saturating_cfs python mirror of mode-2 plateau (TDD)"
 ```
 
@@ -102,7 +102,7 @@ git commit -m "feat: saturating_cfs python mirror of mode-2 plateau (TDD)"
 ```c
 /**
  * Mode-2 family constant A in c_fs = (1/3)(1 - exp(-3*A*ca2_bg(a=1))).
- * Measured by notebooks_test/15_test_fluid_closure_diagnostic.ipynb for the
+ * Measured by notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb for the
  * kappa=6, a_t=0.13 family (A ~ 13); re-measure with nb15 when fixing a
  * different (kappa, a_t) family. Has no effect unless ncdm_ceff2_mode = 2.
  */
@@ -244,7 +244,7 @@ git commit -m "feat: ncdm_ceff2_mode=2 plateau branch + free-gas-ceiling rewordi
 ### Task 4: Validation notebook 16 (P(k) over k<=1 at f=0.3 + trigger scan)
 
 **Files:**
-- Create: `notebooks_test/16_test_plateau_fluid_validation.ipynb`
+- Create: `notebooks_test/_archive/fluid_closure/16_test_plateau_fluid_validation.ipynb`
 
 **Interfaces:**
 - Consumes: rebuilt `classy` with mode 2 (Tasks 2-3); `saturating_cfs`, `ca2_from_kfs`, `mask_small_denom` from `fluid_closure_helpers` (Task 1); nb15's cache pattern.
@@ -368,7 +368,7 @@ Expected: agreement within ~10% (the two `ca2_today` recoveries differ slightly:
 - [ ] **Step 6: Commit**
 
 ```bash
-git add notebooks_test/16_test_plateau_fluid_validation.ipynb
+git add notebooks_test/_archive/fluid_closure/16_test_plateau_fluid_validation.ipynb
 git commit -m "feat: nb16 plateau-fluid P(k) validation (k<=1, f=0.3, trigger scan)"
 ```
 

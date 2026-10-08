@@ -6,7 +6,7 @@
 
 **Architecture:** The daughter's fluid relaxation rate `Λ = a·Γ·(1+η)·((1+ca2)/(1+w))·ratio_rho` is compared per-wavenumber to the competing dynamical/oscillation rate `max(aH, k·sqrt(ca2))`. The fluid is allowed on only when this stiffness ratio drops below a precision threshold `kappa_stiff`, so the explicit `rk` evolver never sees the large negative eigenvalue. A scratch workspace field carries the ratio so it can be logged at the actual switch-on for the Phase-2 decision gate.
 
-**Tech Stack:** CLASS (C), built with the user's toolchain (no compiler in the agent shell — the user builds and runs each verification). Validation via `classy` in `notebooks_test/6_test_fluid_vs_exact.ipynb`.
+**Tech Stack:** CLASS (C), built with the user's toolchain (no compiler in the agent shell — the user builds and runs each verification). Validation via `classy` in `notebooks_test/_archive/fluid_closure/6_test_fluid_vs_exact.ipynb`.
 
 ## Global Constraints
 
@@ -134,7 +134,7 @@ git commit -m "Add acc_stiff_ratio workspace field for daughter fluid trigger di
 
 - [ ] **Step 1: Establish the failing baseline (red)**
 
-In `notebooks_test/6_test_fluid_vs_exact.ipynb`, run the accDM model with the explicit
+In `notebooks_test/_archive/fluid_closure/6_test_fluid_vs_exact.ipynb`, run the accDM model with the explicit
 evolver and an early fluid switch using the *old* density trigger:
 
 ```python
@@ -288,7 +288,7 @@ git commit -m "Log daughter stiffness ratio at fluid switch-on for Phase-2 decis
 ### Task 5: Instrument the fluid-vs-exact comparison in the notebook
 
 **Files:**
-- Modify: `notebooks_test/6_test_fluid_vs_exact.ipynb`
+- Modify: `notebooks_test/_archive/fluid_closure/6_test_fluid_vs_exact.ipynb`
 
 **Interfaces:**
 - Consumes: the built CLASS with Tasks 1-4.
@@ -368,7 +368,7 @@ parse the log file instead — note which you used.)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add notebooks_test/6_test_fluid_vs_exact.ipynb
+git add notebooks_test/_archive/fluid_closure/6_test_fluid_vs_exact.ipynb
 git commit -m "Instrument fluid-vs-exact: P(k)/Cl divergence, speedup, stiffness-at-transition"
 ```
 

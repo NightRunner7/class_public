@@ -518,7 +518,7 @@ git commit -m "Test background energy conservation with the accDM DE sink"
 
 - [ ] **Step 1: Rerun notebook 21 with the sink**
 
-In a scratch copy (do not commit), `notebooks_test/21_test_stress_energy_conservation.ipynb` → set `FIDUCIAL`'s run to `run_background(accdm_params(**FIDUCIAL, extra={'acc_de_sink': 'yes'}))`. Note that `accdm_params` in that notebook takes `eta` via `FIDUCIAL`. Record `max |R_windowed|` and `Omega_K_eff(a=1)` against the flag-off values.
+In a scratch copy (do not commit), `notebooks_test/_archive/conservation_audit/21_test_stress_energy_conservation.ipynb` → set `FIDUCIAL`'s run to `run_background(accdm_params(**FIDUCIAL, extra={'acc_de_sink': 'yes'}))`. Note that `accdm_params` in that notebook takes `eta` via `FIDUCIAL`. Record `max |R_windowed|` and `Omega_K_eff(a=1)` against the flag-off values.
 
 - [ ] **Step 2: Rerun notebook 22 the same way**
 

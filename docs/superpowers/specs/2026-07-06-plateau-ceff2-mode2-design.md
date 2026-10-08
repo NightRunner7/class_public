@@ -1,6 +1,6 @@
 # Plateau ceff2 closure (`ncdm_ceff2_mode = 2`) + k<=1 P(k) validation — Design Spec
 
-**Status:** draft (2026-07-06). Implements the closure measured by [`15_test_fluid_closure_diagnostic.ipynb`](../../../notebooks_test/15_test_fluid_closure_diagnostic.ipynb) (Tasks 6-9) for the fluid approximation of the accDM daughter. Scope gated by the nb15 verdict: **valid only at fixed `(kappa, a_t)` with production completed early** (a_t <~ 0.2, kappa >~ 4-6); the production-history maturity effect makes the closure non-universal across those knobs (`memory: ceff2-fit-structure`). The user's production scans fix `(kappa, a_t)` and vary `(eta, f, mass)` — the covered regime.
+**Status:** draft (2026-07-06). Implements the closure measured by [`15_test_fluid_closure_diagnostic.ipynb`](../../../notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb) (Tasks 6-9) for the fluid approximation of the accDM daughter. Scope gated by the nb15 verdict: **valid only at fixed `(kappa, a_t)` with production completed early** (a_t <~ 0.2, kappa >~ 4-6); the production-history maturity effect makes the closure non-universal across those knobs (`memory: ceff2-fit-structure`). The user's production scans fix `(kappa, a_t)` and vary `(eta, f, mass)` — the covered regime.
 
 **Goal:** replace the published Eq-38 `sqrt(k/k_fs)` fit (wrong sign in `W(eta)`, unbounded, blows up) with the measured plateau closure
 

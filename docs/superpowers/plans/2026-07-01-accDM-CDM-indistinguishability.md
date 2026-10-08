@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`, which sweeps the daughter mass (via `eta = 1e11/m`) and locates the mass above which accDM's P(k) and CMB spectra become indistinguishable from CDM under fixed-tolerance and cosmic-variance χ² metrics.
+**Goal:** Build `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`, which sweeps the daughter mass (via `eta = 1e11/m`) and locates the mass above which accDM's P(k) and CMB spectra become indistinguishable from CDM under fixed-tolerance and cosmic-variance χ² metrics.
 
 **Architecture:** A single self-contained notebook. Pure-numpy helper functions (metrics, threshold extraction) are unit-tested inline with `assert` cells so `pytest --nbmake` exercises them without CLASS. CLASS-dependent cells (parameter builders, the run/cache layer, the scan) are verified by executing the notebook in the user's `accDM` classy environment. Results are cached in a dict keyed by `(f_acc, m, kind)`, mirroring `notebooks_test/5_test_Pk_freestreaming.ipynb`.
 
@@ -24,7 +24,7 @@
 ### Task 1: Notebook scaffold — header, imports, constants, parameter builders
 
 **Files:**
-- Create: `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`
+- Create: `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`
 
 **Interfaces:**
 - Produces (module-level names later cells rely on):
@@ -54,7 +54,7 @@ fractional tolerance on the spectra, and (B) a cosmic-variance-limited chi^2 det
 
 Daughter on exact quadrature (fluid closure is unusable). Hybrid notebook: inline unit
 asserts for the pure metrics (nbmake) + a CLASS scan + diagnostic plots. Run in the
-`accDM` classy environment: `pytest --nbmake notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`.
+`accDM` classy environment: `pytest --nbmake notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`.
 ```
 
 - [ ] **Step 2: Add the imports + plot-style + constants code cell**
@@ -161,7 +161,7 @@ print('Task 1 param builders OK')
 - [ ] **Step 5: Commit**
 
 ```bash
-git add notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb
+git add notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb
 git commit -m "nb13: scaffold - constants and accDM/LCDM parameter builders"
 ```
 
@@ -170,7 +170,7 @@ git commit -m "nb13: scaffold - constants and accDM/LCDM parameter builders"
 ### Task 2: Run/cache layer and spectrum extractors
 
 **Files:**
-- Modify: `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`
+- Modify: `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`
 
 **Interfaces:**
 - Consumes: `K_NODES`, `L_MAX`, param builders from Task 1.
@@ -226,14 +226,14 @@ print('Task 2 run/cache OK: pk[0]={:.3e}, tt[100]={:.3e}'.format(_warm['pk'][0],
 - [ ] **Step 3: Verify in the classy env**
 
 Run (user, on the accDM pyenv):
-`pytest --nbmake notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb -k "cell" -x`
+`pytest --nbmake notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb -k "cell" -x`
 Expected: the smoke-test cell prints finite `pk[0]` / `tt[100]` and no assertion fires.
 (Authoring shell cannot run this — mark done once the user confirms.)
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb
+git add notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb
 git commit -m "nb13: run/cache layer + spectrum extractors, single-run smoke test"
 ```
 
@@ -242,7 +242,7 @@ git commit -m "nb13: run/cache layer + spectrum extractors, single-run smoke tes
 ### Task 3: Metric functions with inline unit tests (no CLASS)
 
 **Files:**
-- Modify: `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`
+- Modify: `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`
 
 **Interfaces:**
 - Consumes: `K_NODES`, `V_SURVEY`, `F_SKY`.
@@ -329,7 +329,7 @@ Expected output: `metric unit tests PASSED`. (This cell runs in the authoring sh
 - [ ] **Step 5: Commit**
 
 ```bash
-git add notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb
+git add notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb
 git commit -m "nb13: P(k)/CMB distinguishability metrics + inline unit tests"
 ```
 
@@ -338,7 +338,7 @@ git commit -m "nb13: P(k)/CMB distinguishability metrics + inline unit tests"
 ### Task 4: Threshold-extraction helper with inline unit tests (no CLASS)
 
 **Files:**
-- Modify: `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`
+- Modify: `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`
 
 **Interfaces:**
 - Produces: `threshold_mass(masses, metric_values, cut) -> float`
@@ -398,7 +398,7 @@ Expected output: `threshold unit tests PASSED`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb
+git add notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb
 git commit -m "nb13: log-interpolated threshold-mass extractor + unit tests"
 ```
 
@@ -407,7 +407,7 @@ git commit -m "nb13: log-interpolated threshold-mass extractor + unit tests"
 ### Task 5: Run the scan and assemble the results table
 
 **Files:**
-- Modify: `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`
+- Modify: `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`
 
 **Interfaces:**
 - Consumes: everything above.
@@ -461,7 +461,7 @@ Expected: the scan prints one line per `f_acc`; `pk_dev vs cold` decreases from 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb
+git add notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb
 git commit -m "nb13: run the mass x f_acc scan, assemble RESULTS table"
 ```
 
@@ -470,7 +470,7 @@ git commit -m "nb13: run the mass x f_acc scan, assemble RESULTS table"
 ### Task 6: Threshold table + diagnostic and summary plots
 
 **Files:**
-- Modify: `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`
+- Modify: `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`
 
 **Interfaces:**
 - Consumes: `RESULTS`, `MASS_GRID`, `ETA_GRID`, `threshold_mass`, plot constants.
@@ -555,7 +555,7 @@ toward 1 (P) and 0 (ΔC) at the largest mass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb
+git add notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb
 git commit -m "nb13: threshold table + distinguishability and diagnostic plots"
 ```
 
@@ -564,7 +564,7 @@ git commit -m "nb13: threshold table + distinguishability and diagnostic plots"
 ### Task 7: Regression asserts, q-grid convergence check, caveats
 
 **Files:**
-- Modify: `notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`
+- Modify: `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`
 
 **Interfaces:**
 - Consumes: `RESULTS`, `get_warm`, `pk_maxdev`, `Q_BINS`, `accdm_params`.
@@ -639,18 +639,18 @@ Insert a markdown cell:
   lower mass.
 - **Scope.** Fixed decay sector (`kappa_acc`, `a_t_acc`); no large-`kappa_acc` regime (known
   WONTFIX). The chi^2 is a single-parameter detectability proxy, not a Fisher/MCMC forecast.
-- Run: `pytest --nbmake notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`.
+- Run: `pytest --nbmake notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`.
 ```
 
 - [ ] **Step 4: Verify full notebook in the classy env**
 
-Run (user): `pytest --nbmake notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb`.
+Run (user): `pytest --nbmake notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`.
 Expected: all cells execute, all asserts pass end to end.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add notebooks_test/13_test_accDM_CDM_indistinguishability.ipynb
+git add notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb
 git commit -m "nb13: regression asserts, q-grid convergence floor, caveats"
 ```
 

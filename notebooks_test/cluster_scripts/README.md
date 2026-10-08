@@ -1,4 +1,10 @@
-# Cluster cache generators for nb15-nb19
+# Cluster cache generators for nb15-nb20
+
+> **Archived.** nb15-nb20 and their `gen_nbNN_cache.py` generators moved to
+> `notebooks_test/_archive/fluid_closure/` (the fluid approximation is dropped).
+> `common.py` and `submit_template.pbs` stay here; `emulator_chi2_validation.py`
+> also uses `common.py`. The setup and submission notes below still apply to
+> any generator run through `submit_template.pbs`.
 
 Each `gen_nbNN_cache.py` reproduces, run for run, the CLASS calls its notebook
 makes and writes pickles with the **exact filenames** the notebook's cache
@@ -13,6 +19,7 @@ cache hits (nb13/nb14 only cache in memory, so they have no generator).
 | `gen_nb17_cache.py` | 17 mode-3 eta scan, f=0.1 | `nb17_cache/` | `(pk, seconds)` | 5 ref + 10 fluid |
 | `gen_nb18_cache.py` | 18 ceff2(f, eta) formula | `nb18_cache/` | series / `(pk, seconds)` | Stage A: 20, Stage C: 10 |
 | `gen_nb19_cache.py` | 19 fluid error vs signal | `nb19_cache/` | `{'pk','sigma8','seconds'}` | 1 LCDM + 5 exact + 5 fluid |
+| `gen_nb20_cache.py` | 20 q-bins vs f accuracy/speed | `nb20_cache/` | `{'pk','sigma8','seconds'}` | 54 truth + 432 exact + 432 fluid |
 
 ## Cluster setup
 
@@ -65,6 +72,27 @@ Heaviness guide: the q=5001 exact references (f=0.3 corners in nb16/nb18/nb19)
 dominate; everything else is minutes. `evolver: 0` (rkck) is baked in — do not
 switch to ndf15 at large q (memory: ndf15-oom-high-q).
 
+nb20 is the big one (918 jobs by default): 54 exact q=10001 ground-truth runs
+plus the 8-rung q-ladder in both arms per (f, eta) corner. Submit it as three
+arrays via `--only` (the filter is applied before `--index`, so always `--list`
+with the same `--only` first to confirm the count):
+
+```
+python cluster_scripts/gen_nb20_cache.py --only truth --list          # -> 54 jobs
+qsub -t 0-53  -v 'GENERATOR=cluster_scripts/gen_nb20_cache.py,GEN_ARGS=--only truth' \
+     cluster_scripts/submit_template.pbs
+qsub -t 0-431 -v 'GENERATOR=cluster_scripts/gen_nb20_cache.py,GEN_ARGS=--only exact_' \
+     cluster_scripts/submit_template.pbs
+qsub -t 0-431 -v 'GENERATOR=cluster_scripts/gen_nb20_cache.py,GEN_ARGS=--only fluid_' \
+     cluster_scripts/submit_template.pbs
+```
+
+The truth array is the expensive one — q=10001 is ~2x a q=5001 run, so bump
+the copy's walltime if the 5001 references were already close to the limit.
+Exact/truth files do not depend on the fluid knobs (`--trigger`, `--shear`,
+`--ceff2-mode`, `--fs-amp`, all encoded in the fluid tag), so re-scanning a
+different fluid configuration only adds the cheap `fluid_` array.
+
 ## Changing settings
 
 Knobs that are **encoded in the filename** (safe — the notebook picks up the
@@ -106,3 +134,8 @@ out of sync with the setup cell).
 - The elapsed-time fields (`seconds`) will reflect cluster wall times; the
   notebooks' speedup tables will report cluster timings, which is usually
   what you want anyway.
+
+## Monitoring kruk (chains, CONNECT)
+
+`kruk_chains.py` and `kruk_connect.py` moved to `project_monopoles/scripts/`
+(see the README there); run them as `kruk-chains` / `kruk-connect`.

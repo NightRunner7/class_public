@@ -4,7 +4,7 @@
 
 **Goal:** Build a diagnostic (helpers module + notebook `15_test_fluid_closure_diagnostic.ipynb`) that decides whether a universal fluid closure exists for the accDM daughter over k ≤ 1 Mpc⁻¹, f_acc ≤ 0.3 — returning an A/B/C verdict from collapse plots of the effective `ceff2` and `cvis2` responses vs `x = k/k_fs`.
 
-**Architecture:** Pure-numpy helpers (`notebooks_test/fluid_closure_helpers.py`) hold all testable logic — `ca2` recovery from `k_fs`, the two dimensionless response functions, the log-binned upper envelope, and the collapse-band metric — and are unit-tested with pytest offline. The notebook imports them, runs the exact hierarchy across `(f, η)`, extracts per-`(k,τ)` daughter quantities CLASS already emits, and produces the collapse plots + verdict. No C changes, no rebuild.
+**Architecture:** Pure-numpy helpers (`notebooks_test/_archive/fluid_closure/fluid_closure_helpers.py`) hold all testable logic — `ca2` recovery from `k_fs`, the two dimensionless response functions, the log-binned upper envelope, and the collapse-band metric — and are unit-tested with pytest offline. The notebook imports them, runs the exact hierarchy across `(f, η)`, extracts per-`(k,τ)` daughter quantities CLASS already emits, and produces the collapse plots + verdict. No C changes, no rebuild.
 
 **Tech Stack:** Python 3, numpy, matplotlib, `classy` (CLASS Python wrapper), pytest for the helpers, Jupyter.
 
@@ -23,8 +23,8 @@
 ### Task 1: Pure-Python helpers module (TDD, no CLASS)
 
 **Files:**
-- Create: `notebooks_test/fluid_closure_helpers.py`
-- Test: `notebooks_test/test_fluid_closure_helpers.py`
+- Create: `notebooks_test/_archive/fluid_closure/fluid_closure_helpers.py`
+- Test: `notebooks_test/_archive/fluid_closure/test_fluid_closure_helpers.py`
 
 **Interfaces:**
 - Consumes: nothing (numpy only).
@@ -38,7 +38,7 @@
 - [ ] **Step 1: Write the failing tests**
 
 ```python
-# notebooks_test/test_fluid_closure_helpers.py
+# notebooks_test/_archive/fluid_closure/test_fluid_closure_helpers.py
 import numpy as np
 import pytest
 from fluid_closure_helpers import (
@@ -88,13 +88,13 @@ def test_collapse_band_measures_spread():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `python -m pytest notebooks_test/test_fluid_closure_helpers.py -v`
+Run: `python -m pytest notebooks_test/_archive/fluid_closure/test_fluid_closure_helpers.py -v`
 Expected: FAIL — `ModuleNotFoundError: No module named 'fluid_closure_helpers'` (run from `notebooks_test/`, or add `-c` / conftest; simplest is `cd notebooks_test && python -m pytest test_fluid_closure_helpers.py -v`).
 
 - [ ] **Step 3: Write the implementation**
 
 ```python
-# notebooks_test/fluid_closure_helpers.py
+# notebooks_test/_archive/fluid_closure/fluid_closure_helpers.py
 """Pure-numpy helpers for the fluid-closure feasibility diagnostic (notebook 15).
 
 No CLASS dependency: everything here is unit-tested offline. The notebook feeds
@@ -184,7 +184,7 @@ Expected: PASS (7 passed).
 - [ ] **Step 5: Commit**
 
 ```bash
-git add notebooks_test/fluid_closure_helpers.py notebooks_test/test_fluid_closure_helpers.py
+git add notebooks_test/_archive/fluid_closure/fluid_closure_helpers.py notebooks_test/_archive/fluid_closure/test_fluid_closure_helpers.py
 git commit -m "feat: pure-numpy helpers for fluid-closure diagnostic (TDD)"
 ```
 
@@ -193,10 +193,10 @@ git commit -m "feat: pure-numpy helpers for fluid-closure diagnostic (TDD)"
 ### Task 2: Notebook scaffold + τ-series extractor cell
 
 **Files:**
-- Create: `notebooks_test/15_test_fluid_closure_diagnostic.ipynb`
+- Create: `notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb`
 
 **Interfaces:**
-- Consumes: `fluid_closure_helpers` (Task 1); `accdm_params` pattern from `notebooks_test/7_test_ceff2_calibration.ipynb`.
+- Consumes: `fluid_closure_helpers` (Task 1); `accdm_params` pattern from `notebooks_test/_archive/fluid_closure/7_test_ceff2_calibration.ipynb`.
 - Produces: `extract_daughter_series(params, k_list) -> dict` returning, per k, arrays over stored τ of `{tau, delta, theta, shear, dpr, k_fs, aH}` for the daughter (ncdm index 1). `aH` per τ is recovered as `k_fs·sqrt(ca2)/sqrt(3/2)` is circular, so instead read background: `aH = a·H` reconstructed from the perturbation dict's `a` and the background `H(a)` — see Step 2 note.
 
 - [ ] **Step 1: Title + setup cell**
@@ -272,7 +272,7 @@ Expected: `extractor OK; tau samples per k = <N>` with no assertion error.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add notebooks_test/15_test_fluid_closure_diagnostic.ipynb
+git add notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb
 git commit -m "feat: nb15 scaffold + daughter tau-series extractor (pending user run)"
 ```
 
@@ -281,7 +281,7 @@ git commit -m "feat: nb15 scaffold + daughter tau-series extractor (pending user
 ### Task 3: Response-function assembly cell (R_c, R_v across f, η)
 
 **Files:**
-- Modify: `notebooks_test/15_test_fluid_closure_diagnostic.ipynb`
+- Modify: `notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb`
 
 **Interfaces:**
 - Consumes: `extract_daughter_series` (Task 2); `ca2_from_kfs`, `sound_speed_response`, `shear_response`, `log_upper_envelope` (Task 1).
@@ -319,7 +319,7 @@ Expected: `built responses for [(0.05,0.1),...]`, 8 entries, each with non-empty
 - [ ] **Step 2: Commit**
 
 ```bash
-git add notebooks_test/15_test_fluid_closure_diagnostic.ipynb
+git add notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb
 git commit -m "feat: nb15 R_c/R_v response assembly across (f,eta) (pending user run)"
 ```
 
@@ -328,7 +328,7 @@ git commit -m "feat: nb15 R_c/R_v response assembly across (f,eta) (pending user
 ### Task 4: Collapse plots + A/B/C decision cell
 
 **Files:**
-- Modify: `notebooks_test/15_test_fluid_closure_diagnostic.ipynb`
+- Modify: `notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb`
 
 **Interfaces:**
 - Consumes: `RESPONSES` (Task 3); `collapse_band` (Task 1).
@@ -395,7 +395,7 @@ Expected: two-panel figure + printed verdict naming Approach B/A-universal, A-wi
 - [ ] **Step 3: Commit**
 
 ```bash
-git add notebooks_test/15_test_fluid_closure_diagnostic.ipynb
+git add notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb
 git commit -m "feat: nb15 collapse plots + A/B/C decision (pending user run)"
 ```
 
@@ -404,7 +404,7 @@ git commit -m "feat: nb15 collapse plots + A/B/C decision (pending user run)"
 ### Task 5: Existing-scaffolding cross-check + feasibility-gate + verdict markdown
 
 **Files:**
-- Modify: `notebooks_test/15_test_fluid_closure_diagnostic.ipynb`
+- Modify: `notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb`
 
 **Interfaces:**
 - Consumes: `RESPONSES`, `band` (Tasks 3-4).
@@ -461,7 +461,7 @@ Add a final markdown cell summarizing the numeric verdict for the record. Fill t
 - [ ] **Step 3: Commit**
 
 ```bash
-git add notebooks_test/15_test_fluid_closure_diagnostic.ipynb
+git add notebooks_test/_archive/fluid_closure/15_test_fluid_closure_diagnostic.ipynb
 git commit -m "feat: nb15 w_trial cross-check + feasibility-gate verdict (pending user run)"
 ```
 

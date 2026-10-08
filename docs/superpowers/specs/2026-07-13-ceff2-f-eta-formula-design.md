@@ -33,7 +33,7 @@ ceff2(f, eta) = (1/3) * (1 - exp(-3 * A(f) * eta)),   A(f) = A0 * (1 + B*f)
 - Rejected alternatives: 2D table/spline (opaque, needs C-side table support); a new C
   mode with native f-dependence (only justified if B is significantly nonzero — deferred).
 
-## Notebook structure (`notebooks_test/18_test_ceff2_f_eta_formula.ipynb`)
+## Notebook structure (`notebooks_test/_archive/fluid_closure/18_test_ceff2_f_eta_formula.ipynb`)
 
 All CLASS results pickle-cached under `accDM_scans/nb18_cache/`; tqdm + bracketing prints
 on slow runs; rkck evolver (`evolver: 0`) throughout.

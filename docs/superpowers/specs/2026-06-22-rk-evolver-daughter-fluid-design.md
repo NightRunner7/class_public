@@ -3,7 +3,7 @@
 **Date:** 2026-06-22
 **Status:** Design approved; ready for implementation planning.
 **Scope:** `source/perturbations.c`, `include/perturbations.h`, `include/precisions.h`,
-`notebooks_test/6_test_fluid_vs_exact.ipynb`.
+`notebooks_test/_archive/fluid_closure/6_test_fluid_vs_exact.ipynb`.
 
 ## Problem
 
