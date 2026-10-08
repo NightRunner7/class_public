@@ -15,7 +15,7 @@ N_LOGA = 10001
 
 def accdm_params(f_acc=0.1, eta=0.1, kappa=12.1, a_t=0.133, mass=1e16,
                  n_q=501, strategy=4, sink=None, n_loga=N_LOGA):
-    """Background-only accDM run; sink=None leaves acc_de_sink unset."""
+    """Background-only accDM run; sink=None leaves acc_de_sink unset (on by default)."""
     p = {'omega_b': OMEGA_B, 'omega_cdm': OMEGA_CDM0, 'H0': H0,
          'vary_Gamma_acc': 'yes', 'kappa_acc': kappa, 'a_t_acc': a_t,
          'f_acc': f_acc, 'eta_acc': eta,
@@ -50,12 +50,18 @@ def run(params):
     return out
 
 
-def test_flag_off_is_default():
+def test_flag_on_is_default_with_accdm():
     unset = run(accdm_params())
+    on = run(accdm_params(sink='yes'))
     off = run(accdm_params(sink='no'))
-    assert '(.)rho_de_acc' not in unset
-    for key in ('H [1/Mpc]', '(.)rho_tot', '(.)p_tot', '(.)p_tot_prime'):
-        np.testing.assert_array_equal(unset[key], off[key])
+    assert '(.)rho_de_acc' not in off
+    for key in ('H [1/Mpc]', '(.)rho_tot', '(.)p_tot', '(.)p_tot_prime', '(.)rho_de_acc'):
+        np.testing.assert_array_equal(unset[key], on[key])
+
+
+def test_flag_off_without_accdm():
+    bg = run({'omega_b': OMEGA_B, 'omega_cdm': OMEGA_CDM0, 'H0': H0})
+    assert '(.)rho_de_acc' not in bg
 
 
 def test_sink_requires_accdm():
@@ -107,7 +113,7 @@ def test_rho_de_acc_matches_analytic(kappa, a_t):
 @pytest.mark.parametrize('mass,f_acc', [(1e16, 0.1), (1e11, 0.3)])
 def test_today_unchanged(mass, f_acc):
     eta = 1e11/mass
-    off = run(accdm_params(f_acc=f_acc, eta=eta, mass=mass))
+    off = run(accdm_params(f_acc=f_acc, eta=eta, mass=mass, sink='no'))
     on = run(accdm_params(f_acc=f_acc, eta=eta, mass=mass, sink='yes'))
     assert abs(on['(.)rho_de_acc'][-1]) <= 1e-12*on['(.)rho_crit'][-1]
     assert on['(.)rho_de_acc'][0] > 0.0
@@ -117,7 +123,7 @@ def test_today_unchanged(mass, f_acc):
 
 def test_p_tot_prime_includes_sink():
     """Other components' p(a) do not depend on H, so on-minus-off isolates the sink."""
-    off = run(accdm_params())
+    off = run(accdm_params(sink='no'))
     on = run(accdm_params(sink='yes'))
     lna = np.log(on['a'])
     dp_on = on['(.)p_tot_prime']/(on['a']*on['H [1/Mpc]'])
@@ -151,8 +157,8 @@ def test_background_conservation_restored(n_q):
     """The sink removes the kick violation; what remains matches the eta ~ 0 run
     (daughter staircase and estimator floor), which the sink does not address."""
     grid = dict(n_q=n_q, strategy=5, n_loga=40001)
-    off = omega_k_eff_today(run(accdm_params(**grid)))
-    base = omega_k_eff_today(run(accdm_params(eta=1e-6, **grid)))
+    off = omega_k_eff_today(run(accdm_params(sink='no', **grid)))
+    base = omega_k_eff_today(run(accdm_params(eta=1e-6, sink='no', **grid)))
     on = omega_k_eff_today(run(accdm_params(sink='yes', **grid)))
     print('Omega_K_eff today: off {:+.3e}  base {:+.3e}  on {:+.3e}'.format(off, base, on))
     assert abs(on) < 0.05*abs(off)

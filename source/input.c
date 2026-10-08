@@ -2801,7 +2801,8 @@ int input_read_parameters_species(struct file_content * pfc,
     class_read_flag("switch_off_shear_acc", ppt->switch_off_shear_acc);
   }
 
-  /* accDM DE sink: w=-1 component that pays the daughters' kick energy */
+  /* accDM DE sink: w=-1 component that pays the daughters' kick energy; on by default with accDM */
+  pba->has_acc_de_sink = pba->has_acc;
   class_read_flag("acc_de_sink", pba->has_acc_de_sink);
   class_test((pba->has_acc_de_sink == _TRUE_) && (pba->has_acc == _FALSE_),
              errmsg,

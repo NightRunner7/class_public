@@ -2,6 +2,11 @@
 
 **Status:** approved design (2026-09-25). Background physics change behind an opt-in flag.
 
+> **Update 2026-10-08:** `acc_de_sink` is now **on by default whenever accDM is on**
+> (`acc_de_sink = no` turns it off; without accDM it stays off). The golden regression was
+> regenerated with the sink on; with `acc_de_sink = no` the build reproduces the previous
+> golden file exactly.
+
 ## Context and goal
 
 Each accDM conversion removes one parent of rest mass M and creates one daughter of energy

@@ -4,7 +4,7 @@ Run after building classy:  python notebooks_test/test_accdm_input_checks.py
 import sys
 
 import numpy as np
-from classy import Class, CosmoSevereError
+from classy import Class, CosmoError
 
 MASS = 1e16                      # m_acc in GeV
 
@@ -39,13 +39,15 @@ def compute(params, level):
 
 
 def expect_error(params, needle, level=("background",)):
-    """Assert that computing `params` up to `level` raises CosmoSevereError mentioning `needle`."""
+    """Assert that computing `params` up to `level` raises a CosmoError mentioning `needle`.
+
+    Input checks raise CosmoSevereError; checks in perturbations_init raise CosmoComputationError."""
     try:
         compute(params, list(level))
-    except CosmoSevereError as error:
+    except CosmoError as error:
         assert needle in str(error), "expected '{}' in error, got:\n{}".format(needle, error)
         return
-    raise AssertionError("expected CosmoSevereError mentioning '{}', none raised".format(needle))
+    raise AssertionError("expected CosmoError mentioning '{}', none raised".format(needle))
 
 
 def test_valid_run_passes_the_checks():
