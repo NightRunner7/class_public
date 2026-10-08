@@ -24,7 +24,7 @@
 ### Task 1: Notebook `29_de_sink_observables.ipynb`
 
 **Files:**
-- Create: `notebooks_test/29_de_sink_observables.ipynb` (cells below, in order; markdown cells from `markdown` fences, code cells from `python` fences)
+- Create: `notebooks_test/09_de_sink_observables.ipynb` (cells below, in order; markdown cells from `markdown` fences, code cells from `python` fences)
 
 **Interfaces:**
 - Produces (inside the notebook): `run(params) -> dict(bg, cl, pk, h, '100*theta_s', sigma8)`, `runs` dict keyed by `'lcdm'` and `(mass, sink)`, `ok` list of masses with both runs, `sorted_bg(bg) -> (a, dict)`.
@@ -278,7 +278,7 @@ for m in ok:
 
 - [ ] **Step 2: Assemble the notebook**
 
-Build `notebooks_test/29_de_sink_observables.ipynb` (nbformat 4.4, kernel metadata copied from `28_test_de_sink_perturbations.ipynb`) from the eleven cells above, in order.
+Build `notebooks_test/09_de_sink_observables.ipynb` (nbformat 4.4, kernel metadata copied from `28_test_de_sink_perturbations.ipynb`) from the eleven cells above, in order.
 
 - [ ] **Step 3: Run it**
 
@@ -289,6 +289,6 @@ failed ones are reported in cell 3).
 - [ ] **Step 4: Commit**
 
 ```bash
-git add notebooks_test/29_de_sink_observables.ipynb
+git add notebooks_test/09_de_sink_observables.ipynb
 git commit -m "Add notebook comparing background, CMB and P(k) with the DE sink off and on"
 ```

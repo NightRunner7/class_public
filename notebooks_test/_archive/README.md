@@ -1,8 +1,9 @@
 # Archived notebooks
 
 Notebooks for problems that are solved or approaches that were dropped. They are kept with their
-outputs as the record of what was found; most no longer run against the current build. Numbers
-are kept from the original sequence, so "nb15" in specs, plans and memory still points here.
+outputs as the record of what was found; most no longer run against the current build. They keep their
+original numbers, which overlap with the renumbered live notebooks: "nb15" in a spec or plan written before
+2026-10-09 means an archived notebook or an old live number (table in `../README.md`).
 Snapshot before the move: tag `notebooks-pre-cleanup`.
 
 Paths inside these notebooks (`accDM_scans/...`, `golden/`, imports) assume they sit in

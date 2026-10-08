@@ -499,7 +499,7 @@ Expected: PASS, with the printed off value ~η·f-sized and both on values much 
 
 - [ ] **Step 3: Flag-off regression against the golden files**
 
-Run: `python -m pytest --nbmake notebooks_test/1_test_regression_golden.ipynb notebooks_test/3_test_bg_conservation.ipynb`
+Run: `python -m pytest --nbmake notebooks_test/01_test_regression_golden.ipynb notebooks_test/03_test_bg_conservation.ipynb`
 Expected: same pass/fail status as on commit `d899f3ef` (run it there first if unsure). Any new failure means the flag-off path changed: fix before continuing.
 
 - [ ] **Step 4: Commit**

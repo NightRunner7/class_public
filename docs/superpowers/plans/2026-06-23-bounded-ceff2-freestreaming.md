@@ -168,7 +168,7 @@ Expected: compiles cleanly. (`ppr`, `pba`, `k`, `a`, `H` are already in scope in
 
 - [ ] **Step 6: Verify bit-identical to pre-refactor (golden regression unchanged)**
 
-Run: `notebooks_test/1_test_regression_golden.ipynb` against the committed golden in `notebooks_test/golden/regression_accDM.*`.
+Run: `notebooks_test/01_test_regression_golden.ipynb` against the committed golden in `notebooks_test/golden/regression_accDM.*`.
 Expected: the accDM `Cl`/`Pk` match the golden to machine precision (max relative diff `< 1e-10`). With `ncdm_ceff2_fs_amp` defaulting to `0.2` and mode 0, the helper reproduces the old expression exactly. If the golden moves at all, the extraction changed a value — diff the three sites.
 
 - [ ] **Step 7: Commit**
@@ -231,7 +231,7 @@ Expected: compiles cleanly.
 
 - [ ] **Step 3: Verify mode 0 still bit-identical**
 
-Run: `notebooks_test/1_test_regression_golden.ipynb` (default params → mode 0).
+Run: `notebooks_test/01_test_regression_golden.ipynb` (default params → mode 0).
 Expected: still matches golden to `< 1e-10`. (Mode 0 keeps the exact factored `cs2_base*(1+...)` form from Task 2 — bit-identical; confirm no regression.)
 
 - [ ] **Step 4: Verify mode 1 stays within [0, 1/3] and reduces to mode 0 at small k/k_fs**

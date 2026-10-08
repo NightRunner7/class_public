@@ -184,7 +184,7 @@ guard that Change 1 is behaviour-preserving.
 
 ## Testing
 
-1. **Golden regression unchanged** — `notebooks_test/1_test_regression_golden.ipynb` passes
+1. **Golden regression unchanged** — `notebooks_test/01_test_regression_golden.ipynb` passes
    with no edits. Confirms the `m_ncdm` path is byte-for-byte equivalent after Change 1.
 2. **Equivalence** — an accDM run with `m_nu = 0.02` produces P(k) and C_l identical to the
    same run with `m_ncdm = '0.02, <m_acc*1e9>'`. This is the core assertion.

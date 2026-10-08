@@ -30,7 +30,7 @@
 | `source/input.c` | range and smooth-births checks in the `qm_acc_birth` setup |
 | `include/background.h`, `source/background.c` | `background_acc_q_nodes`, called from `background_ncdm_init` |
 | `notebooks_test/test_accdm_born_nodes.py` | new tests |
-| `notebooks_test/38_born_fraction_nodes.ipynb` | evaluation against nb37's references |
+| `notebooks_test/18_born_fraction_nodes.ipynb` | evaluation against nb37's references |
 
 ---
 
@@ -307,10 +307,10 @@ git commit -m "Place accDM daughter nodes partly by born fraction when accdm_q_l
 ### Task 3: Notebook 38, evaluation
 
 **Files:**
-- Create: `notebooks_test/38_born_fraction_nodes.ipynb` (generated, executed with `jupyter_client`; cache `38_cache.pkl`, not committed)
+- Create: `notebooks_test/18_born_fraction_nodes.ipynb` (generated, executed with `jupyter_client`; cache `38_cache.pkl`, not committed)
 
 **Interfaces:**
-- Consumes: `accdm_q_log_share` (Tasks 1–2); `notebooks_test/37_cache.pkl` (nb37 runs keyed by `json.dumps(params, sort_keys=True)` with params built exactly as nb37's `params(log10m, f_tilde, **per_decade(n))`).
+- Consumes: `accdm_q_log_share` (Tasks 1–2); `notebooks_test/17_cache.pkl` (nb37 runs keyed by `json.dumps(params, sort_keys=True)` with params built exactly as nb37's `params(log10m, f_tilde, **per_decade(n))`).
 
 Cells (code copied from nb37 where marked, so the cache keys match):
 
@@ -331,6 +331,6 @@ Cells (code copied from nb37 where marked, so the cache keys match):
 - [ ] **Step 4: Commit**
 
 ```bash
-git add notebooks_test/38_born_fraction_nodes.ipynb
+git add notebooks_test/18_born_fraction_nodes.ipynb
 git commit -m "Add notebook 38: born-fraction daughter nodes against nb37 references"
 ```
