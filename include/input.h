@@ -380,6 +380,11 @@ extern "C" {
                        int * flag,
                        ErrorMsg errmsg);
 
+  int input_read_m_acc(struct file_content * pfc,
+                       double * m_acc,
+                       int * flag,
+                       ErrorMsg errmsg);
+
   int input_read_parameters_species(struct file_content * pfc,
                                     struct precision * ppr,
                                     struct background * pba,

@@ -133,6 +133,18 @@ def test_default_kick_is_1e11_gev():
     assert np.array_equal(default, from_energy), "default kick differs from E_acc_in_GeV = 1e11"
 
 
+def test_log10_mass_matches_mass():
+    params = accdm_params()
+    del params["m_acc_in_GeV"]
+    from_log10 = background_daughter(dict(params, log10m_acc_in_GeV=np.log10(MASS)))
+    assert np.array_equal(background_daughter(accdm_params()), from_log10), \
+        "log10m_acc_in_GeV differs from m_acc_in_GeV"
+
+
+def test_mass_and_log10_mass_together_are_rejected():
+    expect_error(accdm_params(log10m_acc_in_GeV=16.), "only enter one of 'm_acc_in_GeV' or 'log10m_acc_in_GeV'")
+
+
 def pk_and_sigma8(params):
     cosmo = Class()
     cosmo.set(dict(params, output="mPk", **{"P_k_max_1/Mpc": 1.0}))

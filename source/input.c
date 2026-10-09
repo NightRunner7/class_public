@@ -2415,6 +2415,49 @@ int input_read_f_acc(struct file_content * pfc,
 
 
 /**
+ * Read the accDM mass, given either as 'm_acc_in_GeV' or as 'log10m_acc_in_GeV'
+ * (suited to a flat prior across decades, e.g. an emulator that varies the mass).
+ * Returns m_acc in GeV in both cases.
+ *
+ * @param pfc     Input: pointer to local structure
+ * @param m_acc   Output: m_acc in GeV (left untouched if neither is given)
+ * @param flag    Output: _TRUE_ if 'm_acc_in_GeV' or 'log10m_acc_in_GeV' was given
+ * @param errmsg  Input: Error message
+ * @return the error status
+ */
+
+int input_read_m_acc(struct file_content * pfc,
+                     double * m_acc,
+                     int * flag,
+                     ErrorMsg errmsg){
+
+  double param1,param2;
+  int flag1,flag2;
+
+  class_call(parser_read_double(pfc,"m_acc_in_GeV",&param1,&flag1,errmsg),
+             errmsg,
+             errmsg);
+  class_call(parser_read_double(pfc,"log10m_acc_in_GeV",&param2,&flag2,errmsg),
+             errmsg,
+             errmsg);
+  class_test((flag1 == _TRUE_) && (flag2 == _TRUE_),
+             errmsg,
+             "You can only enter one of 'm_acc_in_GeV' or 'log10m_acc_in_GeV'.");
+
+  *flag = (flag1 == _TRUE_) || (flag2 == _TRUE_);
+  if (flag1 == _TRUE_){
+    *m_acc = param1;
+  }
+  if (flag2 == _TRUE_){
+    *m_acc = pow(10.,param2);
+  }
+
+  return _SUCCESS_;
+
+}
+
+
+/**
  * Read the parameters for each physical species
  *
  * @param pfc            Input: pointer to local structure
@@ -2676,9 +2719,9 @@ int input_read_parameters_species(struct file_content * pfc,
   class_test(pba->Omega_ini_dcdm<0,errmsg,"You cannot set the initial dcdm density to negative values.");
   param3 = 0.;
   class_call(input_read_f_acc(pfc,&param3,&flag3,errmsg), errmsg, errmsg);
-  class_call(parser_read_double(pfc,"m_acc_in_GeV",&param4,&flag4,errmsg), errmsg, errmsg);
+  class_call(input_read_m_acc(pfc,&param4,&flag4,errmsg), errmsg, errmsg);
 
-  /* accDM is on when m_acc_in_GeV is given; f_acc = 0 then leaves the daughter
+  /* accDM is on when m_acc_in_GeV (or log10m_acc_in_GeV) is given; f_acc = 0 then leaves the daughter
      slot empty. Omega_ini_dcdm alone means standard decaying CDM (section 7.1). */
   if ((flag4 == _TRUE_) || (flag3 == _TRUE_ && param3 > 0.)) {
     /* the parent density is f_acc*Omega_cdm; Omega_ini_dcdm is not an accDM input */
@@ -2701,7 +2744,7 @@ int input_read_parameters_species(struct file_content * pfc,
     class_test((flag1 == _TRUE_) && (flag5 == _TRUE_),
                errmsg,
                "You can only enter one of 'eta_acc' or 'E_acc_in_GeV'.");
-    class_call(parser_read_double(pfc,"m_acc_in_GeV",&param2,&flag2,errmsg),
+    class_call(input_read_m_acc(pfc,&param2,&flag2,errmsg),
               errmsg,
               errmsg);
     class_call(parser_read_double(pfc,"m_cdm_in_GeV",&param3,&flag3,errmsg),
