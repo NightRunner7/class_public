@@ -11,7 +11,7 @@
 # as param_scan.sh). Submit from notebooks_test/ so the cache lands in
 # ./accDM_scans exactly like on the laptop:
 #
-#   cd $HOME/Workplace/class_accDM/notebooks_test
+#   cd $HOME/Workplace/class_accDM_refactor/notebooks_test
 #   python cluster_scripts/gen_nb19_cache.py --list        # note the job count N
 #   qsub -t 0-$((N-1)) \
 #        -v 'GENERATOR=cluster_scripts/gen_nb19_cache.py,GEN_ARGS=--trigger 0.2 --shear no' \

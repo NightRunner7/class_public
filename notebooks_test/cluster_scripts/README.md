@@ -1,10 +1,32 @@
-# Cluster cache generators for nb15-nb20
+# Cluster cache generators
 
-> **Archived.** nb15-nb20 and their `gen_nbNN_cache.py` generators moved to
-> `notebooks_test/_archive/fluid_closure/` (the fluid approximation is dropped).
-> `common.py` and `submit_template.pbs` stay here; `emulator_chi2_validation.py`
-> also uses `common.py`. The setup and submission notes below still apply to
-> any generator run through `submit_template.pbs`.
+`gen_nb21_cache.py` (notebook 21, daughter `accdm_l_max`) is the live generator. The nb15-nb20
+generators of the fluid era moved to `notebooks_test/_archive/fluid_closure/`; `common.py` stays here
+for them and for `emulator_chi2_validation.py`. The setup and submission notes below apply to any
+generator run through `submit_template.pbs`.
+
+## nb21: daughter hierarchy length
+
+`gen_nb21_cache.py` defines the grid, and notebook 21 imports it, so the two cannot drift. Each array
+task runs one CLASS job (257 runs, then 12 CPU-timing jobs) and writes
+`accDM_scans/nb21_cache/<tag>.pkl` as `{RunCache key: result}` (timings in `nb21_cache/cpu/`). The
+notebook reads them with `RunCache(..., also=...)` and stops if any run is missing.
+
+```
+cd $HOME/Workplace/class_accDM_refactor/notebooks_test
+python cluster_scripts/gen_nb21_cache.py --list | tail -1        # -> 269 jobs
+qsub -t 0-268 -v 'GENERATOR=cluster_scripts/gen_nb21_cache.py' cluster_scripts/submit_template.pbs
+# after it finishes, on the laptop:
+rsync -av kruk:Workplace/class_accDM_refactor/notebooks_test/accDM_scans/nb21_cache/ notebooks_test/accDM_scans/nb21_cache/
+```
+
+The env's `classy` must be built from `cbeb3e86` or later (`accdm_l_max`, flat-space ℓ sampling).
+Most tasks take seconds to minutes; the 400 bins/decade × `accdm_l_max` 140 references at 10¹¹ GeV
+take about 40 CPU-minutes, so up to an hour on the 4 threads of one task. Resubmitting the same
+array after a walltime kill only redoes the missing files. The timing jobs measure CPU time on the
+node they land on, two runs each.
+
+## Old generators (nb15-nb20, archived)
 
 Each `gen_nbNN_cache.py` reproduces, run for run, the CLASS calls its notebook
 makes and writes pickles with the **exact filenames** the notebook's cache
@@ -25,7 +47,7 @@ cache hits (nb13/nb14 only cache in memory, so they have no generator).
 
 Copy the whole `notebooks_test/` folder (or at least `cluster_scripts/` +
 `fluid_closure_helpers.py`, keeping that relative layout — nb18/nb19 import
-the helpers from the parent directory) into `$HOME/Workplace/class_accDM/` on
+the helpers from the parent directory) into `$HOME/Workplace/class_accDM_refactor/` on
 the cluster. The `accDM` conda env must contain the **rebuilt** `classy` from
 this branch (modes 2/3 wired in — the env used for `param_scan.sh` needs a
 `classy` rebuild if it predates the mode-2/3 work).
@@ -55,7 +77,7 @@ and a resubmit after walltime kills only redoes missing files.
 `param_scan.sh`, where the ID is a seed and starts at 1):
 
 ```
-cd $HOME/Workplace/class_accDM/notebooks_test
+cd $HOME/Workplace/class_accDM_refactor/notebooks_test
 python cluster_scripts/gen_nb18_cache.py --stage A --list     # -> 20 jobs
 qsub -t 0-19 -v 'GENERATOR=cluster_scripts/gen_nb18_cache.py,GEN_ARGS=--stage A' \
      cluster_scripts/submit_template.pbs
@@ -116,7 +138,7 @@ same value in the notebook's setup cell *and* regenerate/clear stale files
 ## Copying back
 
 ```
-rsync -av cluster:Workplace/class_accDM/notebooks_test/accDM_scans/ notebooks_test/accDM_scans/
+rsync -av kruk:Workplace/class_accDM_refactor/notebooks_test/accDM_scans/ notebooks_test/accDM_scans/
 ```
 
 Then run the notebook and check every run line prints `[cache hit]` /

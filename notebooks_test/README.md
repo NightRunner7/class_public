@@ -51,6 +51,7 @@ pytest --nbmake notebooks_test/0[1-4]_test_*.ipynb
 | 18 | born-fraction nodes across κ → stable to κ = 290 at 51 bins |
 | 19 | `l_max_ncdm` for warm daughters → biases large f̃ below 10¹²·⁵ GeV, not the chains |
 | 20 | integration tolerance → keep 1e-5: Δχ² ≤ 10⁻³; 1e-4 saves ≤ 11% CPU for up to 0.016 at 10¹¹ GeV |
+| 21 | daughter `accdm_l_max` across masses (runs on kruk, `cluster_scripts/gen_nb21_cache.py`) → pending |
 
 ## Old numbers
 
