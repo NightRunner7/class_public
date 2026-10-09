@@ -3282,12 +3282,26 @@ int perturbations_solve(
         }
       }
 
+      /* accDM: hand the evolver only the daughter bins whose birth starts by tau_stop. They
+         are a leading run of the daughter block, which ends the vector; the bins left out have
+         zero born weight here, and the first derivs call of the next sub-interval pins them. */
+      int pt_size_active = ppw->pv->pt_size;
+      if ((pba->has_acc == _TRUE_) && (_scalars_)) {
+        int n_acc = pba->N_ncdm-1;
+        int index_q, n_active = 1;
+        for (index_q=0; index_q<ppw->pv->q_size_ncdm[n_acc]; index_q++)
+          if (ppt->tau_birth_lo_acc[index_q] <= tau_stop)
+            n_active = index_q+1;
+        ppw->q_size_active_acc = n_active;
+        pt_size_active -= (ppw->pv->q_size_ncdm[n_acc]-n_active)*(ppw->pv->l_max_ncdm[n_acc]+1);
+      }
+
       class_call_except(generic_evolver(perturbations_derivs,
                                         tau_start,
                                         tau_stop,
                                         ppw->pv->y,
                                         ppw->pv->used_in_sources,
-                                        ppw->pv->pt_size,
+                                        pt_size_active,
                                         &ppaw,
                                         ppr->tol_perturbations_integration,
                                         ppr->smallest_allowed_variation,
@@ -3312,6 +3326,9 @@ int perturbations_solve(
 
       tau_start = tau_stop;
     }
+
+    if ((pba->has_acc == _TRUE_) && (_scalars_))
+      ppw->q_size_active_acc = ppw->pv->q_size_ncdm[pba->N_ncdm-1];
 
     // class_test(ppw->ca2_ncdm_bad == _TRUE_,
     //            ppt->error_message,
@@ -4184,7 +4201,19 @@ int perturbations_vector_init(
     }
 
 
-    /* non-cold dark matter */
+    /* metric (only quantities to be integrated, not those obeying constraint equations) */
+
+    /* metric perturbation eta of synchronous gauge */
+    class_define_index(ppv->index_pt_eta,ppt->gauge == synchronous,index_pt,1);
+
+    /* metric perturbation phi of newtonian gauge (we could fix it
+       using Einstein equations as a constraint equation for phi, but
+       integration is numerically more stable if we actually evolve
+       phi) */
+    class_define_index(ppv->index_pt_phi,ppt->gauge == newtonian,index_pt,1);
+
+    /* non-cold dark matter, last: the accDM daughter (last ncdm species) ends the vector,
+       so its bins not yet born form a tail the evolver can leave out */
 
     if (pba->has_ncdm == _TRUE_) {
       ppv->index_pt_psi0_ncdm1 = index_pt; /* density of ultra-relativistic neutrinos/relics */
@@ -4217,17 +4246,6 @@ int perturbations_vector_init(
         index_pt += (ppv->l_max_ncdm[n_ncdm]+1)*ppv->q_size_ncdm[n_ncdm];
       }
     }
-
-    /* metric (only quantities to be integrated, not those obeying constraint equations) */
-
-    /* metric perturbation eta of synchronous gauge */
-    class_define_index(ppv->index_pt_eta,ppt->gauge == synchronous,index_pt,1);
-
-    /* metric perturbation phi of newtonian gauge (we could fix it
-       using Einstein equations as a constraint equation for phi, but
-       integration is numerically more stable if we actually evolve
-       phi) */
-    class_define_index(ppv->index_pt_phi,ppt->gauge == newtonian,index_pt,1);
 
   }
 
@@ -4335,6 +4353,17 @@ int perturbations_vector_init(
   }
 
   ppv->pt_size = index_pt;
+
+  /* all daughter bins count until perturbations_solve narrows them for one evolver call */
+  if ((pba->has_acc == _TRUE_) && (_scalars_)) {
+    int n_ncdm_end = 0;
+    ppw->q_size_active_acc = ppv->q_size_ncdm[pba->N_ncdm-1];
+    for (n_ncdm=0; n_ncdm<pba->N_ncdm; n_ncdm++)
+      n_ncdm_end += (ppv->l_max_ncdm[n_ncdm]+1)*ppv->q_size_ncdm[n_ncdm];
+    class_test(ppv->index_pt_psi0_ncdm1 + n_ncdm_end != ppv->pt_size,
+               ppt->error_message,
+               "accDM: the daughter hierarchy must end the perturbation vector");
+  }
 
   /** - allocate vectors for storing the values of all these
       quantities and their time-derivatives at a given time */
@@ -7576,8 +7605,10 @@ int perturbations_total_stress_energy(
           delta_p_ncdm = 0.0;
           factor = pba->factor_ncdm[n_ncdm]/pow(a,4);
           int idx_first_bin = idx;
+          int q_size_loop = ((n_ncdm == pba->N_ncdm-1) && (pba->has_acc == _TRUE_)) ?
+            ppw->q_size_active_acc : ppw->pv->q_size_ncdm[n_ncdm];
 
-          for (index_q=0; index_q < ppw->pv->q_size_ncdm[n_ncdm]; index_q ++) {
+          for (index_q=0; index_q < q_size_loop; index_q ++) {
 
             q = pba->q_ncdm[n_ncdm][index_q];
             q2 = q*q;
@@ -8980,7 +9011,9 @@ int perturbations_print_variables(double tau,
 
           factor = pba->factor_ncdm[n_ncdm]/pow(a,4);
 
-          for (index_q=0; index_q < ppw->pv->q_size_ncdm[n_ncdm]; index_q ++) {
+          int q_size_loop = ((n_ncdm == pba->N_ncdm-1) && (pba->has_acc == _TRUE_)) ?
+            ppw->q_size_active_acc : ppw->pv->q_size_ncdm[n_ncdm];
+          for (index_q=0; index_q < q_size_loop; index_q ++) {
 
             q = pba->q_ncdm[n_ncdm][index_q];
             q2 = q*q;
@@ -10439,9 +10472,12 @@ int perturbations_derivs(double tau,
 
         for (n_ncdm=0; n_ncdm<pv->N_ncdm; n_ncdm++) {
 
-          /** - -----> loop over momentum */
+          /** - -----> loop over momentum (accDM daughter: the bins in the integrated vector) */
 
-          for (index_q=0; index_q < pv->q_size_ncdm[n_ncdm]; index_q++) {
+          int q_size_loop = ((n_ncdm == pba->N_ncdm-1) && (pba->has_acc == _TRUE_)) ?
+            ppw->q_size_active_acc : pv->q_size_ncdm[n_ncdm];
+
+          for (index_q=0; index_q < q_size_loop; index_q++) {
             /** - -----> define intermediate quantities */
             
             dlnf0_dlnq = pba->dlnf0_dlnq_ncdm[n_ncdm][index_q];

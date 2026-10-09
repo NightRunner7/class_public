@@ -670,6 +670,7 @@ struct perturbations_workspace
      denominator hits zero; checked after the evolver returns so we abort
      cleanly without overflowing the error_message buffer */
   short ca2_ncdm_bad;
+  int q_size_active_acc; /**< accDM daughter: bins in the integrated vector (born or being born by the end of the current sub-interval); the rest are a tail left out of the evolver */
 
 };
 
