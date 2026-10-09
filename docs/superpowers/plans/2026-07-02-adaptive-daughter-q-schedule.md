@@ -391,7 +391,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 ### Task 4: Calibration & regression notebook (`14_test_q_schedule_calibration.ipynb`)
 
 **Files:**
-- Create: `notebooks_test/06_q_schedule_calibration.ipynb`
+- Create: `notebooks_test/05_q_schedule_calibration.ipynb`
 
 **Interfaces:**
 - Consumes: `capture_class_stdout` and `base_params` from `notebooks_test/test_q_schedule_smoke.py` (import them — do not copy), the built `classy`.
@@ -578,7 +578,7 @@ with large margin, try lowering it — the margin is wall-time on every MCMC poi
 - [ ] **Step 4: Commit**
 
 ```powershell
-git add notebooks_test/06_q_schedule_calibration.ipynb source/input.c docs/superpowers/specs/2026-07-02-adaptive-daughter-q-schedule-design.md
+git add notebooks_test/05_q_schedule_calibration.ipynb source/input.c docs/superpowers/specs/2026-07-02-adaptive-daughter-q-schedule-design.md
 git commit -m @'
 nb14: q(f) schedule calibration + regression gate; pin measured table
 

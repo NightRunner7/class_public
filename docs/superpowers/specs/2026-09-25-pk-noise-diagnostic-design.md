@@ -15,7 +15,7 @@ sample different k nodes and their spline-interpolation errors do not cancel. Al
 rk integration error (`tol_perturbations_integration`), source time sampling
 (`perturbations_sampling_stepsize`), discrete daughter births.
 
-## Notebook `notebooks_test/10_pk_noise.ipynb`
+## Notebook `notebooks_test/09_pk_noise.ipynb`
 
 - m_acc = 1e11 GeV (η = 1), f_acc = 0.1, κ = 12.1, a_t = 0.133, FIX = 100θ_s, same outputs as
   nb29 (lensed C_l and P(k, z = 0)); only P(k) is analysed.

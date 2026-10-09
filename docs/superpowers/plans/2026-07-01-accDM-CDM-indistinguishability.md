@@ -4,7 +4,7 @@
 
 **Goal:** Build `notebooks_test/_archive/superseded/13_test_accDM_CDM_indistinguishability.ipynb`, which sweeps the daughter mass (via `eta = 1e11/m`) and locates the mass above which accDM's P(k) and CMB spectra become indistinguishable from CDM under fixed-tolerance and cosmic-variance χ² metrics.
 
-**Architecture:** A single self-contained notebook. Pure-numpy helper functions (metrics, threshold extraction) are unit-tested inline with `assert` cells so `pytest --nbmake` exercises them without CLASS. CLASS-dependent cells (parameter builders, the run/cache layer, the scan) are verified by executing the notebook in the user's `accDM` classy environment. Results are cached in a dict keyed by `(f_acc, m, kind)`, mirroring `notebooks_test/05_test_pk_freestreaming.ipynb`.
+**Architecture:** A single self-contained notebook. Pure-numpy helper functions (metrics, threshold extraction) are unit-tested inline with `assert` cells so `pytest --nbmake` exercises them without CLASS. CLASS-dependent cells (parameter builders, the run/cache layer, the scan) are verified by executing the notebook in the user's `accDM` classy environment. Results are cached in a dict keyed by `(f_acc, m, kind)`, mirroring `notebooks_test/04_test_pk_freestreaming.ipynb`.
 
 **Tech Stack:** Python 3.12, `classy` (CLASS accDM fork), numpy, matplotlib. Test runner: `pytest --nbmake`.
 

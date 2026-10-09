@@ -43,7 +43,7 @@ The daughter is born with `(1+eta)` times the parent's energy and nothing paid f
 `eta`. The DE sink (`acc_de_sink`, spec `2026-09-25-accdm-de-sink-design.md`, on by default for
 accDM) pays it from a w = -1 component and restores background conservation; this is now tested in
 `test_de_sink.py::test_background_conservation_restored`. The perturbation-level residual left
-with the sink on is tracked in the live nb28.
+with the sink on is tracked in live notebook 07 (old nb28).
 
 | nb | question | finding |
 |---|---|---|
@@ -57,8 +57,9 @@ with the sink on is tracked in the live nb28.
 
 | nb | question | superseded by |
 |---|---|---|
-| 10 | daughter q_size and l_max on strategy 4 | q-schedule (nb14) and strategy 5 (nb27, nb37-39); l_max by nb40 |
-| 13 | mass above which accDM looks like CDM | nb35 and the fixed-mass chains (nb13 predates the DE sink and used strategy 4 at κ = 6) |
+| 10 | daughter q_size and l_max on strategy 4 | live 05 (q schedule), 06 and 16–18 (strategy 5); l_max: live 19 |
+| 13 | mass above which accDM looks like CDM | live 14 and the fixed-mass chains (nb13 predates the DE sink and used strategy 4 at κ = 6) |
+| 4 | gauge invariance, synchronous vs newtonian | cannot run: accDM is rejected in newtonian gauge since `e1b18c0c` (2026-09-24). Last result: sub-horizon agreement at the ΛCDM floor; super-horizon P(k) differs by ~6% at k ~ 10⁻³/Mpc because the pre-birth daughter is pinned to the parent with gauge-dependent terms |
 
 ## `pre_refactor/`
 

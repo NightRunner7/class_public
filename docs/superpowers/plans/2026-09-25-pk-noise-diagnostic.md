@@ -22,7 +22,7 @@
 ### Task 1: Notebook `30_pk_noise_diagnostic.ipynb`
 
 **Files:**
-- Create: `notebooks_test/10_pk_noise.ipynb` (cells below, in order)
+- Create: `notebooks_test/09_pk_noise.ipynb` (cells below, in order)
 
 **Interfaces:**
 - Produces (inside the notebook): `run(params) -> (pk array on KM, seconds)`, `params(sink, extra, n_q) -> dict`, `noise(p1, p2) -> (r, rms, max)`, `results` list of dicts.
@@ -167,13 +167,13 @@ else:
     print('no single setting brings max|r| below 1e-3; combine the two best next')
 ```
 
-- [ ] **Step 2: Assemble** `notebooks_test/10_pk_noise.ipynb` (nbformat 4.4, kernel metadata from nb28) from the five cells.
+- [ ] **Step 2: Assemble** `notebooks_test/09_pk_noise.ipynb` (nbformat 4.4, kernel metadata from nb28) from the five cells.
 
 - [ ] **Step 3: Run** with Run All in the IDE. Expected: the null pair and default rows print; all cases complete; table and verdict lines print.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add notebooks_test/10_pk_noise.ipynb
+git add notebooks_test/09_pk_noise.ipynb
 git commit -m "Add P(k) noise diagnostic notebook for the DE sink comparison"
 ```

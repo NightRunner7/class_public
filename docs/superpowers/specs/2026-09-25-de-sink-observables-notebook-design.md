@@ -9,7 +9,7 @@ matter power spectrum, for a mass scan, with the sink off and on and against ΛC
 
 ## Notebook
 
-`notebooks_test/09_de_sink_observables.ipynb`, self-contained, runs in a few minutes in memory.
+`notebooks_test/08_de_sink_observables.ipynb`, self-contained, runs in a few minutes in memory.
 
 **Setup.** Planck 2018 base. Toggle `FIX = '100*theta_s'` (1.041783, default) or `'H0'` (67.32).
 accDM: `ncdm_quadrature_strategy = '0, 5'`, 51 daughter bins, rk evolver, synchronous gauge,

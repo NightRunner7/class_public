@@ -19,7 +19,7 @@ Both the published `sqrt(k/k_fs)` fit and the "add a `cvis2` fit" idea rest on a
 
 ## Feasibility gate (kept in frame throughout)
 
-Even the **exact** hierarchy converges <1% only for f < ~0.1 (needs `q_size` ~5001, not 1001, above that; `memory: accdm-fluid-f-boundary`). At f = 0.3 the 1% *target itself* is expensive. The fluid only earns its place if it reaches 1% over k ≤ 1 **more cheaply** than exact + the q(f) schedule ([`14_test_q_schedule_calibration.ipynb`](../../../notebooks_test/06_q_schedule_calibration.ipynb)). A negative diagnostic (no clean closure, or a closure no cheaper than exact) is a valid, useful result that routes to notebook 14, not a failure.
+Even the **exact** hierarchy converges <1% only for f < ~0.1 (needs `q_size` ~5001, not 1001, above that; `memory: accdm-fluid-f-boundary`). At f = 0.3 the 1% *target itself* is expensive. The fluid only earns its place if it reaches 1% over k ≤ 1 **more cheaply** than exact + the q(f) schedule ([`14_test_q_schedule_calibration.ipynb`](../../../notebooks_test/05_q_schedule_calibration.ipynb)). A negative diagnostic (no clean closure, or a closure no cheaper than exact) is a valid, useful result that routes to notebook 14, not a failure.
 
 ## What the exact run already exposes (no C changes)
 
