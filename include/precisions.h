@@ -95,6 +95,13 @@ class_precision_parameter(accdm_smooth_births,int,0)
  */
 class_precision_parameter(accdm_q_log_share,double,0.25)
 /**
+ * accDM daughter: multipole at which its Boltzmann hierarchy is truncated, at least 4.
+ * 0 follows l_max_ncdm, which then sets the neutrinos and the daughter alike. Warm
+ * daughters (m <~ 1e12 GeV) at large f need 35-50 (notebook 19); this raises the
+ * daughter alone.
+ */
+class_precision_parameter(accdm_l_max,int,0)
+/**
  * Tolerance on the deviation of the conformal time of equality from the true value in 1/Mpc.
  */
 class_precision_parameter(tol_tau_eq,double,1.e-6)

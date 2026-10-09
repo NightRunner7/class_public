@@ -2996,6 +2996,10 @@ int input_read_parameters_species(struct file_content * pfc,
 
     if (pba->m_acc_in_GeV > 0. && pba-> N_ncdm > 0) {
         int idx_acc = pba->N_ncdm-1;
+
+        class_test((ppr->accdm_l_max != 0) && (ppr->accdm_l_max < 4),
+                   errmsg,
+                   "'accdm_l_max' must be 0 (follow l_max_ncdm) or at least 4, got %d.", ppr->accdm_l_max);
         
         /* Convert T_cmb to GeV */
         pba->T_acc_GeV = pba->T_ncdm[idx_acc] * pba->T_cmb * _k_B_ / _eV_ / 1e9;

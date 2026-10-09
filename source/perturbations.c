@@ -2726,12 +2726,14 @@ int perturbations_workspace_init(
     if (pba->has_ur == _TRUE_) ppw->max_l_max = MAX(ppw->max_l_max, ppr->l_max_ur);
     if ((pba->has_idr == _TRUE_) && (ppt->idr_nature == idr_free_streaming)) ppw->max_l_max = MAX(ppw->max_l_max, ppr->l_max_idr);
     if (pba->has_ncdm == _TRUE_) ppw->max_l_max = MAX(ppw->max_l_max, ppr->l_max_ncdm);
+    if (pba->has_acc == _TRUE_) ppw->max_l_max = MAX(ppw->max_l_max, ppr->accdm_l_max);
     if (pba->has_dr == _TRUE_) ppw->max_l_max = MAX(ppw->max_l_max, ppr->l_max_dr);
   }
   if (_tensors_) {
     ppw->max_l_max = MAX(ppr->l_max_g_ten, ppr->l_max_pol_g_ten);
     if (pba->has_ur == _TRUE_) ppw->max_l_max = MAX(ppw->max_l_max, ppr->l_max_ur);
     if (pba->has_ncdm == _TRUE_) ppw->max_l_max = MAX(ppw->max_l_max, ppr->l_max_ncdm);
+    if (pba->has_acc == _TRUE_) ppw->max_l_max = MAX(ppw->max_l_max, ppr->accdm_l_max);
   }
 
   /** - Allocate \f$ s_l\f$[ ] array for freestreaming of multipoles (see arXiv:1305.3261) and initialize
@@ -4228,8 +4230,10 @@ int perturbations_vector_init(
           class_test(ppr->l_max_ncdm < 4,
                      ppt->error_message,
                      "ppr->l_max_ncdm=%d should be at least 4, i.e. we must integrate at least over first four momenta of non-cold dark matter perturbed phase-space distribution",n_ncdm);
-          //Copy value from precision parameter:
+          //Copy value from precision parameter (accDM daughter: accdm_l_max unless 0):
           ppv->l_max_ncdm[n_ncdm] = ppr->l_max_ncdm;
+          if ((n_ncdm == pba->N_ncdm-1) && (pba->has_acc == _TRUE_) && (ppr->accdm_l_max > 0))
+            ppv->l_max_ncdm[n_ncdm] = ppr->accdm_l_max;
           ppv->q_size_ncdm[n_ncdm] = pba->q_size_ncdm[n_ncdm];
         }
         else{
@@ -4335,8 +4339,10 @@ int perturbations_vector_init(
         class_test(ppr->l_max_ncdm < 4,
                    ppt->error_message,
                    "ppr->l_max_ncdm=%d should be at least 4, i.e. we must integrate at least over first four momenta of non-cold dark matter perturbed phase-space distribution",n_ncdm);
-        //Copy value from precision parameter:
+        //Copy value from precision parameter (accDM daughter: accdm_l_max unless 0):
         ppv->l_max_ncdm[n_ncdm] = ppr->l_max_ncdm;
+        if ((n_ncdm == pba->N_ncdm-1) && (pba->has_acc == _TRUE_) && (ppr->accdm_l_max > 0))
+          ppv->l_max_ncdm[n_ncdm] = ppr->accdm_l_max;
         ppv->q_size_ncdm[n_ncdm] = pba->q_size_ncdm[n_ncdm];
 
         index_pt += (ppv->l_max_ncdm[n_ncdm]+1)*ppv->q_size_ncdm[n_ncdm];
