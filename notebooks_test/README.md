@@ -49,6 +49,7 @@ pytest --nbmake notebooks_test/0[1-4]_test_*.ipynb
 | 17 | born-fraction nodes → 50–2500× smaller error at equal cost; s = 0.25 is the default |
 | 18 | born-fraction nodes across κ → stable to κ = 290 at 51 bins |
 | 19 | `l_max_ncdm` for warm daughters → biases large f̃ below 10¹²·⁵ GeV, not the chains |
+| 20 | integration tolerance → keep 1e-5: Δχ² ≤ 10⁻³; 1e-4 saves ≤ 11% CPU for up to 0.016 at 10¹¹ GeV |
 
 ## Old numbers
 
