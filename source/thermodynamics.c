@@ -3809,7 +3809,13 @@ int thermodynamics_calculate_recombination_quantities(
   pth->ds_rec=pth->rs_rec/(1.+pth->z_rec);
   pth->da_rec=pvecback[pba->index_bg_ang_distance];
   pth->ra_rec=pth->da_rec*(1.+pth->z_rec);
-  pth->angular_rescaling=pth->ra_rec/(pba->conformal_age-pth->tau_rec);
+  /* exactly 1 in flat space: the ratio of two separately computed distances is 1 only up to
+     roundoff, and transfer_get_l_list() truncates expressions in it to integers, so the C_l
+     sampling flipped with tiny input changes */
+  if (pba->sgnK == 0)
+    pth->angular_rescaling = 1.;
+  else
+    pth->angular_rescaling=pth->ra_rec/(pba->conformal_age-pth->tau_rec);
 
   /** - find damping scale at recombination (using linear interpolation) */
   if (pth->compute_damping_scale == _TRUE_) {

@@ -27,6 +27,7 @@ pytest --nbmake notebooks_test/0[1-4]_test_*.ipynb
 | `test_de_sink.py` | DE sink background, including restored energy conservation |
 | `test_accdm_born_nodes.py` | born-fraction node placement (`accdm_q_log_share`) |
 | `test_accdm_l_max.py` | daughter hierarchy length `accdm_l_max`, separate from `l_max_ncdm` |
+| `test_cl_sampling_flat.py` | flat models: the C_ℓ multipole sampling does not flip with roundoff (the 0.04 jumps) |
 | `test_q_schedule_smoke.py` | strategy-4 q(f) schedule |
 | `test_m_nu_input.py` | `m_nu` input |
 
