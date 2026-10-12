@@ -2851,6 +2851,12 @@ int input_read_parameters_species(struct file_content * pfc,
              errmsg,
              "'acc_de_sink = yes' requires accDM (set f_acc and m_acc_in_GeV).");
 
+  /* accDM: pivot [h/Mpc] at which the growth factor D and rate f count the daughter */
+  class_read_double("accdm_growth_k", pba->accdm_growth_k);
+  class_test(pba->accdm_growth_k < 0.,
+             errmsg,
+             "'accdm_growth_k' must be >= 0 (h/Mpc), got %g.", pba->accdm_growth_k);
+
   /** 5) Non-cold relics (ncdm) */
   /** 5.a) Number of non-cold relics */
   /* Read */
@@ -6445,6 +6451,7 @@ int input_default_params(struct background *pba,
   /* START Accelerating DM */
   pba->has_acc = _FALSE_;
   pba->has_acc_de_sink = _FALSE_;
+  pba->accdm_growth_k = 0.1;
   pba->eta_acc = 0.;
   pba->eps_acc = 0.;
   pba->m_acc_in_GeV = 0.;

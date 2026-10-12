@@ -3112,6 +3112,7 @@ int background_derivs(
   struct background_parameters_and_workspace * pbpaw;
   struct background * pba;
   double * pvecback, a, H, rho_M;
+  double rho_d, p_d, k_pivot, x2;
 
   pbpaw = parameters_and_workspace;
   pba =  pbpaw->pba;
@@ -3149,6 +3150,20 @@ int background_derivs(
   }
   if (pba->has_idm == _TRUE_){
     rho_M += pvecback[pba->index_bg_rho_idm];
+  }
+  if (pba->has_acc == _TRUE_) {
+    /* accDM: the parent is cold at every mass. The daughter (last ncdm slot) counts
+       with its non-relativistic part, weighted by how much it clusters at the pivot
+       k = accdm_growth_k: 1/(1+(k/k_fs)^2), where k_fs^2 = (3/2) a^2 rho_cold / c_s^2
+       and c_s^2 = p/rho. A cold daughter counts fully, a hot or newborn one not at all. */
+    rho_M += pvecback[pba->index_bg_rho_acc_cdm];
+    rho_d = pvecback[pba->index_bg_rho_ncdm1+pba->N_ncdm-1];
+    p_d = pvecback[pba->index_bg_p_ncdm1+pba->N_ncdm-1];
+    if (rho_d > 0.) {
+      k_pivot = pba->accdm_growth_k * pba->h;
+      x2 = k_pivot*k_pivot * (p_d/rho_d) / (1.5*a*a*rho_M);
+      rho_M += (rho_d - 3.*p_d)/(1.+x2);
+    }
   }
 
   dy[pba->index_bi_D] = y[pba->index_bi_D_prime]/a/H;

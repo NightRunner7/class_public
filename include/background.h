@@ -99,6 +99,10 @@ struct background
                        (1/3)(1-exp(-3*A_eta*eta_acc)) from the input kick
                        alone; 0 unless has_acc */
 
+  double accdm_growth_k; /**< pivot [h/Mpc] at which the scale-independent growth D, f
+                              counts the daughter: weight 1/(1+(k/k_fs)^2), k_fs its
+                              free-streaming wavenumber; 0 counts it fully */
+
   int acc_de_sink_n;          /**< intervals of the acc_de_sink J(a) table */
   double acc_de_sink_lna_min; /**< ln a of the first J(a) node */
   double acc_de_sink_dlna;    /**< uniform ln a step of the J(a) table */
