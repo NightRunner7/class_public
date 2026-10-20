@@ -3070,6 +3070,12 @@ int input_read_parameters_species(struct file_content * pfc,
           class_test(ppr->accdm_q_min_bins < 0,
                      errmsg,
                      "'accdm_q_min_bins' must be 0 (no floor) or positive, got %d.", ppr->accdm_q_min_bins);
+          class_test(ppr->accdm_q_bins_a_t_slope < 0.,
+                     errmsg,
+                     "'accdm_q_bins_a_t_slope' must be >= 0 (0 = off), got %g.", ppr->accdm_q_bins_a_t_slope);
+          class_test(ppr->accdm_q_bins_a_t_ref <= 0.,
+                     errmsg,
+                     "'accdm_q_bins_a_t_ref' must be > 0, got %g.", ppr->accdm_q_bins_a_t_ref);
           class_test((ppr->accdm_q_log_share < 1.) && (ppr->accdm_smooth_births == _TRUE_),
                      errmsg,
                      "'accdm_q_log_share' < 1 cannot be combined with 'accdm_smooth_births': smooth births need cells even in ln a.");
@@ -3204,6 +3210,17 @@ int input_read_parameters_species(struct file_content * pfc,
         free(schedule_f_edges);
         free(schedule_q_sizes);
       }
+    }
+
+    /* accDM qm_acc_birth: an early transition needs more bins (notebook 24), explicit or per decade */
+    if ((pba->has_acc == _TRUE_) && (pba->ncdm_quadrature_strategy[N_ncdm-1] == qm_acc_birth)
+        && (ppr->accdm_q_bins_a_t_slope > 0.) && (pba->a_t_acc < ppr->accdm_q_bins_a_t_ref)) {
+      pba->ncdm_input_q_size[N_ncdm-1] = (int)ceil(pba->ncdm_input_q_size[N_ncdm-1]
+                                                   * pow(ppr->accdm_q_bins_a_t_ref/pba->a_t_acc, ppr->accdm_q_bins_a_t_slope));
+      if (input_verbose > 0)
+        printf("accDM qm_acc_birth: early transition a_t = %g < %g, bins x (%g/a_t)^%g -> q_size = %d for ncdm species %d.\n",
+               pba->a_t_acc, ppr->accdm_q_bins_a_t_ref, ppr->accdm_q_bins_a_t_ref, ppr->accdm_q_bins_a_t_slope,
+               pba->ncdm_input_q_size[N_ncdm-1], N_ncdm-1);
     }
 
     /* Simpson weights need an odd number of nodes */

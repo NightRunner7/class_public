@@ -28,6 +28,7 @@ pytest --nbmake notebooks_test/0[1-4]_test_*.ipynb
 | `test_accdm_born_nodes.py` | born-fraction node placement (`accdm_q_log_share`) |
 | `test_accdm_l_max.py` | daughter hierarchy length `accdm_l_max`, separate from `l_max_ncdm` |
 | `test_accdm_q_min_bins.py` | floor `accdm_q_min_bins` on the strategy-5 daughter bins (default 0, off) |
+| `test_accdm_q_bins_a_t.py` | more daughter bins for early transitions (`accdm_q_bins_a_t_slope`, default 0, off) |
 | `test_accdm_growth.py` | growth D, f count the parent and the clustering daughter (`accdm_growth_k`) |
 | `test_cl_sampling_flat.py` | flat models: the C_ℓ multipole sampling does not flip with roundoff (the 0.04 jumps) |
 | `test_q_schedule_smoke.py` | strategy-4 q(f) schedule |
@@ -55,6 +56,7 @@ pytest --nbmake notebooks_test/0[1-4]_test_*.ipynb
 | 20 | integration tolerance → keep 1e-5: Δχ² ≤ 10⁻³; 1e-4 saves ≤ 11% CPU for up to 0.016 at 10¹¹ GeV |
 | 21 | daughter `accdm_l_max` across masses (runs on kruk, `cluster_scripts/gen_nb21_cache.py`) → pending |
 | 22 | κ and a_t over a_t ≥ 10⁻² (kruk, `cluster_scripts/gen_nb22_cache.py`) → κ ≳ 4 acts only via z₅₀; f̃₄ from 0.5× the chains' (10¹²–10¹³, a_t 0.01–0.03) to unconstrained (late; f̃ < 1/(1 + a_t^κ) caps a_t = 1 at 0.5); the box stops at 10⁻² because 201 daughter bins fake Δχ² ≈ 4 below it at ≥ 10¹⁵ GeV |
+| 24 | daughter bins at early transitions (kruk, `cluster_scripts/gen_nb24_cache.py`) → 201 bins fine at a_t ≥ 10⁻², 401 at 3·10⁻³, 801 at 10⁻³; rule N = 201·max(1, 10⁻²/a_t)^0.6; κ 12.1 vs 20 agree to 1% at 1601 bins |
 
 ## Old numbers
 

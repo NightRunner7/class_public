@@ -1,7 +1,7 @@
 # Cluster cache generators
 
-`gen_nb21_cache.py` (notebook 21, daughter `accdm_l_max`) and `gen_nb22_cache.py` (notebook 22, κ and
-a_t) are the live generators. The nb15-nb20 generators of the fluid era moved to
+`gen_nb21_cache.py` (notebook 21, daughter `accdm_l_max`), `gen_nb22_cache.py` (notebook 22, κ and a_t) and
+`gen_nb24_cache.py` (notebook 24, bins at early a_t) are the live generators. The nb15-nb20 generators of the fluid era moved to
 `notebooks_test/_archive/fluid_closure/`; `common.py` stays here for them and for
 `emulator_chi2_validation.py`. The setup and submission notes below apply to any generator run through
 `submit_template.pbs`.
@@ -47,6 +47,19 @@ rsync -av kruk:Workplace/class_accDM_refactor/notebooks_test/accDM_scans/nb22_ca
 
 Needs `CHAIN_SETTINGS_OCT07` in `accdm_nb.py` and `classy` from `209be92a` or later. Tasks take a few
 minutes; the earliest transitions (a_t = 10⁻³, κ = 1) and the 401-bin checks are the slow ones.
+
+## nb24: daughter bins at early transitions
+
+`gen_nb24_cache.py` defines the ladder (201/401/801/1601 daughter bins × 10¹⁴–10¹⁸ GeV × f̃ 0.5, 0.9 × five
+(κ, a_t) with a_t 10⁻³–10⁻²), one CLASS run per task; notebook 24 imports it.
+
+```
+cd $HOME/Workplace/class_accDM_refactor/notebooks_test
+python cluster_scripts/gen_nb24_cache.py --list | tail -1        # -> 201 jobs
+qsub -t 0-200 -l mem=4gb,walltime=12:00:00 -N nb24-ladder -v 'GENERATOR=cluster_scripts/gen_nb24_cache.py' \
+     cluster_scripts/submit_template.pbs
+rsync -av kruk:Workplace/class_accDM_refactor/notebooks_test/accDM_scans/nb24_cache/ notebooks_test/accDM_scans/nb24_cache/
+```
 
 ## Old generators (nb15-nb20, archived)
 

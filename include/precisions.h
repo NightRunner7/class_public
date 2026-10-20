@@ -87,6 +87,15 @@ class_precision_parameter(accdm_q_bins_per_decade,double,50.)
  */
 class_precision_parameter(accdm_q_min_bins,int,0)
 /**
+ * accDM daughter with ncdm_quadrature_strategy = 5: an early transition needs more bins
+ * (notebook 24: 201 bins suffice at a_t = 1e-2, ~800 at a_t = 1e-3, from 1e14 GeV up).
+ * For a_t_acc < accdm_q_bins_a_t_ref the bin count, explicit or per decade, is multiplied
+ * by (accdm_q_bins_a_t_ref/a_t_acc)^accdm_q_bins_a_t_slope. Slope 0 = off; 0.6 meets
+ * Delta chi2 < 0.01 against 1601 bins at a_t = 1e-3 to 1e-2.
+ */
+class_precision_parameter(accdm_q_bins_a_t_slope,double,0.)
+class_precision_parameter(accdm_q_bins_a_t_ref,double,1.e-2)
+/**
  * accDM daughter with ncdm_quadrature_strategy = 5: 0 births each bin at once at a_q;
  * 1 spreads its birth over its cell in ln a (smooth background, no integrator steps).
  * Smooth births release each bin at the end of its cell, which biases P(k) by
