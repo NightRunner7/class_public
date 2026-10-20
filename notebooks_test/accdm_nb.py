@@ -6,7 +6,8 @@
   disk by their full input dict.
 - `observables`: the standard set of outputs (lensed C_l, P_cb, P_m, BAO, sigma8, ...).
 - `chi2_parts`: approximate Delta chi2 between two runs (Planck-like CMB, lensing amplitude, BAO).
-- The strategy-5 daughter grid in Python: `born_fraction`, `a_min`, `q_size`, `node_lna`.
+- The strategy-5 daughter grid in Python: `born_fraction`, `a_min`, `q_size`, `node_lna`; the physical
+  bound `f_tilde_max`.
 - Chains: `chains_dir`, `load_chain`, weighted statistics.
 """
 import json
@@ -87,6 +88,17 @@ LITE_LIN_11 = {'N_ncdm': 2, 'N_ur': 2.0308, 'm_ncdm': '0.06, 0.1', 'deg_ncdm': '
                'P_k_max_1/Mpc': 1.0, 'lensing': 'yes', 'l_max_scalars': 2508, 'accdm_q_log_share': 1}
 LCDM_LITE_LIN_11 = {'omega_b': 0.02256944, 'omega_cdm': 0.1175042, 'H0': 68.47743,
                     'ln10^{10}A_s': 3.056426, 'n_s': 0.972248, 'tau_reio': 0.06151263}
+
+# Settings of the current chains (DE sink on, born-fraction grid) with the ΛCDM best fit and omega_dm_tot
+# of the 10^14 GeV chain of 2026-10-07; the same dict as SETTINGS in cluster_scripts/gen_nb21_cache.py.
+CHAIN_SETTINGS_OCT07 = {
+    'N_ncdm': 2, 'N_ur': 2.0308, 'm_ncdm': '0.06, 0.1', 'deg_ncdm': '1, 1', 'T_ncdm': '0.71611, 1',
+    'ncdm_quadrature_strategy': '0, 5', 'ncdm_fluid_approximation': 3, 'accdm_q_log_share': 0.25,
+    'kappa_acc': KAPPA, 'a_t_acc': A_T, 'vary_Gamma_acc': 'yes', 'acc_de_sink': 'yes',
+    'gauge': 'synchronous', 'reionization_z_start_max': 80, 'evolver': 0, 'k_pivot': 0.05,
+    'output': 'mPk, lCl, tCl, pCl', 'P_k_max_1/Mpc': 1.0, 'lensing': 'yes', 'l_max_scalars': 2508,
+    'omega_b': 0.02246728, 'omega_dm_tot': 0.1176592, 'H0': 68.34158, 'ln10^{10}A_s': 3.052865,
+    'n_s': 0.9694445, 'tau_reio': 0.06127875}
 
 # ---------------------------------------------------------------------------------------------
 # Running CLASS
@@ -291,6 +303,11 @@ def born_fraction(a, kappa=KAPPA, a_t=A_T):
     """F(a), the fraction of daughters born by a (background_acc_born_fraction)."""
     with np.errstate(over='ignore'):
         return 1 - (1 - a**kappa)/(1 + (a/a_t)**kappa)
+
+
+def f_tilde_max(kappa=KAPPA, a_t=A_T):
+    """Physical bound on f_tilde from f_acc < a_t^-kappa (input.c warns above it)."""
+    return 1/(1 + np.asarray(a_t, float)**np.asarray(kappa, float))
 
 
 def a_min(kappa=KAPPA, a_t=A_T, eps=1e-6):

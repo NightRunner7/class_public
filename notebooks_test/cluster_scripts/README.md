@@ -1,9 +1,10 @@
 # Cluster cache generators
 
-`gen_nb21_cache.py` (notebook 21, daughter `accdm_l_max`) is the live generator. The nb15-nb20
-generators of the fluid era moved to `notebooks_test/_archive/fluid_closure/`; `common.py` stays here
-for them and for `emulator_chi2_validation.py`. The setup and submission notes below apply to any
-generator run through `submit_template.pbs`.
+`gen_nb21_cache.py` (notebook 21, daughter `accdm_l_max`) and `gen_nb22_cache.py` (notebook 22, κ and
+a_t) are the live generators. The nb15-nb20 generators of the fluid era moved to
+`notebooks_test/_archive/fluid_closure/`; `common.py` stays here for them and for
+`emulator_chi2_validation.py`. The setup and submission notes below apply to any generator run through
+`submit_template.pbs`.
 
 ## nb21: daughter hierarchy length
 
@@ -25,6 +26,27 @@ Most tasks take seconds to minutes; the 400 bins/decade × `accdm_l_max` 140 ref
 take about 40 CPU-minutes, so up to an hour on the 4 threads of one task. Resubmitting the same
 array after a walltime kill only redoes the missing files. The timing jobs measure CPU time on the
 node they land on, two runs each.
+
+## nb22: dependence on κ and a_t
+
+`gen_nb22_cache.py` defines the grid (6 masses × 6 κ × 7 a_t) and the f̃₄ search, and notebook 22
+imports both. Each search task runs one (m, κ, a_t) point's whole search serially (its own null, then
+3–6 runs until Δχ² = 4 is bracketed); at the corners of the box it adds the 401-bin grid check at f̃₄.
+The notebook replays every search from `accDM_scans/nb22_cache/` and stops if a run is missing.
+
+```
+cd $HOME/Workplace/class_accDM_refactor/notebooks_test
+python cluster_scripts/gen_nb22_cache.py --list | tail -1        # -> 373 jobs, the first 265 without ladder
+qsub -t 0-264 -l mem=2gb,walltime=06:00:00 -N nb22-cache -v 'GENERATOR=cluster_scripts/gen_nb22_cache.py' \
+     cluster_scripts/submit_template.pbs
+# section 5, bins x accdm_l_max up to (801, 50):
+qsub -t 0-107 -l mem=4gb,walltime=12:00:00 -N nb22-ladder \
+     -v 'GENERATOR=cluster_scripts/gen_nb22_cache.py,GEN_ARGS=--only ladder_' cluster_scripts/submit_template.pbs
+rsync -av kruk:Workplace/class_accDM_refactor/notebooks_test/accDM_scans/nb22_cache/ notebooks_test/accDM_scans/nb22_cache/
+```
+
+Needs `CHAIN_SETTINGS_OCT07` in `accdm_nb.py` and `classy` from `209be92a` or later. Tasks take a few
+minutes; the earliest transitions (a_t = 10⁻³, κ = 1) and the 401-bin checks are the slow ones.
 
 ## Old generators (nb15-nb20, archived)
 

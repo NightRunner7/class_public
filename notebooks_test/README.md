@@ -22,7 +22,7 @@ pytest --nbmake notebooks_test/0[1-4]_test_*.ipynb
 | `02_test_limits` | f_acc → 0 and η → 0 recover ΛCDM |
 | `03_test_bg_conservation` | Friedmann closure, parent analytic form, Γ_acc consistency, daughter normalization |
 | `04_test_pk_freestreaming` | P(k) suppression grows with f_acc and η, cutoff moves to larger scales with η |
-| `test_accdm_input_checks.py` | input validation (fluid approximation, daughter slot, f_acc) |
+| `test_accdm_input_checks.py` | input validation (fluid approximation, daughter slot, f_acc); warning above f_acc < a_t^-κ |
 | `test_birth_breakpoints.py` | daughter births as integration breakpoints |
 | `test_de_sink.py` | DE sink background, including restored energy conservation |
 | `test_accdm_born_nodes.py` | born-fraction node placement (`accdm_q_log_share`) |
@@ -53,6 +53,7 @@ pytest --nbmake notebooks_test/0[1-4]_test_*.ipynb
 | 19 | `l_max_ncdm` for warm daughters → biases large f̃ below 10¹²·⁵ GeV, not the chains |
 | 20 | integration tolerance → keep 1e-5: Δχ² ≤ 10⁻³; 1e-4 saves ≤ 11% CPU for up to 0.016 at 10¹¹ GeV |
 | 21 | daughter `accdm_l_max` across masses (runs on kruk, `cluster_scripts/gen_nb21_cache.py`) → pending |
+| 22 | κ and a_t over a_t ≥ 10⁻² (kruk, `cluster_scripts/gen_nb22_cache.py`) → κ ≳ 4 acts only via z₅₀; f̃₄ from 0.5× the chains' (10¹²–10¹³, a_t 0.01–0.03) to unconstrained (late; f̃ < 1/(1 + a_t^κ) caps a_t = 1 at 0.5); the box stops at 10⁻² because 201 daughter bins fake Δχ² ≈ 4 below it at ≥ 10¹⁵ GeV |
 
 ## Old numbers
 

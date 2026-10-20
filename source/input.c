@@ -2838,6 +2838,12 @@ int input_read_parameters_species(struct file_content * pfc,
       class_test(pba->a_t_acc <= 0.,
                  errmsg,
                  "'a_t_acc' must be > 0, got %g.", pba->a_t_acc);
+
+      /* Physically f_acc < a_t^-kappa. Warn but run, so samplers can still reach such points;
+         compared in logs because a_t^-kappa overflows for small a_t and large kappa. */
+      if ((pba->f_acc > 0.) && (log(pba->f_acc) >= -pba->kappa_acc*log(pba->a_t_acc)))
+        printf("Warning: f_acc = %g exceeds the physical bound a_t_acc^-kappa_acc = %g (kappa_acc = %g, a_t_acc = %g); running anyway.\n",
+               pba->f_acc, pow(pba->a_t_acc, -pba->kappa_acc), pba->kappa_acc, pba->a_t_acc);
     }
 
     class_read_flag("switch_on_eq_delta_p_acc", ppt->switch_on_eq_delta_p_acc);

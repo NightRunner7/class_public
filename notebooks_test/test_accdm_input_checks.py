@@ -111,6 +111,42 @@ def test_eta_and_e_acc_together_are_rejected():
     expect_error(accdm_params(E_acc_in_GeV=1e11), "only enter one of 'eta_acc' or 'E_acc_in_GeV'")
 
 
+def c_stdout(params, level):
+    """What CLASS prints to file descriptor 1 while computing params up to level."""
+    import ctypes
+    import os
+    import tempfile
+    libc = ctypes.CDLL(None)
+    sys.stdout.flush()
+    libc.fflush(None)
+    saved = os.dup(1)
+    with tempfile.TemporaryFile(mode="w+") as out:
+        os.dup2(out.fileno(), 1)
+        try:
+            compute(params, level)
+        finally:
+            libc.fflush(None)                 # C stdio buffers its printf output
+            sys.stdout.flush()
+            os.dup2(saved, 1)
+            os.close(saved)
+        out.seek(0)
+        return out.read()
+
+
+BOUND_WARNING = "exceeds the physical bound"
+
+
+def test_f_acc_above_bound_warns_and_runs():
+    # a_t = 1, kappa = 1: the bound a_t^-kappa is 1
+    printed = c_stdout(accdm_params(kappa_acc=1., a_t_acc=1., f_acc=2.), ["background"])
+    assert BOUND_WARNING in printed, "no warning for f_acc above a_t^-kappa, got:\n" + printed
+
+
+def test_f_acc_below_bound_is_silent():
+    printed = c_stdout(accdm_params(kappa_acc=1., a_t_acc=1., f_acc=0.5), ["background"])
+    assert BOUND_WARNING not in printed, "warning below the bound:\n" + printed
+
+
 def background_daughter(params):
     """Background rho of the daughter (last ncdm species)."""
     cosmo = Class()
