@@ -3067,6 +3067,9 @@ int input_read_parameters_species(struct file_content * pfc,
           class_test((ppr->accdm_q_log_share <= 0.) || (ppr->accdm_q_log_share > 1.),
                      errmsg,
                      "'accdm_q_log_share' must lie in (0,1], got %g.", ppr->accdm_q_log_share);
+          class_test(ppr->accdm_q_min_bins < 0,
+                     errmsg,
+                     "'accdm_q_min_bins' must be 0 (no floor) or positive, got %d.", ppr->accdm_q_min_bins);
           class_test((ppr->accdm_q_log_share < 1.) && (ppr->accdm_smooth_births == _TRUE_),
                      errmsg,
                      "'accdm_q_log_share' < 1 cannot be combined with 'accdm_smooth_births': smooth births need cells even in ln a.");
@@ -3128,9 +3131,11 @@ int input_read_parameters_species(struct file_content * pfc,
       else if (pba->ncdm_quadrature_strategy[N_ncdm-1] == qm_acc_birth) {
         /* fixed density in ln a_q; the q(f) schedule below is calibrated for the 20-decade grid */
         pba->ncdm_input_q_size[N_ncdm-1] = MAX(3, (int)ceil(ppr->accdm_q_bins_per_decade*log10(1./pba->a_min_acc)) + 1);
+        /* a narrow birth window (large kappa, late a_t) gets few bins per decade: floor them */
+        pba->ncdm_input_q_size[N_ncdm-1] = MAX(pba->ncdm_input_q_size[N_ncdm-1], ppr->accdm_q_min_bins);
         if (input_verbose > 0)
-          printf("accDM qm_acc_birth: %g bins per decade -> q_size = %d for ncdm species %d.\n",
-                 ppr->accdm_q_bins_per_decade, pba->ncdm_input_q_size[N_ncdm-1], N_ncdm-1);
+          printf("accDM qm_acc_birth: %g bins per decade, at least %d -> q_size = %d for ncdm species %d.\n",
+                 ppr->accdm_q_bins_per_decade, ppr->accdm_q_min_bins, pba->ncdm_input_q_size[N_ncdm-1], N_ncdm-1);
       }
       else if (accdm_q_schedule == _TRUE_) {
 

@@ -79,6 +79,14 @@ class_precision_parameter(accdm_q_number_tol,double,1.e-6)
  */
 class_precision_parameter(accdm_q_bins_per_decade,double,50.)
 /**
+ * accDM daughter with ncdm_quadrature_strategy = 5: floor on the number of bins set by
+ * accdm_q_bins_per_decade. A sharp (large kappa) or late (a_t -> 1) transition has a
+ * narrow birth window, so the per-decade rule gives few bins (4 at kappa = 100, a_t = 1)
+ * and the daughter is unconverged. 0 = no floor. Ignored when the number of bins is
+ * given explicitly.
+ */
+class_precision_parameter(accdm_q_min_bins,int,0)
+/**
  * accDM daughter with ncdm_quadrature_strategy = 5: 0 births each bin at once at a_q;
  * 1 spreads its birth over its cell in ln a (smooth background, no integrator steps).
  * Smooth births release each bin at the end of its cell, which biases P(k) by
